@@ -19,121 +19,130 @@ const SalesAnalysisView = () => import('@/views/SalesAnalysisView.vue')
 const routes = [
   {
     path: '/',
-    redirect: '/dashboard'
+    redirect: (to) => {
+      // 인증 상태에 따른 동적 리다이렉트
+      const authStore = useAuthStore()
+      return authStore.isAuthenticated ? '/dashboard' : '/login'
+    },
   },
   {
     path: '/login',
     name: 'Login',
     component: LoginView,
-    meta: { 
+    meta: {
       requiresAuth: false,
-      title: '로그인'
-    }
+      title: '로그인',
+    },
   },
   {
     path: '/dashboard',
     name: 'Dashboard',
     component: DashboardView,
-    meta: { 
+    meta: {
       requiresAuth: true,
-      title: '대시보드'
-    }
+      title: '대시보드',
+    },
   },
   {
     path: '/store',
     name: 'StoreManagement',
     component: StoreManagementView,
-    meta: { 
+    meta: {
       requiresAuth: true,
-      title: '매장 관리'
-    }
+      title: '매장 관리',
+    },
   },
   {
     path: '/menu',
     name: 'MenuManagement',
     component: MenuManagementView,
-    meta: { 
+    meta: {
       requiresAuth: true,
-      title: '메뉴 관리'
-    }
+      title: '메뉴 관리',
+    },
   },
   {
     path: '/content/create',
     name: 'ContentCreation',
     component: ContentCreationView,
-    meta: { 
+    meta: {
       requiresAuth: true,
-      title: '콘텐츠 생성'
-    }
+      title: '콘텐츠 생성',
+    },
   },
   {
     path: '/content',
     name: 'ContentManagement',
     component: ContentManagementView,
-    meta: { 
+    meta: {
       requiresAuth: true,
-      title: '콘텐츠 관리'
-    }
+      title: '콘텐츠 관리',
+    },
   },
   {
     path: '/ai-recommend',
     name: 'AIRecommendation',
     component: AIRecommendationView,
-    meta: { 
+    meta: {
       requiresAuth: true,
-      title: 'AI 추천'
-    }
+      title: 'AI 추천',
+    },
   },
   {
     path: '/sales',
     name: 'SalesAnalysis',
     component: SalesAnalysisView,
-    meta: { 
+    meta: {
       requiresAuth: true,
-      title: '매출 분석'
-    }
+      title: '매출 분석',
+    },
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/dashboard'
-  }
+    redirect: '/login', // 404시 로그인으로 이동
+  },
 ]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes
+  routes,
 })
 
 // 네비게이션 가드
 router.beforeEach(async (to, from, next) => {
+  console.log('=== 라우터 가드 실행 ===')
+  console.log('이동 경로:', `${from.path} → ${to.path}`)
+
   const authStore = useAuthStore()
-  
+  console.log('현재 인증 상태:', authStore.isAuthenticated)
+  console.log('토큰 존재:', !!authStore.token)
+  console.log('사용자 정보:', authStore.user)
+
   // 인증이 필요한 페이지인지 확인
   if (to.meta.requiresAuth) {
+    console.log('인증이 필요한 페이지')
+
     if (!authStore.isAuthenticated) {
-      // 토큰이 있다면 사용자 정보 재검증
-      if (authStore.token) {
-        try {
-          await authStore.refreshUserInfo()
-          next()
-        } catch (error) {
-          authStore.clearAuth()
-          next('/login')
-        }
-      } else {
-        next('/login')
-      }
+      console.log('인증되지 않음, 로그인으로 이동')
+      next('/login')
     } else {
+      console.log('인증됨, 페이지 이동 허용')
       next()
     }
   } else {
+    console.log('인증이 필요하지 않은 페이지')
+
     // 로그인 페이지에 이미 인증된 사용자가 접근하는 경우
     if (to.name === 'Login' && authStore.isAuthenticated) {
+      console.log('이미 로그인됨, 대시보드로 리다이렉트')
       next('/dashboard')
     } else {
+      console.log('페이지 이동 허용')
       next()
     }
   }
+
+  console.log('=== 라우터 가드 종료 ===')
 })
 
 export default router

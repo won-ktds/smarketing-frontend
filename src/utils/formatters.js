@@ -1,345 +1,281 @@
+//* src/utils/formatters.js
 /**
- * 데이터 포맷팅 유틸리티
- * 
- * @description 다양한 데이터 타입을 사용자 친화적인 형태로 포맷팅하는 함수들을 제공합니다.
- * @author AI Marketing Team
- * @version 1.0
+ * 포맷팅 유틸리티 함수들
  */
 
 /**
- * 숫자를 통화 형식으로 포맷팅
- * @param {number} amount - 포맷팅할 금액
- * @param {string} currency - 통화 단위 (기본값: 'KRW')
- * @param {boolean} showSymbol - 통화 기호 표시 여부 (기본값: true)
- * @returns {string} 포맷팅된 통화 문자열
+ * 통화 포맷 (한국 원화)
  */
-export const formatCurrency = (amount, currency = 'KRW', showSymbol = true) => {
-  if (amount === null || amount === undefined || isNaN(amount)) {
-    return '0원'
-  }
-
-  const formatter = new Intl.NumberFormat('ko-KR', {
+export const formatCurrency = (amount) => {
+  if (!amount && amount !== 0) return '₩0'
+  return new Intl.NumberFormat('ko-KR', {
     style: 'currency',
-    currency: currency,
+    currency: 'KRW',
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  })
-
-  if (showSymbol) {
-    return formatter.format(amount)
-  } else {
-    return amount.toLocaleString('ko-KR')
-  }
+    maximumFractionDigits: 0,
+  }).format(amount)
 }
 
 /**
- * 큰 숫자를 축약된 형태로 포맷팅 (예: 1000 -> 1K)
- * @param {number} num - 포맷팅할 숫자
- * @param {number} digits - 소수점 자릿수 (기본값: 1)
- * @returns {string} 축약된 숫자 문자열
+ * 숫자 포맷 (천 단위 콤마)
  */
-export const formatAbbreviatedNumber = (num, digits = 1) => {
-  if (num === null || num === undefined || isNaN(num)) {
-    return '0'
-  }
-
-  const units = [
-    { value: 1e9, symbol: 'B' },
-    { value: 1e8, symbol: '억' },
-    { value: 1e6, symbol: 'M' },
-    { value: 1e4, symbol: '만' },
-    { value: 1e3, symbol: 'K' }
-  ]
-
-  for (let unit of units) {
-    if (Math.abs(num) >= unit.value) {
-      return (num / unit.value).toFixed(digits) + unit.symbol
-    }
-  }
-
-  return num.toString()
+export const formatNumber = (number) => {
+  if (!number && number !== 0) return '0'
+  return new Intl.NumberFormat('ko-KR').format(number)
 }
 
 /**
- * 퍼센트를 포맷팅
- * @param {number} value - 퍼센트 값
- * @param {number} decimals - 소수점 자릿수 (기본값: 1)
- * @param {boolean} showSign - 부호 표시 여부 (기본값: false)
- * @returns {string} 포맷팅된 퍼센트 문자열
+ * 퍼센트 포맷
  */
-export const formatPercentage = (value, decimals = 1, showSign = false) => {
-  if (value === null || value === undefined || isNaN(value)) {
-    return '0%'
-  }
-
-  const sign = showSign && value > 0 ? '+' : ''
-  return `${sign}${value.toFixed(decimals)}%`
+export const formatPercent = (value, decimals = 1) => {
+  if (!value && value !== 0) return '0%'
+  return `${parseFloat(value).toFixed(decimals)}%`
 }
 
 /**
- * 날짜를 한국어 형식으로 포맷팅
- * @param {Date|string} date - 포맷팅할 날짜
- * @param {string} format - 포맷 형식 ('full', 'date', 'time', 'datetime', 'relative')
- * @returns {string} 포맷팅된 날짜 문자열
+ * 상대적 시간 포맷 (예: "30분 전", "2시간 전")
  */
-export const formatDate = (date, format = 'date') => {
+export const formatRelativeTime = (date) => {
   if (!date) return ''
-
-  const dateObj = typeof date === 'string' ? new Date(date) : date
-  
-  if (isNaN(dateObj.getTime())) {
-    return '잘못된 날짜'
-  }
-
-  const options = {
-    full: {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long'
-    },
-    date: {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    },
-    time: {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    },
-    datetime: {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }
-  }
-
-  if (format === 'relative') {
-    return formatRelativeTime(dateObj)
-  }
-
-  const formatOptions = options[format] || options.date
-  return new Intl.DateTimeFormat('ko-KR', formatOptions).format(dateObj)
-}
-
-/**
- * 상대적 시간 포맷팅 (예: 2시간 전, 3일 후)
- * @param {Date|string} date - 기준 날짜
- * @param {Date} baseDate - 비교 기준 날짜 (기본값: 현재 시간)
- * @returns {string} 상대적 시간 문자열
- */
-export const formatRelativeTime = (date, baseDate = new Date()) => {
-  if (!date) return ''
-
-  const dateObj = typeof date === 'string' ? new Date(date) : date
-  const baseDateObj = typeof baseDate === 'string' ? new Date(baseDate) : baseDate
-
-  if (isNaN(dateObj.getTime()) || isNaN(baseDateObj.getTime())) {
-    return '잘못된 날짜'
-  }
-
-  const diffInSeconds = Math.floor((baseDateObj - dateObj) / 1000)
-  const absDiff = Math.abs(diffInSeconds)
-
-  const units = [
-    { name: '년', seconds: 31536000 },
-    { name: '개월', seconds: 2592000 },
-    { name: '일', seconds: 86400 },
-    { name: '시간', seconds: 3600 },
-    { name: '분', seconds: 60 }
-  ]
-
-  for (let unit of units) {
-    const interval = Math.floor(absDiff / unit.seconds)
-    if (interval >= 1) {
-      return diffInSeconds > 0 
-        ? `${interval}${unit.name} 전`
-        : `${interval}${unit.name} 후`
-    }
-  }
-
-  return diffInSeconds > 0 ? '방금 전' : '곧'
-}
-
-/**
- * 날짜와 시간을 사용자 친화적 형식으로 포맷팅
- * @param {Date|string} dateTime - 포맷팅할 날짜시간
- * @returns {string} 포맷팅된 날짜시간 문자열
- */
-export const formatDateTime = (dateTime) => {
-  if (!dateTime) return ''
-
-  const dateObj = typeof dateTime === 'string' ? new Date(dateTime) : dateTime
-  
-  if (isNaN(dateObj.getTime())) {
-    return '잘못된 날짜'
-  }
 
   const now = new Date()
-  const diffInDays = Math.floor((now - dateObj) / (1000 * 60 * 60 * 24))
+  const targetDate = new Date(date)
+  const diffInMs = now - targetDate
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
 
-  if (diffInDays === 0) {
-    // 오늘인 경우 시간만 표시
-    return formatDate(dateObj, 'time')
-  } else if (diffInDays === 1) {
-    // 어제인 경우
-    return `어제 ${formatDate(dateObj, 'time')}`
-  } else if (diffInDays < 7) {
-    // 일주일 이내인 경우
-    const weekday = dateObj.toLocaleDateString('ko-KR', { weekday: 'short' })
-    return `${weekday} ${formatDate(dateObj, 'time')}`
-  } else {
-    // 일주일 이상인 경우 전체 날짜 표시
-    return formatDate(dateObj, 'datetime')
-  }
+  if (diffInMinutes < 1) return '방금 전'
+  if (diffInMinutes < 60) return `${diffInMinutes}분 전`
+  if (diffInHours < 24) return `${diffInHours}시간 전`
+  if (diffInDays < 7) return `${diffInDays}일 전`
+
+  return targetDate.toLocaleDateString('ko-KR')
 }
 
 /**
- * 파일 크기를 사람이 읽기 쉬운 형태로 포맷팅
- * @param {number} bytes - 파일 크기 (바이트)
- * @param {number} decimals - 소수점 자릿수 (기본값: 2)
- * @returns {string} 포맷팅된 파일 크기 문자열
+ * 날짜 포맷 (YYYY-MM-DD 형식)
  */
-export const formatFileSize = (bytes, decimals = 2) => {
-  if (bytes === 0) return '0 B'
-  if (!bytes) return ''
+export const formatDate = (date, options = {}) => {
+  if (!date) return ''
+
+  const targetDate = new Date(date)
+  const defaultOptions = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }
+
+  return targetDate.toLocaleDateString('ko-KR', { ...defaultOptions, ...options })
+}
+
+/**
+ * 날짜시간 포맷 (YYYY-MM-DD HH:mm 형식)
+ */
+export const formatDateTime = (date, options = {}) => {
+  if (!date) return ''
+
+  const targetDate = new Date(date)
+  const defaultOptions = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }
+
+  return targetDate.toLocaleString('ko-KR', { ...defaultOptions, ...options })
+}
+
+/**
+ * 시간 포맷 (HH:mm 형식)
+ */
+export const formatTime = (date) => {
+  if (!date) return ''
+
+  const targetDate = new Date(date)
+  return targetDate.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+/**
+ * 파일 크기 포맷
+ */
+export const formatFileSize = (bytes) => {
+  if (!bytes) return '0 B'
 
   const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
 
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
 }
 
 /**
- * 전화번호를 포맷팅
- * @param {string} phoneNumber - 전화번호 문자열
- * @returns {string} 포맷팅된 전화번호
+ * 전화번호 포맷
  */
-export const formatPhoneNumber = (phoneNumber) => {
-  if (!phoneNumber) return ''
+export const formatPhoneNumber = (phone) => {
+  if (!phone) return ''
 
-  // 숫자만 추출
-  const numbers = phoneNumber.replace(/\D/g, '')
+  const cleaned = phone.replace(/\D/g, '')
+  const match = cleaned.match(/^(\d{3})(\d{4})(\d{4})$/)
 
-  // 휴대폰 번호 (010-xxxx-xxxx)
-  if (numbers.length === 11 && numbers.startsWith('010')) {
-    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`
-  }
-  
-  // 일반 전화번호 (02-xxx-xxxx 또는 03x-xxx-xxxx)
-  if (numbers.length === 10) {
-    if (numbers.startsWith('02')) {
-      return `${numbers.slice(0, 2)}-${numbers.slice(2, 6)}-${numbers.slice(6)}`
-    } else {
-      return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(6)}`
-    }
+  if (match) {
+    return `${match[1]}-${match[2]}-${match[3]}`
   }
 
-  if (numbers.length === 11 && !numbers.startsWith('010')) {
-    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`
-  }
-
-  return phoneNumber
+  return phone
 }
 
 /**
- * 사업자등록번호를 포맷팅
- * @param {string} businessNumber - 사업자등록번호
- * @returns {string} 포맷팅된 사업자등록번호
+ * 사업자등록번호 포맷
  */
-export const formatBusinessNumber = (businessNumber) => {
-  if (!businessNumber) return ''
+export const formatBusinessNumber = (number) => {
+  if (!number) return ''
 
-  const numbers = businessNumber.replace(/\D/g, '')
-  
-  if (numbers.length === 10) {
-    return `${numbers.slice(0, 3)}-${numbers.slice(3, 5)}-${numbers.slice(5)}`
+  const cleaned = number.replace(/\D/g, '')
+  const match = cleaned.match(/^(\d{3})(\d{2})(\d{5})$/)
+
+  if (match) {
+    return `${match[1]}-${match[2]}-${match[3]}`
   }
 
-  return businessNumber
+  return number
 }
 
 /**
- * 텍스트를 지정된 길이로 자르고 말줄임표 추가
- * @param {string} text - 자를 텍스트
- * @param {number} maxLength - 최대 길이
- * @param {string} suffix - 말줄임표 (기본값: '...')
- * @returns {string} 잘린 텍스트
+ * 해시태그 포맷 (#포함하여 문자열로 변환)
  */
-export const truncateText = (text, maxLength, suffix = '...') => {
-  if (!text) return ''
-  
-  if (text.length <= maxLength) {
-    return text
-  }
+export const formatHashtags = (hashtags) => {
+  if (!hashtags || !Array.isArray(hashtags)) return ''
 
-  return text.slice(0, maxLength - suffix.length) + suffix
+  return hashtags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`)).join(' ')
 }
 
 /**
- * 해시태그 배열을 문자열로 포맷팅
- * @param {Array} hashtags - 해시태그 배열
- * @param {string} separator - 구분자 (기본값: ' ')
- * @returns {string} 포맷팅된 해시태그 문자열
+ * 콘텐츠 미리보기 포맷 (길이 제한)
  */
-export const formatHashtags = (hashtags, separator = ' ') => {
-  if (!Array.isArray(hashtags) || hashtags.length === 0) {
-    return ''
-  }
+export const formatContentPreview = (content, maxLength = 100) => {
+  if (!content) return ''
 
-  return hashtags
-    .filter(tag => tag && tag.trim())
-    .map(tag => tag.startsWith('#') ? tag : `#${tag}`)
-    .join(separator)
+  if (content.length <= maxLength) return content
+
+  return content.substring(0, maxLength) + '...'
 }
 
 /**
- * 주소를 간단한 형태로 포맷팅
- * @param {string} fullAddress - 전체 주소
- * @param {boolean} showDetail - 상세 주소 표시 여부 (기본값: false)
- * @returns {string} 포맷팅된 주소
+ * 소셜미디어 URL 포맷
  */
-export const formatAddress = (fullAddress, showDetail = false) => {
-  if (!fullAddress) return ''
+export const formatSocialUrl = (username, platform) => {
+  if (!username) return ''
 
-  const parts = fullAddress.split(' ')
-  
-  if (showDetail) {
-    return fullAddress
+  const urls = {
+    instagram: `https://instagram.com/${username}`,
+    facebook: `https://facebook.com/${username}`,
+    twitter: `https://twitter.com/${username}`,
+    youtube: `https://youtube.com/@${username}`,
+    naver_blog: `https://blog.naver.com/${username}`,
   }
 
-  // 시/도, 구/군만 표시
-  if (parts.length >= 2) {
-    return `${parts[0]} ${parts[1]}`
-  }
-
-  return fullAddress
+  return urls[platform] || username
 }
 
 /**
- * 배열을 문자열로 포맷팅
- * @param {Array} array - 포맷팅할 배열
- * @param {string} separator - 구분자 (기본값: ', ')
- * @param {number} maxItems - 최대 표시 항목 수
- * @returns {string} 포맷팅된 문자열
+ * 성과 지표 포맷 (K, M 단위)
  */
-export const formatArrayToString = (array, separator = ', ', maxItems = null) => {
-  if (!Array.isArray(array) || array.length === 0) {
-    return ''
+export const formatMetric = (number) => {
+  if (!number && number !== 0) return '0'
+
+  if (number >= 1000000) {
+    return `${(number / 1000000).toFixed(1)}M`
+  }
+  if (number >= 1000) {
+    return `${(number / 1000).toFixed(1)}K`
   }
 
-  const items = maxItems ? array.slice(0, maxItems) : array
-  const result = items.join(separator)
+  return formatNumber(number)
+}
 
-  if (maxItems && array.length > maxItems) {
-    const remaining = array.length - maxItems
-    return `${result} 외 ${remaining}개`
+/**
+ * 진행률 포맷
+ */
+export const formatProgress = (current, total) => {
+  if (!total || total === 0) return '0%'
+
+  const percentage = (current / total) * 100
+  return `${Math.round(percentage)}%`
+}
+
+/**
+ * 이메일 마스킹 포맷
+ */
+export const formatEmailMask = (email) => {
+  if (!email) return ''
+
+  const [username, domain] = email.split('@')
+  if (!domain) return email
+
+  const maskedUsername =
+    username.length > 2 ? username.substring(0, 2) + '*'.repeat(username.length - 2) : username
+
+  return `${maskedUsername}@${domain}`
+}
+
+/**
+ * 주소 간단 포맷
+ */
+export const formatAddressShort = (address) => {
+  if (!address) return ''
+
+  // 상세주소 제거하고 주요 정보만 표시
+  const parts = address.split(' ')
+  if (parts.length > 3) {
+    return parts.slice(0, 3).join(' ') + '...'
   }
 
-  return result
+  return address
+}
+
+/**
+ * 평점 포맷 (별점)
+ */
+export const formatRating = (rating, maxRating = 5) => {
+  if (!rating && rating !== 0) return '☆'.repeat(maxRating)
+
+  const fullStars = Math.floor(rating)
+  const hasHalfStar = rating % 1 >= 0.5
+  const emptyStars = maxRating - fullStars - (hasHalfStar ? 1 : 0)
+
+  return '★'.repeat(fullStars) + (hasHalfStar ? '☆' : '') + '☆'.repeat(emptyStars)
+}
+
+/**
+ * 운영시간 포맷
+ */
+export const formatBusinessHours = (openTime, closeTime) => {
+  if (!openTime || !closeTime) return '운영시간 미정'
+
+  return `${formatTime(openTime)} - ${formatTime(closeTime)}`
+}
+
+/**
+ * 나이 계산 및 포맷
+ */
+export const formatAge = (birthDate) => {
+  if (!birthDate) return ''
+
+  const today = new Date()
+  const birth = new Date(birthDate)
+  let age = today.getFullYear() - birth.getFullYear()
+
+  const monthDiff = today.getMonth() - birth.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--
+  }
+
+  return `${age}세`
 }
