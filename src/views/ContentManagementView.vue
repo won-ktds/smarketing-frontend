@@ -979,7 +979,8 @@ onMounted(async () => {
 
 .content-preview {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  line-clamp: 3; /* 표준 속성 추가 */
+  -webkit-line-clamp: 3; /* 웹킷 fallback */
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.4;
