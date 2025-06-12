@@ -92,7 +92,9 @@
             <div class="d-flex align-center justify-between w-100">
               <div>
                 <h3 class="text-h6 font-weight-bold mb-1">매출 추이 분석</h3>
-                <p class="text-body-2 text-grey-darken-1 mb-0">최근 7일간 매출 현황</p>
+                <p class="text-body-2 text-grey-darken-1 mb-0">
+                  최근 {{ chartPeriod.replace('d', '일') }}간 매출 현황
+                </p>
               </div>
               <v-btn-toggle
                 v-model="chartPeriod"
