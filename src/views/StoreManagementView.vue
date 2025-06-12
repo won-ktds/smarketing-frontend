@@ -466,10 +466,532 @@
     >
       {{ snackbar.message }}
     </v-snackbar>
+    
+    <!-- 매장 등록/수정 다이얼로그 -->
+    <v-dialog
+      v-model="showCreateDialog"
+      max-width="800"
+      persistent
+      scrollable
+    >
+      <v-card>
+        <v-card-title class="pa-4">
+          <span class="text-h6">{{ editMode ? '매장 정보 수정' : '매장 정보 등록' }}</span>
+          <v-spacer />
+        </v-card-title>
+
+        <v-divider />
+
+        <v-card-text class="pa-6" style="max-height: 500px;">
+          <v-form ref="storeForm" v-model="formValid">
+            <v-row>
+              <!-- 매장 이미지 -->
+              <v-col cols="12">
+                <h4 class="text-subtitle-1 font-weight-bold mb-3">매장 이미지</h4>
+                <div class="text-center mb-4">
+                  <v-avatar size="120" class="mb-3">
+                    <v-img
+                      :src="formData.imageUrl || '/images/store-placeholder.png'"
+                      alt="매장 이미지"
+                    />
+                  </v-avatar>
+                  <br>
+                  <v-btn
+                    color="primary"
+                    variant="outlined"
+                    prepend-icon="mdi-camera"
+                    @click="selectImage"
+                  >
+                    이미지 선택
+                  </v-btn>
+                  <input
+                    ref="imageInput"
+                    type="file"
+                    accept="image/*"
+                    style="display: none;"
+                    @change="handleImageUpload"
+                  >
+                </div>
+              </v-col>
+
+              <!-- 기본 정보 -->
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="formData.storeName"
+                  label="매장명 *"
+                  variant="outlined"
+                  :rules="[v => !!v || '매장명을 입력해주세요']"
+                  required
+                />
+              </v-col>
+
+              <v-col cols="12" sm="6">
+                <v-select
+                  v-model="formData.businessType"
+                  label="업종 *"
+                  variant="outlined"
+                  :items="businessTypes"
+                  :rules="[v => !!v || '업종을 선택해주세요']"
+                  required
+                />
+              </v-col>
+
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="formData.ownerName"
+                  label="사업자명 *"
+                  variant="outlined"
+                  :rules="[v => !!v || '사업자명을 입력해주세요']"
+                  required
+                />
+              </v-col>
+
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="formData.businessNumber"
+                  label="사업자등록번호 *"
+                  variant="outlined"
+                  :rules="businessNumberRules"
+                  required
+                />
+              </v-col>
+
+              <v-col cols="12">
+                <v-text-field
+                  v-model="formData.address"
+                  label="주소 *"
+                  variant="outlined"
+                  :rules="[v => !!v || '주소를 입력해주세요']"
+                  required
+                />
+              </v-col>
+
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="formData.phoneNumber"
+                  label="연락처 *"
+                  variant="outlined"
+                  :rules="phoneRules"
+                  required
+                />
+              </v-col>
+
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model.number="formData.seatCount"
+                  label="좌석 수"
+                  variant="outlined"
+                  type="number"
+                  min="0"
+                />
+              </v-col>
+
+              <!-- SNS 정보 -->
+              <div class="form-section">
+                <h3 class="text-h6 font-weight-bold mb-4">SNS 계정 정보</h3>
+                
+                <v-row>
+                  <!-- 인스타그램 -->
+                  <v-col cols="12" md="6">
+                    <div class="d-flex align-center mb-2">
+                      <v-icon color="purple" class="mr-2">mdi-instagram</v-icon>
+                      <span class="text-subtitle-2 font-weight-medium">인스타그램</span>
+                    </div>
+                    
+                    <div class="d-flex gap-2 align-center">
+                      <v-text-field
+                        v-model="formData.instagramUrl"
+                        placeholder="@계정명 또는 URL 입력"
+                        variant="outlined"
+                        density="comfortable"
+                        prepend-inner-icon="mdi-at"
+                        hide-details="auto"
+                        class="flex-grow-1"
+                      />
+                      <v-btn
+                        color="purple"
+                        size="small"
+                        variant="tonal"
+                        :loading="snsCheckLoading.instagram"
+                        @click="checkSnsConnection('instagram')"
+                      >
+                        연동 확인
+                      </v-btn>
+                    </div>
+                  </v-col>
+                  
+                  <!-- 네이버 블로그 -->
+                  <v-col cols="12" md="6">
+                    <div class="d-flex align-center mb-2">
+                      <v-icon color="green" class="mr-2">mdi-blogger</v-icon>
+                      <span class="text-subtitle-2 font-weight-medium">네이버 블로그</span>
+                    </div>
+                    
+                    <div class="d-flex gap-2 align-center">
+                      <v-text-field
+                        v-model="formData.blogUrl"
+                        placeholder="blog.naver.com/계정명"
+                        variant="outlined"
+                        density="comfortable"
+                        prepend-inner-icon="mdi-web"
+                        hide-details="auto"
+                        class="flex-grow-1"
+                      />
+                      <v-btn
+                        color="green"
+                        size="small"
+                        variant="tonal"
+                        :loading="snsCheckLoading.naver_blog"
+                        @click="checkSnsConnection('naver_blog')"
+                      >
+                        연동 확인
+                      </v-btn>
+                    </div>
+                  </v-col>
+                </v-row>
+              </div>
+
+              <!-- 운영 정보 -->
+              <v-col cols="12">
+                <h4 class="text-subtitle-1 font-weight-bold mb-3">운영 정보</h4>
+              </v-col>
+
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="formData.openTime"
+                  label="오픈 시간"
+                  variant="outlined"
+                  type="time"
+                />
+              </v-col>
+
+              <v-col cols="12" sm="6">
+                <v-text-field
+                  v-model="formData.closeTime"
+                  label="마감 시간"
+                  variant="outlined"
+                  type="time"
+                />
+              </v-col>
+
+              <v-col cols="12">
+                <v-select
+                  v-model="formData.holidays"
+                  label="휴무일"
+                  variant="outlined"
+                  :items="daysOfWeek"
+                  multiple
+                  chips
+                />
+              </v-col>
+
+              <v-col cols="12" sm="6">
+                <v-switch
+                  v-model="formData.deliveryAvailable"
+                  label="배달 서비스"
+                  color="primary"
+                />
+              </v-col>
+
+              <v-col cols="12" sm="6">
+                <v-switch
+                  v-model="formData.takeoutAvailable"
+                  label="포장 서비스"
+                  color="primary"
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card-text>
+
+        <v-divider />
+
+        <v-card-actions class="pa-4">
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="closeDialog"
+          >
+            취소
+          </v-btn>
+          <v-btn
+            color="primary"
+            :loading="saving"
+            :disabled="!formValid"
+            @click="saveStoreInfo"
+          >
+            {{ editMode ? '수정하기' : '등록하기' }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 메뉴 등록/수정 다이얼로그 -->
+    <v-dialog
+      v-model="showMenuDialog"
+      max-width="600"
+      persistent
+      scrollable
+    >
+      <v-card>
+        <v-card-title class="pa-4">
+          <span class="text-h6">{{ editMenuMode ? '메뉴 수정' : '메뉴 등록' }}</span>
+          <v-spacer />
+          <v-btn
+            icon
+            @click="closeMenuDialog"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <v-divider />
+
+        <v-card-text class="pa-6" style="max-height: 500px;">
+          <v-form ref="menuForm" v-model="menuFormValid">
+            <!-- 메뉴 이미지 -->
+            <div class="text-center mb-6">
+              <v-img
+                :src="menuFormData.imageUrl || '/images/menu-placeholder.png'"
+                :alt="menuFormData.menuName"
+                max-width="200"
+                max-height="150"
+                class="mx-auto mb-3 rounded"
+              />
+              <v-btn
+                color="primary"
+                variant="outlined"
+                prepend-icon="mdi-camera"
+                @click="selectMenuImage"
+              >
+                이미지 선택
+              </v-btn>
+              <input
+                ref="menuImageInput"
+                type="file"
+                accept="image/*"
+                style="display: none;"
+                @change="handleMenuImageUpload"
+              >
+            </div>
+
+            <v-row>
+              <v-col cols="12" sm="8">
+                <v-text-field
+                  v-model="menuFormData.menuName"
+                  label="메뉴명 *"
+                  variant="outlined"
+                  :rules="[v => !!v || '메뉴명을 입력해주세요']"
+                  required
+                />
+              </v-col>
+
+              <v-col cols="12" sm="4">
+                <v-text-field
+                  v-model.number="menuFormData.price"
+                  label="가격 *"
+                  variant="outlined"
+                  type="number"
+                  prefix="₩"
+                  :rules="priceRules"
+                  required
+                />
+              </v-col>
+
+              <v-col cols="12">
+                <v-combobox
+                  v-model="menuFormData.category"
+                  label="카테고리 *"
+                  variant="outlined"
+                  :items="menuCategories"
+                  :rules="[v => !!v || '카테고리를 선택해주세요']"
+                  required
+                />
+              </v-col>
+
+              <v-col cols="12">
+                <v-textarea
+                  v-model="menuFormData.description"
+                  label="메뉴 설명"
+                  variant="outlined"
+                  rows="3"
+                  placeholder="메뉴에 대한 자세한 설명을 입력해주세요"
+                />
+              </v-col>
+
+              <v-col cols="12" sm="6">
+                <div class="d-flex flex-column gap-2 mt-4">
+                  <v-switch
+                    v-model="menuFormData.available"
+                    label="판매 중"
+                    color="success"
+                  />
+                  <v-switch
+                    v-model="menuFormData.recommended"
+                    label="추천 메뉴"
+                    color="warning"
+                  />
+                </div>
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card-text>
+
+        <v-divider />
+
+        <v-card-actions class="pa-4">
+          <v-spacer />
+          <v-btn
+            variant="text"
+            @click="closeMenuDialog"
+          >
+            취소
+          </v-btn>
+          <v-btn
+            color="primary"
+            :loading="savingMenu"
+            :disabled="!menuFormValid"
+            @click="saveMenu"
+          >
+            {{ editMenuMode ? '수정하기' : '등록하기' }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 메뉴 삭제 확인 다이얼로그 -->
+    <v-dialog v-model="showDeleteMenuDialog" max-width="400">
+      <v-card>
+        <v-card-title class="text-h6">메뉴 삭제</v-card-title>
+        <v-card-text>
+          <p>정말로 <strong>{{ deleteMenuTarget?.menuName }}</strong> 메뉴를 삭제하시겠습니까?</p>
+          <v-alert type="warning" variant="tonal" class="mt-3">
+            삭제된 메뉴는 복구할 수 없습니다.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            color="grey"
+            variant="text"
+            @click="showDeleteMenuDialog = false"
+          >
+            취소
+          </v-btn>
+          <v-btn
+            color="error"
+            :loading="deletingMenu"
+            @click="deleteMenu"
+          >
+            삭제
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- 메뉴 상세 다이얼로그 -->
+    <v-dialog v-model="showMenuDetailDialog" max-width="500">
+      <v-card class="menu-detail-card">
+        <v-card-title class="pa-4">
+          <span class="text-h6">메뉴 상세 정보</span>
+          <v-spacer />
+          <v-btn
+            icon
+            @click="showMenuDetailDialog = false"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+
+        <v-divider />
+
+        <v-card-text class="pa-4" v-if="selectedMenuDetail">
+          <!-- 메뉴 이미지 -->
+          <div class="text-center mb-4">
+            <v-img
+              :src="selectedMenuDetail.imageUrl || '/images/menu-placeholder.png'"
+              :alt="selectedMenuDetail.menuName"
+              max-width="300"
+              max-height="200"
+              class="mx-auto rounded"
+            />
+          </div>
+
+          <!-- 메뉴 기본 정보 -->
+          <div class="menu-detail-info mb-4">
+            <h3 class="text-h6 font-weight-bold mb-2">{{ selectedMenuDetail.menuName }}</h3>
+            <p class="text-body-1 mb-2">
+              {{ selectedMenuDetail.description || '설명이 없습니다.' }}
+            </p>
+          </div>
+
+          <!-- 메뉴 정보 카드들 -->
+          <v-row>
+            <v-col cols="6">
+              <v-card variant="tonal" color="primary" class="text-center pa-4">
+                <v-icon size="32" class="mb-2">mdi-food</v-icon>
+                <h4 class="text-subtitle-1 font-weight-bold">카테고리</h4>
+                <p class="text-body-2">{{ selectedMenuDetail.category }}</p>
+              </v-card>
+            </v-col>
+            <v-col cols="6">
+              <v-card variant="tonal" color="success" class="text-center pa-4">
+                <v-icon size="32" class="mb-2">mdi-currency-krw</v-icon>
+                <h4 class="text-subtitle-1 font-weight-bold">가격</h4>
+                <p class="text-body-2">{{ formatCurrency(selectedMenuDetail.price) }}</p>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-card-text>
+
+        <v-divider />
+
+        <v-card-actions class="pa-4 justify-end">
+          <v-btn
+            variant="text"
+            @click="showMenuDetailDialog = false"
+          >
+            닫기
+          </v-btn>
+          <v-btn
+            color="primary"
+            @click="editFromDetail"
+          >
+            수정하기
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- SNS 연동 확인 결과 다이얼로그 -->
+    <v-dialog v-model="showSnsResultDialog" max-width="400">
+      <v-card>
+        <v-card-title class="pa-4">
+          <v-icon :color="snsConnectionResult.success ? 'success' : 'error'" class="mr-2">
+            {{ snsConnectionResult.success ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+          </v-icon>
+          SNS 연동 확인
+        </v-card-title>
+        <v-card-text class="pa-4">
+          <p>{{ snsConnectionResult.message }}</p>
+        </v-card-text>
+        <v-card-actions class="pa-4">
+          <v-spacer />
+          <v-btn
+            color="primary"
+            @click="showSnsResultDialog = false"
+          >
+            확인
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </v-container>
+</template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useStoreStore } from '@/stores/store'
+import { useStoreStore } from '@/store/index'
 
 /**
  * AI 마케팅 서비스 - 매장 관리 페이지
