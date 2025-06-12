@@ -126,56 +126,60 @@
                 </v-col>
               </v-row>
               
-              <!-- SNS 계정 정보 -->
-              <v-divider class="my-6" />
-              
-              <h4 class="text-h6 font-weight-bold mb-4">SNS 계정 정보</h4>
-              
-              <v-row>
-                <v-col cols="12" sm="6">
-                  <div class="d-flex align-center justify-space-between">
-                    <div class="d-flex align-center">
-                      <v-icon color="purple" class="mr-3">mdi-instagram</v-icon>
-                      <div>
-                        <p class="text-body-2 text-grey mb-1">Instagram</p>
-                        <p class="text-body-1">{{ storeInfo.instagramUrl || '등록되지 않음' }}</p>
-                      </div>
-                    </div>
-                    <v-btn
-                      v-if="storeInfo.instagramUrl"
-                      color="purple"
-                      size="small"
-                      variant="tonal"
-                      @click="checkSnsConnection('instagram')"
-                      :loading="snsCheckLoading.instagram"
-                    >
-                      연동 확인
-                    </v-btn>
-                  </div>
-                </v-col>
-                
-                <v-col cols="12" sm="6">
-                  <div class="d-flex align-center justify-space-between">
-                    <div class="d-flex align-center">
-                      <v-icon color="green" class="mr-3">mdi-blogger</v-icon>
-                      <div>
-                        <p class="text-body-2 text-grey mb-1">네이버 블로그</p>
-                        <p class="text-body-1">{{ storeInfo.blogUrl || '등록되지 않음' }}</p>
-                      </div>
-                    </div>
-                    <v-btn
-                      v-if="storeInfo.blogUrl"
-                      color="green"
-                      size="small"
-                      variant="tonal"
-                      @click="checkSnsConnection('naver_blog')"
-                      :loading="snsCheckLoading.naver_blog"
-                    >
-                      연동 확인
-                    </v-btn>
-                  </div>
-                </v-col>
-              </v-row>
+              <!-- SNS 정보 섹션 수정 부분 -->
+              <v-col cols="12">
+                <h4 class="text-subtitle-1 font-weight-bold mb-3">SNS 계정 정보</h4>
+              </v-col>
+
+              <!-- 인스타그램 -->
+              <v-col cols="12">
+                <div class="d-flex align-center" style="gap: 12px;">
+                  <v-text-field
+                    v-model="formData.instagramUrl"
+                    label="Instagram URL"
+                    variant="outlined"
+                    prepend-inner-icon="mdi-instagram"
+                    style="flex: 1;"
+                    placeholder="https://instagram.com/yourstore"
+                  />
+                  <v-btn
+                    color="purple"
+                    variant="tonal"
+                    prepend-icon="mdi-check-circle"
+                    size="default"
+                    style="min-width: 120px; height: 56px;"
+                    @click="checkSnsConnection('instagram')"
+                    :loading="snsCheckLoading.instagram"
+                  >
+                    연동 확인
+                  </v-btn>
+                </div>
+              </v-col>
+
+              <!-- 네이버 블로그 -->
+              <v-col cols="12">
+                <div class="d-flex align-center" style="gap: 12px;">
+                  <v-text-field
+                    v-model="formData.blogUrl"
+                    label="네이버 블로그 URL"
+                    variant="outlined"
+                    prepend-inner-icon="mdi-notebook"
+                    style="flex: 1;"
+                    placeholder="https://blog.naver.com/yourstore"
+                  />
+                  <v-btn
+                    color="green"
+                    variant="tonal"
+                    prepend-icon="mdi-check-circle"
+                    size="default"
+                    style="min-width: 120px; height: 56px;"
+                    @click="checkSnsConnection('naver_blog')"
+                    :loading="snsCheckLoading.naver_blog"
+                  >
+                    연동 확인
+                  </v-btn>
+                </div>
+              </v-col>
 
               <!-- 운영 정보 -->
               <v-divider class="my-6" />
@@ -2180,5 +2184,22 @@ const editFromDetail = () => {
 .v-card[variant="tonal"]:hover {
   transform: scale(1.02);
   transition: transform 0.2s ease;
+}
+
+/* SNS 입력 행 레이아웃 */
+.sns-input-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.sns-text-field {
+  flex: 1 !important;
+}
+
+.sns-check-btn {
+  flex-shrink: 0 !important;
+  min-width: 120px !important;
+  height: 56px !important;
 }
 </style>
