@@ -1,276 +1,277 @@
 //* src/views/ContentCreationView.vue
 <template>
-  <v-container fluid class="pa-4">
-    <!-- 페이지 헤더 -->
-    <v-row class="mb-4">
-      <v-col cols="12">
-        <div class="d-flex align-center">
-          <v-btn icon variant="text" @click="$router.go(-1)" class="mr-2">
-            <v-icon>mdi-arrow-left</v-icon>
-          </v-btn>
-          <h1 class="text-h4 font-weight-bold">콘텐츠 생성</h1>
-        </div>
-      </v-col>
-    </v-row>
+  <v-container fluid class="pa-0" style="height: 100vh; overflow: hidden;">
+    <!-- 책자 형식 레이아웃 -->
+    <v-row no-gutters style="height: 100vh;">
+      <!-- 왼쪽 패널: 콘텐츠 생성 기능 -->
+      <v-col cols="6" class="left-panel">
+        <v-card flat tile style="height: 100vh; overflow-y: auto;">
+          <!-- 헤더 -->
+          <v-card-title class="text-h5 pa-4 bg-primary text-white d-flex align-center">
+            <v-btn icon variant="text" @click="$router.go(-1)" class="mr-2" color="white">
+              <v-icon>mdi-arrow-left</v-icon>
+            </v-btn>
+            <v-icon class="mr-2">mdi-creation</v-icon>
+            콘텐츠 생성
+            (최대 3개)
+          </v-card-title>
 
-    <!-- 콘텐츠 타입 선택 -->
-    <v-row class="mb-6">
-      <v-col cols="12">
-        <v-card elevation="2">
-          <v-card-title>콘텐츠 유형 선택</v-card-title>
-          <v-card-text>
-            <v-row>
-              <v-col v-for="type in contentTypes" :key="type.value" cols="6" md="3">
-                <v-card
-                  :color="selectedType === type.value ? 'primary' : 'default'"
-                  :variant="selectedType === type.value ? 'flat' : 'outlined'"
-                  class="text-center cursor-pointer"
-                  @click="selectContentType(type.value)"
-                >
-                  <v-card-text class="pa-4">
-                    <v-icon
-                      :color="selectedType === type.value ? 'white' : type.color"
-                      size="48"
-                      class="mb-2"
+          <v-card-text class="pa-4">
+            <!-- 1. 콘텐츠 타입 선택 -->
+            <v-card class="mb-4" elevation="1">
+              <v-card-title class="text-h6 py-3">1. 콘텐츠 유형 선택</v-card-title>
+              <v-card-text>
+                <v-row>
+                  <v-col
+                    v-for="type in contentTypes"
+                    :key="type.value"
+                    cols="6"
+                  >
+                    <v-card
+                      :color="selectedType === type.value ? 'primary' : 'grey-lighten-4'"
+                      :elevation="selectedType === type.value ? 8 : 2"
+                      class="pa-3 text-center cursor-pointer"
+                      @click="selectContentType(type.value)"
                     >
-                      {{ type.icon }}
-                    </v-icon>
-                    <div
-                      class="text-body-1 font-weight-medium"
-                      :class="selectedType === type.value ? 'text-white' : ''"
-                    >
-                      {{ type.label }}
-                    </div>
-                    <div
-                      class="text-caption"
-                      :class="selectedType === type.value ? 'text-white' : 'text-grey'"
-                    >
-                      {{ type.description }}
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- 콘텐츠 생성 폼 -->
-    <div v-if="selectedType">
-      <v-row>
-        <!-- 좌측: 기본 정보 입력 -->
-        <v-col cols="12" md="8">
-          <v-card elevation="2">
-            <v-card-title>기본 정보</v-card-title>
-            <v-card-text>
-              <v-form ref="contentForm" v-model="formValid">
-                <!-- 제목 -->
-                <v-text-field
-                  v-model="formData.title"
-                  label="제목"
-                  variant="outlined"
-                  :rules="titleRules"
-                  required
-                  class="mb-4"
-                />
-
-                <!-- 플랫폼 선택 -->
-                <v-select
-                  v-model="formData.platform"
-                  :items="platformOptions"
-                  label="발행 플랫폼"
-                  variant="outlined"
-                  :rules="platformRules"
-                  required
-                  class="mb-4"
-                >
-                  <template v-slot:item="{ props, item }">
-                    <v-list-item v-bind="props">
-                      <template v-slot:prepend>
-                        <v-icon :color="getPlatformColor(item.value)">
-                          {{ getPlatformIcon(item.value) }}
-                        </v-icon>
-                      </template>
-                    </v-list-item>
-                  </template>
-                </v-select>
-
-                <!-- 홍보 대상 -->
-                <v-select
-                  v-model="formData.targetType"
-                  :items="targetTypes"
-                  label="홍보 대상"
-                  variant="outlined"
-                  :rules="targetRules"
-                  required
-                  class="mb-4"
-                />
-
-                <!-- 이벤트명 (홍보 대상이 이벤트인 경우) -->
-                <v-text-field
-                  v-if="formData.targetType === 'event'"
-                  v-model="formData.eventName"
-                  label="이벤트명"
-                  variant="outlined"
-                  :rules="eventNameRules"
-                  class="mb-4"
-                />
-
-                <!-- 홍보 기간 -->
-                <v-row class="mb-4">
-                  <v-col cols="6">
-                    <v-text-field
-                      v-model="formData.startDate"
-                      label="홍보 시작일"
-                      type="date"
-                      variant="outlined"
-                      :rules="startDateRules"
-                      required
-                    />
-                  </v-col>
-                  <v-col cols="6">
-                    <v-text-field
-                      v-model="formData.endDate"
-                      label="홍보 종료일"
-                      type="date"
-                      variant="outlined"
-                      :rules="endDateRules"
-                      required
-                    />
+                      <v-icon
+                        :color="selectedType === type.value ? 'white' : type.color"
+                        size="32"
+                        class="mb-2"
+                      >
+                        {{ type.icon }}
+                      </v-icon>
+                      <div
+                        class="text-body-2 font-weight-medium"
+                        :class="selectedType === type.value ? 'text-white' : ''"
+                      >
+                        {{ type.label }}
+                      </div>
+                      <div
+                        class="text-caption"
+                        :class="selectedType === type.value ? 'text-white' : 'text-grey'"
+                      >
+                        {{ type.description }}
+                      </div>
+                    </v-card>
                   </v-col>
                 </v-row>
+              </v-card-text>
+            </v-card>
 
-                <!-- 콘텐츠 내용 (수동 입력 모드) -->
-                <div v-if="!useAI">
-                  <v-textarea
-                    v-model="formData.content"
-                    label="콘텐츠 내용"
-                    variant="outlined"
-                    rows="6"
-                    :rules="contentRules"
-                    counter="500"
-                    class="mb-4"
-                  />
+            <!-- 콘텐츠 생성 폼 -->
+            <div v-if="selectedType">
+              <!-- 2. 기본 정보 -->
+              <v-card class="mb-4" elevation="1">
+                <v-card-title class="text-h6 py-3">2. 기본 정보</v-card-title>
+                <v-card-text>
+                  <v-form ref="contentForm" v-model="formValid">
+                    <!-- 제목 -->
+                    <v-text-field
+                      v-model="formData.title"
+                      label="제목"
+                      variant="outlined"
+                      :rules="titleRules"
+                      required
+                      density="compact"
+                      class="mb-3"
+                    />
 
-                  <!-- 해시태그 -->
-                  <v-combobox
-                    v-model="formData.hashtags"
-                    label="해시태그"
-                    variant="outlined"
-                    multiple
-                    chips
-                    closable-chips
-                    hint="엔터로 해시태그를 추가하세요"
-                    persistent-hint
-                    class="mb-4"
-                  />
-                </div>
-              </v-form>
-            </v-card-text>
-          </v-card>
+                    <!-- 플랫폼 선택 -->
+                    <v-select
+                      v-model="formData.platform"
+                      :items="platformOptions"
+                      label="발행 플랫폼"
+                      variant="outlined"
+                      :rules="platformRules"
+                      required
+                      density="compact"
+                      class="mb-3"
+                    >
+                      <template v-slot:item="{ props, item }">
+                        <v-list-item v-bind="props">
+                          <template v-slot:prepend>
+                            <v-icon :color="getPlatformColor(item.value)">
+                              {{ getPlatformIcon(item.value) }}
+                            </v-icon>
+                          </template>
+                        </v-list-item>
+                      </template>
+                    </v-select>
 
-          <!-- AI 생성 옵션 -->
-          <v-card elevation="2" class="mt-4">
-            <v-card-title class="d-flex align-center">
-              <v-icon color="primary" class="mr-2">mdi-robot</v-icon>
-              AI 콘텐츠 생성
-              <v-spacer />
-              <v-switch v-model="useAI" color="primary" hide-details />
-            </v-card-title>
+                    <!-- 홍보 대상 -->
+                    <v-select
+                      v-model="formData.targetType"
+                      :items="targetTypes"
+                      label="홍보 대상"
+                      variant="outlined"
+                      :rules="targetRules"
+                      required
+                      density="compact"
+                      class="mb-3"
+                    />
 
-            <v-card-text v-if="useAI">
-              <v-row>
-                <!-- 톤앤매너 -->
-                <v-col cols="6" md="3">
+                    <!-- 이벤트명 (홍보 대상이 이벤트인 경우) -->
+                    <v-text-field
+                      v-if="formData.targetType === 'event'"
+                      v-model="formData.eventName"
+                      label="이벤트명"
+                      variant="outlined"
+                      :rules="eventNameRules"
+                      density="compact"
+                      class="mb-3"
+                    />
+
+                    <!-- 이벤트 기간 -->
+                    <v-row v-if="formData.targetType === 'event'">
+                      <v-col cols="6">
+                        <v-text-field
+                          v-model="formData.startDate"
+                          label="시작일"
+                          type="date"
+                          variant="outlined"
+                          :rules="startDateRules"
+                          density="compact"
+                        />
+                      </v-col>
+                      <v-col cols="6">
+                        <v-text-field
+                          v-model="formData.endDate"
+                          label="종료일"
+                          type="date"
+                          variant="outlined"
+                          :rules="endDateRules"
+                          density="compact"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-form>
+                </v-card-text>
+              </v-card>
+
+              <!-- 3. AI 옵션 설정 -->
+              <v-card class="mb-4" elevation="1" v-if="useAI">
+                <v-card-title class="text-h6 py-3">3. AI 옵션 설정</v-card-title>
+                <v-card-text>
+                  <!-- 톤앤매너 -->
                   <v-select
                     v-model="aiOptions.toneAndManner"
                     :items="toneOptions"
                     label="톤앤매너"
                     variant="outlined"
                     density="compact"
+                    class="mb-3"
                   />
-                </v-col>
 
-                <!-- 프로모션 -->
-                <v-col cols="6" md="3">
+                  <!-- 홍보 유형 -->
                   <v-select
                     v-model="aiOptions.promotion"
                     :items="promotionOptions"
-                    label="프로모션"
+                    label="홍보 유형"
                     variant="outlined"
                     density="compact"
+                    class="mb-3"
                   />
-                </v-col>
 
-                <!-- 감정 강도 -->
-                <v-col cols="6" md="3">
+                  <!-- 감정 강도 -->
                   <v-select
                     v-model="aiOptions.emotionIntensity"
                     :items="emotionOptions"
                     label="감정 강도"
                     variant="outlined"
                     density="compact"
+                    class="mb-3"
                   />
-                </v-col>
 
-                <!-- 사진 스타일 (포스터인 경우) -->
-                <v-col v-if="selectedType === 'poster'" cols="6" md="3">
+                  <!-- 포토 스타일 (포스터인 경우) -->
                   <v-select
+                    v-if="selectedType === 'poster'"
                     v-model="aiOptions.photoStyle"
                     :items="photoStyleOptions"
-                    label="사진 스타일"
+                    label="포토 스타일"
                     variant="outlined"
                     density="compact"
+                    class="mb-3"
                   />
-                </v-col>
-              </v-row>
 
-              <!-- AI 생성 요구사항 -->
-              <v-textarea
-                v-model="aiOptions.requirements"
-                label="AI 생성 요구사항 (선택사항)"
-                variant="outlined"
-                rows="3"
-                hint="특별한 요구사항이나 포함하고 싶은 내용을 입력하세요"
-                persistent-hint
-                class="mb-4"
-              />
-            </v-card-text>
-          </v-card>
-        </v-col>
+                  <!-- 추가 요구사항 -->
+                  <v-textarea
+                    v-model="aiOptions.requirements"
+                    label="추가 요구사항"
+                    variant="outlined"
+                    rows="3"
+                    density="compact"
+                    placeholder="특별히 포함하고 싶은 내용이나 요구사항을 입력해주세요"
+                  />
+                </v-card-text>
+              </v-card>
 
-        <!-- 우측: 이미지 업로드 및 미리보기 -->
-        <v-col cols="12" md="4">
-          <v-card elevation="2">
-            <v-card-title>이미지 업로드</v-card-title>
-            <v-card-text>
-              <!-- 이미지 업로드 영역 -->
-              <div class="upload-area mb-4">
-                <v-file-input
-                  v-model="uploadedFiles"
-                  label="이미지 선택"
-                  variant="outlined"
-                  multiple
-                  accept="image/*"
-                  prepend-icon="mdi-camera"
-                  @change="handleFileUpload"
-                />
+              <!-- 4. 수동 입력 (AI 사용하지 않는 경우) -->
+              <v-card class="mb-4" elevation="1" v-if="!useAI">
+                <v-card-title class="text-h6 py-3">3. 콘텐츠 직접 입력</v-card-title>
+                <v-card-text>
+                  <v-textarea
+                    v-model="formData.content"
+                    label="콘텐츠 내용"
+                    variant="outlined"
+                    rows="5"
+                    :rules="contentRules"
+                    placeholder="콘텐츠 내용을 직접 입력해주세요"
+                    class="mb-3"
+                  />
 
-                <div class="drop-zone" @dragover.prevent @drop.prevent="handleFileDrop">
-                  <v-icon size="48" color="grey-lighten-2">mdi-cloud-upload</v-icon>
-                  <p class="text-grey mt-2">드래그 앤 드롭으로 이미지를 업로드하세요</p>
-                  <p class="text-caption text-grey">JPG, PNG, GIF (최대 10MB)</p>
-                </div>
-              </div>
+                  <v-text-field
+                    v-model="hashtagInput"
+                    label="해시태그"
+                    variant="outlined"
+                    density="compact"
+                    placeholder="#해시태그를 입력하고 엔터"
+                    @keydown.enter="addHashtag"
+                    class="mb-3"
+                  />
 
-              <!-- 업로드된 이미지 미리보기 -->
-              <div v-if="previewImages.length > 0">
-                <h4 class="text-subtitle-1 mb-2">미리보기</h4>
-                <v-row>
-                  <v-col v-for="(image, index) in previewImages" :key="index" cols="6">
-                    <div class="image-preview">
-                      <v-img :src="image.url" aspect-ratio="1" cover class="rounded" />
+                  <div v-if="formData.hashtags.length" class="mb-3">
+                    <v-chip
+                      v-for="(tag, index) in formData.hashtags"
+                      :key="index"
+                      closable
+                      @click:close="removeHashtag(index)"
+                      class="mr-1 mb-1"
+                    >
+                      #{{ tag }}
+                    </v-chip>
+                  </div>
+                </v-card-text>
+              </v-card>
+
+              <!-- 5. 이미지 업로드 -->
+              <v-card class="mb-4" elevation="1">
+                <v-card-title class="text-h6 py-3">{{ useAI ? '4' : '5' }}. 이미지 첨부</v-card-title>
+                <v-card-text>
+                  <v-file-input
+                    v-model="uploadedFiles"
+                    label="이미지 선택"
+                    multiple
+                    accept="image/*"
+                    variant="outlined"
+                    density="compact"
+                    prepend-icon="mdi-camera"
+                    @change="handleFileUpload"
+                    class="mb-3"
+                  />
+                  
+                  <!-- 업로드된 이미지 미리보기 -->
+                  <div v-if="previewImages.length" class="image-preview-grid">
+                    <div
+                      v-for="(image, index) in previewImages"
+                      :key="index"
+                      class="image-preview-item"
+                    >
+                      <v-img
+                        :src="image.url"
+                        aspect-ratio="1"
+                        cover
+                        class="rounded"
+                      />
                       <v-btn
                         icon
                         size="small"
@@ -278,102 +279,303 @@
                         class="remove-btn"
                         @click="removeImage(index)"
                       >
-                        <v-icon size="16">mdi-close</v-icon>
+                        <v-icon size="small">mdi-close</v-icon>
                       </v-btn>
                     </div>
-                  </v-col>
-                </v-row>
-              </div>
-            </v-card-text>
-          </v-card>
+                  </div>
+                </v-card-text>
+              </v-card>
 
-          <!-- 생성 버튼 -->
-          <v-card elevation="2" class="mt-4">
-            <v-card-text>
-              <v-btn
-                color="primary"
-                size="large"
-                block
-                :loading="isGenerating"
-                :disabled="!canGenerate"
-                @click="generateContent"
+              <!-- 6. 생성 방식 선택 및 버튼 -->
+              <v-card elevation="1">
+                <v-card-text>
+                  <!-- AI 사용 여부 토글 -->
+                  <v-switch
+                    v-model="useAI"
+                    label="AI 자동 생성 사용"
+                    color="primary"
+                    hide-details
+                    class="mb-4"
+                  />
+
+                  <!-- 생성 버튼 -->
+                  <v-btn
+                    color="primary"
+                    size="large"
+                    block
+                    :loading="isGenerating"
+                    :disabled="!canGenerate"
+                    @click="generateContent"
+                    class="mb-2"
+                  >
+                    <v-icon class="mr-2">
+                      {{ useAI ? 'mdi-robot' : 'mdi-content-save' }}
+                    </v-icon>
+                    {{ useAI ? 'AI 콘텐츠 생성' : '콘텐츠 저장' }}
+                  </v-btn>
+
+                  <v-btn
+                    variant="outlined"
+                    block
+                    @click="saveDraft"
+                    :disabled="!formData.title"
+                  >
+                    임시저장
+                  </v-btn>
+                </v-card-text>
+              </v-card>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <!-- 오른쪽 패널: 생성된 콘텐츠 버전 관리 -->
+      <v-col cols="6" class="right-panel">
+        <v-card flat tile style="height: 100vh; overflow-y: auto;">
+          <v-card-title class="text-h5 pa-4 bg-primary text-white d-flex align-center">
+            <v-icon class="mr-2">mdi-file-document-multiple</v-icon>
+            콘텐츠 이력
+            <v-spacer />
+            <v-btn
+              v-if="generatedVersions.length > 0"
+              icon
+              variant="text"
+              color="white"
+              @click="clearAllVersions"
+            >
+              <v-icon>mdi-delete-sweep</v-icon>
+            </v-btn>
+          </v-card-title>
+
+          <v-card-text class="pa-4">
+            <!-- 생성된 콘텐츠가 없는 경우 -->
+            <div v-if="generatedVersions.length === 0" class="text-center pa-8">
+              <v-icon size="64" color="grey-lighten-1" class="mb-4">
+                mdi-file-document-outline
+              </v-icon>
+              <h3 class="text-h6 text-grey-darken-1 mb-2">
+                아직 생성된 콘텐츠가 없습니다
+              </h3>
+              <p class="text-grey">
+                왼쪽에서 정보를 입력하고 '{{ useAI ? 'AI 콘텐츠 생성' : '콘텐츠 저장' }}' 버튼을 클릭해주세요
+              </p>
+            </div>
+
+            <!-- 생성된 콘텐츠 버전들 -->
+            <div v-else>
+              <v-card
+                v-for="(version, index) in generatedVersions"
+                :key="version.id"
+                class="mb-4 version-card"
+                :elevation="selectedVersion === index ? 4 : 2"
+                :color="selectedVersion === index ? 'primary' : ''"
+                :variant="selectedVersion === index ? 'elevated' : 'outlined'"
+                @click="selectVersion(index)"
               >
-                <v-icon class="mr-2">
-                  {{ useAI ? 'mdi-robot' : 'mdi-content-save' }}
-                </v-icon>
-                {{ useAI ? 'AI 콘텐츠 생성' : '콘텐츠 저장' }}
-              </v-btn>
+                <v-card-title class="pa-3">
+                  <div class="d-flex align-center">
+                    <v-chip
+                      :color="selectedVersion === index ? 'white' : 'primary'"
+                      :text-color="selectedVersion === index ? 'primary' : 'white'"
+                      size="small"
+                      class="mr-2"
+                    >
+                      버전 {{ index + 1 }}
+                    </v-chip>
+                    <span :class="selectedVersion === index ? 'text-white' : ''" class="flex-grow-1">
+                      {{ version.title }}
+                    </span>
+                    
+                    <!-- 버전 액션 버튼 -->                   
+                    <v-btn
+                      :color="selectedVersion === index ? 'white' : 'grey'"
+                      icon
+                      size="small"
+                      @click.stop="deleteVersion(index)"
+                    >
+                      <v-icon>mdi-delete-outline</v-icon>
+                    </v-btn>
+                  </div>
+                </v-card-title>
 
-              <v-btn
-                variant="outlined"
-                block
-                class="mt-2"
-                @click="saveDraft"
-                :disabled="!formData.title"
-              >
-                임시저장
-              </v-btn>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-    </div>
+                <v-card-text class="pa-3" :class="selectedVersion === index ? 'text-white' : ''">
+                  <!-- 플랫폼 정보 -->
+                  <div class="mb-2">
+                    <v-chip
+                      :color="getPlatformColor(version.platform)"
+                      size="small"
+                      class="mr-2"
+                    >
+                      <v-icon left size="small">{{ getPlatformIcon(version.platform) }}</v-icon>
+                      {{ getPlatformLabel(version.platform) }}
+                    </v-chip>
+                    <small :class="selectedVersion === index ? 'text-white' : 'text-grey'">
+                      {{ formatDate(version.createdAt) }}
+                    </small>
+                  </div>
 
-    <!-- 생성 결과 미리보기 -->
-    <v-dialog v-model="showPreview" max-width="600" scrollable>
-      <v-card>
-        <v-card-title class="d-flex align-center">
-          <v-icon class="mr-2">mdi-eye</v-icon>
-          콘텐츠 미리보기
+                  <!-- 콘텐츠 내용 미리보기 -->
+                  <div class="content-preview mb-2">
+                    <p class="text-body-2 content-text">
+                      {{ truncateText(version.content, 120) }}
+                    </p>
+                  </div>
+
+                  <!-- 해시태그 -->
+                  <div v-if="version.hashtags?.length" class="hashtags mb-2">
+                    <v-chip
+                      v-for="tag in version.hashtags.slice(0, 3)"
+                      :key="tag"
+                      size="x-small"
+                      variant="outlined"
+                      :color="selectedVersion === index ? 'white' : 'primary'"
+                      class="mr-1 mb-1"
+                    >
+                      #{{ tag }}
+                    </v-chip>
+                    <span v-if="version.hashtags.length > 3" 
+                          :class="selectedVersion === index ? 'text-white' : 'text-grey'"
+                          class="text-caption">
+                      +{{ version.hashtags.length - 3 }}개 더
+                    </span>
+                  </div>
+
+                  <!-- 이미지 -->
+                  <div v-if="version.images?.length" class="images">
+                    <v-row>
+                      <v-col
+                        v-for="(image, imgIndex) in version.images.slice(0, 2)"
+                        :key="imgIndex"
+                        cols="6"
+                      >
+                        <v-img
+                          :src="image"
+                          aspect-ratio="1"
+                          cover
+                          class="rounded"
+                        />
+                      </v-col>
+                    </v-row>
+                    <p v-if="version.images.length > 2" 
+                       :class="selectedVersion === index ? 'text-white' : 'text-grey'"
+                       class="text-caption mt-1">
+                      +{{ version.images.length - 2 }}개 이미지 더
+                    </p>
+                  </div>
+                </v-card-text>
+
+                <!-- 버전별 액션 -->
+                <v-card-actions class="pa-3">
+                  <v-btn
+                    :color="selectedVersion === index ? 'white' : 'secondary'"
+                    :text-color="selectedVersion === index ? 'primary' : 'white'"
+                    variant="outlined"
+                    size="small"
+                    @click.stop="editVersion(index)"
+                  >
+                    <v-icon size="small" class="mr-1">mdi-pencil</v-icon>
+                    수정
+                  </v-btn>
+                  <v-spacer />
+                  <v-btn
+                    :color="selectedVersion === index ? 'white' : 'primary'"
+                    :text-color="selectedVersion === index ? 'primary' : 'white'"
+                    size="small"
+                    @click.stop="publishVersion(index)"
+                    :loading="isPublishing && publishingIndex === index"
+                  >
+                    <v-icon size="small" class="mr-1">mdi-send</v-icon>
+                    발행
+                  </v-btn>
+                </v-card-actions>
+              </v-card>
+            </div>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- 상세 보기 다이얼로그 -->
+    <v-dialog
+      v-model="showDetailDialog"
+      max-width="800"
+      scrollable
+    >
+      <v-card v-if="selectedVersionData">
+        <v-card-title class="text-h6">
+          {{ selectedVersionData.title }} (버전 {{ selectedVersion + 1 }})
           <v-spacer />
-          <v-btn icon @click="showPreview = false">
+          <v-btn icon @click="showDetailDialog = false">
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-card-title>
 
         <v-divider />
 
-        <v-card-text v-if="generatedContent">
-          <div class="preview-content">
-            <h3 class="text-h6 mb-2">{{ generatedContent.title }}</h3>
-
-            <v-chip :color="getPlatformColor(generatedContent.platform)" size="small" class="mb-3">
-              <v-icon start>{{ getPlatformIcon(generatedContent.platform) }}</v-icon>
-              {{ getPlatformLabel(generatedContent.platform) }}
+        <v-card-text class="pa-4">
+          <!-- 플랫폼 정보 -->
+          <div class="mb-4">
+            <v-chip
+              :color="getPlatformColor(selectedVersionData.platform)"
+              size="small"
+              class="mr-2"
+            >
+              <v-icon left>{{ getPlatformIcon(selectedVersionData.platform) }}</v-icon>
+              {{ getPlatformLabel(selectedVersionData.platform) }}
             </v-chip>
+            <small class="text-grey">{{ formatDate(selectedVersionData.createdAt) }}</small>
+          </div>
 
-            <div class="content-text mb-3">
-              {{ generatedContent.content }}
+          <!-- 콘텐츠 내용 -->
+          <div class="content-full mb-4">
+            <h4 class="text-h6 mb-2">콘텐츠</h4>
+            <div class="text-body-1 content-text">
+              {{ selectedVersionData.content }}
             </div>
+          </div>
 
-            <div v-if="generatedContent.hashtags?.length" class="hashtags mb-3">
-              <v-chip
-                v-for="tag in generatedContent.hashtags"
-                :key="tag"
-                size="small"
-                variant="outlined"
-                class="mr-1 mb-1"
+          <!-- 해시태그 -->
+          <div v-if="selectedVersionData.hashtags?.length" class="hashtags mb-4">
+            <h4 class="text-h6 mb-2">해시태그</h4>
+            <v-chip
+              v-for="tag in selectedVersionData.hashtags"
+              :key="tag"
+              variant="outlined"
+              class="mr-1 mb-1"
+            >
+              #{{ tag }}
+            </v-chip>
+          </div>
+
+          <!-- 이미지 -->
+          <div v-if="selectedVersionData.images?.length" class="images">
+            <h4 class="text-h6 mb-2">이미지</h4>
+            <v-row>
+              <v-col
+                v-for="(image, index) in selectedVersionData.images"
+                :key="index"
+                cols="6"
               >
-                #{{ tag }}
-              </v-chip>
-            </div>
-
-            <div v-if="generatedContent.images?.length" class="images">
-              <v-row>
-                <v-col v-for="(image, index) in generatedContent.images" :key="index" cols="6">
-                  <v-img :src="image" aspect-ratio="1" cover class="rounded" />
-                </v-col>
-              </v-row>
-            </div>
+                <v-img :src="image" aspect-ratio="1" cover class="rounded" />
+              </v-col>
+            </v-row>
           </div>
         </v-card-text>
 
         <v-divider />
 
         <v-card-actions class="pa-4">
-          <v-btn color="secondary" variant="outlined" @click="editContent"> 수정하기 </v-btn>
+          <v-btn color="secondary" variant="outlined" @click="editVersion(selectedVersion)">
+            수정하기
+          </v-btn>
           <v-spacer />
-          <v-btn color="primary" @click="publishContent" :loading="isPublishing"> 발행하기 </v-btn>
+          <v-btn
+            color="primary"
+            @click="publishVersion(selectedVersion)"
+            :loading="isPublishing && publishingIndex === selectedVersion"
+          >
+            발행하기
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -422,8 +624,11 @@ const uploadedFiles = ref([])
 const previewImages = ref([])
 const isGenerating = ref(false)
 const isPublishing = ref(false)
-const showPreview = ref(false)
-const generatedContent = ref(null)
+const publishingIndex = ref(-1)
+const showDetailDialog = ref(false)
+const selectedVersion = ref(0)
+const generatedVersions = ref([])
+const hashtagInput = ref('')
 
 // 폼 데이터
 const formData = ref({
@@ -553,28 +758,263 @@ const endDateRules = [
 
 const contentRules = [
   (v) => useAI.value || !!v || '콘텐츠 내용을 입력해주세요',
-  (v) => !v || v.length <= 500 || '콘텐츠는 500자 이내로 입력해주세요',
 ]
 
 // 컴퓨티드 속성
 const canGenerate = computed(() => {
-  return (
-    formValid.value &&
-    selectedType.value &&
-    (useAI.value || formData.value.content) &&
-    (formData.value.targetType !== 'menu' || previewImages.value.length > 0)
-  )
+  if (!selectedType.value || !formData.value.title || !formData.value.platform || !formData.value.targetType) {
+    return false
+  }
+  
+  if (formData.value.targetType === 'event' && (!formData.value.eventName || !formData.value.startDate || !formData.value.endDate)) {
+    return false
+  }
+  
+  if (!useAI.value && !formData.value.content) {
+    return false
+  }
+  
+  return true
+})
+
+const selectedVersionData = computed(() => {
+  return generatedVersions.value[selectedVersion.value] || null
 })
 
 // 메서드
 const selectContentType = (type) => {
   selectedType.value = type
-  // 타입에 따른 기본값 설정
-  if (type === CONTENT_TYPES.SNS) {
-    formData.value.platform = PLATFORMS.INSTAGRAM
+}
+
+const handleFileUpload = (files) => {
+  if (files?.length) {
+    previewImages.value = []
+    const imagePromises = files.map(file => {
+      return new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onload = (e) => resolve({
+          file,
+          url: e.target.result,
+          name: file.name
+        })
+        reader.readAsDataURL(file)
+      })
+    })
+    
+    Promise.all(imagePromises).then(images => {
+      previewImages.value = images
+    })
   }
 }
 
+const removeImage = (index) => {
+  previewImages.value.splice(index, 1)
+  // 파일 입력도 업데이트
+  const dt = new DataTransfer()
+  previewImages.value.forEach(img => dt.items.add(img.file))
+  uploadedFiles.value = dt.files
+}
+
+const addHashtag = () => {
+  const tag = hashtagInput.value.trim().replace('#', '')
+  if (tag && !formData.value.hashtags.includes(tag)) {
+    formData.value.hashtags.push(tag)
+    hashtagInput.value = ''
+  }
+}
+
+const removeHashtag = (index) => {
+  formData.value.hashtags.splice(index, 1)
+}
+
+const generateContent = async () => {
+  if (!canGenerate.value) return
+
+  // 최대 3개 버전 체크
+  if (generatedVersions.value.length >= 3) {
+    appStore.showSnackbar('최대 3개의 버전까지만 생성할 수 있습니다.', 'warning')
+    return
+  }
+
+  isGenerating.value = true
+  
+  try {
+    const contentData = {
+      title: formData.value.title,
+      type: selectedType.value,
+      platform: formData.value.platform,
+      targetType: formData.value.targetType,
+      eventName: formData.value.eventName,
+      startDate: formData.value.startDate,
+      endDate: formData.value.endDate,
+      images: previewImages.value.map(img => img.url),
+      aiOptions: useAI.value ? aiOptions.value : null,
+      content: useAI.value ? null : formData.value.content,
+      hashtags: useAI.value ? null : formData.value.hashtags,
+    }
+
+    let newContent
+    if (useAI.value) {
+      // AI 콘텐츠 생성
+      const generated = await contentStore.generateContent(contentData)
+      newContent = {
+        id: Date.now() + Math.random(),
+        ...contentData,
+        content: generated.content,
+        hashtags: generated.hashtags,
+        createdAt: new Date(),
+        status: 'draft',
+      }
+    } else {
+      // 수동 입력 콘텐츠
+      newContent = {
+        id: Date.now() + Math.random(),
+        ...contentData,
+        createdAt: new Date(),
+        status: 'draft',
+      }
+    }
+
+    generatedVersions.value.push(newContent)
+    selectedVersion.value = generatedVersions.value.length - 1
+    
+    appStore.showSnackbar(`콘텐츠 버전 ${generatedVersions.value.length}이 생성되었습니다!`, 'success')
+  } catch (error) {
+    console.error('콘텐츠 생성 실패:', error)
+    appStore.showSnackbar('콘텐츠 생성 중 오류가 발생했습니다.', 'error')
+  } finally {
+    isGenerating.value = false
+  }
+}
+
+const generateAdditionalVersion = async () => {
+  await generateContent()
+}
+
+const selectVersion = (index) => {
+  selectedVersion.value = index
+  showDetailDialog.value = true
+}
+
+const editVersion = (index) => {
+  const version = generatedVersions.value[index]
+  
+  // 폼에 버전 데이터 로드
+  formData.value = {
+    title: version.title,
+    platform: version.platform,
+    targetType: version.targetType,
+    eventName: version.eventName || '',
+    startDate: version.startDate || '',
+    endDate: version.endDate || '',
+    content: version.content || '',
+    hashtags: [...(version.hashtags || [])],
+  }
+  
+  selectedType.value = version.type
+  
+  if (version.aiOptions) {
+    aiOptions.value = { ...version.aiOptions }
+    useAI.value = true
+  } else {
+    useAI.value = false
+  }
+  
+  showDetailDialog.value = false
+  appStore.showSnackbar('버전 데이터를 폼에 로드했습니다. 수정 후 다시 생성해주세요.', 'info')
+}
+
+const duplicateVersion = async (index) => {
+  if (generatedVersions.value.length >= 3) {
+    appStore.showSnackbar('최대 3개의 버전까지만 생성할 수 있습니다.', 'warning')
+    return
+  }
+
+  const version = generatedVersions.value[index]
+  const duplicated = {
+    ...version,
+    id: Date.now() + Math.random(),
+    title: `${version.title} (복사본)`,
+    createdAt: new Date(),
+  }
+  
+  generatedVersions.value.push(duplicated)
+  selectedVersion.value = generatedVersions.value.length - 1
+  
+  appStore.showSnackbar('버전이 복사되었습니다.', 'success')
+}
+
+const deleteVersion = (index) => {
+  generatedVersions.value.splice(index, 1)
+  if (selectedVersion.value >= generatedVersions.value.length) {
+    selectedVersion.value = Math.max(0, generatedVersions.value.length - 1)
+  }
+  appStore.showSnackbar('버전이 삭제되었습니다.', 'info')
+}
+
+const clearAllVersions = () => {
+  generatedVersions.value = []
+  selectedVersion.value = 0
+  appStore.showSnackbar('모든 버전이 삭제되었습니다.', 'info')
+}
+
+const publishVersion = async (index) => {
+  isPublishing.value = true
+  publishingIndex.value = index
+  
+  try {
+    const version = generatedVersions.value[index]
+    
+    // 실제로는 발행 API 호출
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    version.status = 'published'
+    version.publishedAt = new Date()
+    
+    appStore.showSnackbar(`버전 ${index + 1}이 성공적으로 발행되었습니다!`, 'success')
+    showDetailDialog.value = false
+    
+    // 발행 후 콘텐츠 관리 페이지로 이동할지 물어보기
+    setTimeout(() => {
+      if (confirm('발행된 콘텐츠를 확인하시겠습니까?')) {
+        router.push('/content')
+      }
+    }, 1000)
+  } catch (error) {
+    console.error('콘텐츠 발행 실패:', error)
+    appStore.showSnackbar('콘텐츠 발행 중 오류가 발생했습니다.', 'error')
+  } finally {
+    isPublishing.value = false
+    publishingIndex.value = -1
+  }
+}
+
+const saveDraft = async () => {
+  try {
+    const draftData = {
+      title: formData.value.title,
+      type: selectedType.value,
+      platform: formData.value.platform,
+      targetType: formData.value.targetType,
+      eventName: formData.value.eventName,
+      startDate: formData.value.startDate,
+      endDate: formData.value.endDate,
+      content: formData.value.content,
+      hashtags: formData.value.hashtags,
+      images: previewImages.value.map(img => img.url),
+      status: 'draft',
+      createdAt: new Date(),
+    }
+
+    await contentStore.addContent(draftData)
+    appStore.showSnackbar('임시저장되었습니다', 'success')
+  } catch (error) {
+    console.error('임시저장 실패:', error)
+    appStore.showSnackbar('임시저장에 실패했습니다', 'error')
+  }
+}
+
+// 유틸리티 함수
 const getPlatformColor = (platform) => {
   return PLATFORM_COLORS[platform] || 'grey'
 }
@@ -582,8 +1022,8 @@ const getPlatformColor = (platform) => {
 const getPlatformIcon = (platform) => {
   const icons = {
     [PLATFORMS.INSTAGRAM]: 'mdi-instagram',
-    [PLATFORMS.NAVER_BLOG]: 'mdi-blogger',
     [PLATFORMS.FACEBOOK]: 'mdi-facebook',
+    [PLATFORMS.NAVER_BLOG]: 'mdi-post',
   }
   return icons[platform] || 'mdi-web'
 }
@@ -592,110 +1032,18 @@ const getPlatformLabel = (platform) => {
   return PLATFORM_LABELS[platform] || platform
 }
 
-const handleFileUpload = (files) => {
-  if (!files || files.length === 0) return
-
-  Array.from(files).forEach((file) => {
-    if (file.size > 10 * 1024 * 1024) {
-      // 10MB 제한
-      appStore.showSnackbar('파일 크기는 10MB 이하여야 합니다', 'error')
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      previewImages.value.push({
-        file,
-        url: e.target.result,
-        name: file.name,
-      })
-    }
-    reader.readAsDataURL(file)
+const formatDate = (date) => {
+  return new Date(date).toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }
 
-const handleFileDrop = (e) => {
-  const files = e.dataTransfer.files
-  handleFileUpload(files)
-}
-
-const removeImage = (index) => {
-  previewImages.value.splice(index, 1)
-}
-
-const generateContent = async () => {
-  try {
-    isGenerating.value = true
-
-    const contentData = {
-      ...formData.value,
-      type: selectedType.value,
-      images: previewImages.value.map((img) => img.url),
-      useAI: useAI.value,
-      aiOptions: useAI.value ? aiOptions.value : null,
-    }
-
-    if (useAI.value) {
-      // AI 콘텐츠 생성
-      generatedContent.value = await contentStore.generateContent(contentData)
-      showPreview.value = true
-    } else {
-      // 수동 입력 콘텐츠 저장
-      const newContent = contentStore.addContent(contentData)
-      appStore.showSnackbar('콘텐츠가 저장되었습니다', 'success')
-      router.push('/content')
-    }
-  } catch (error) {
-    console.error('콘텐츠 생성 실패:', error)
-    appStore.showSnackbar('콘텐츠 생성에 실패했습니다', 'error')
-  } finally {
-    isGenerating.value = false
-  }
-}
-
-const saveDraft = () => {
-  try {
-    const draftData = {
-      ...formData.value,
-      type: selectedType.value,
-      images: previewImages.value.map((img) => img.url),
-      status: 'draft',
-    }
-
-    contentStore.addContent(draftData)
-    appStore.showSnackbar('임시저장되었습니다', 'success')
-  } catch (error) {
-    console.error('임시저장 실패:', error)
-    appStore.showSnackbar('임시저장에 실패했습니다', 'error')
-  }
-}
-
-const editContent = () => {
-  showPreview.value = false
-  // 생성된 콘텐츠를 폼에 다시 로드
-  if (generatedContent.value) {
-    formData.value.content = generatedContent.value.content
-    formData.value.hashtags = generatedContent.value.hashtags || []
-    useAI.value = false
-  }
-}
-
-const publishContent = async () => {
-  try {
-    isPublishing.value = true
-
-    if (generatedContent.value) {
-      await contentStore.publishContent(generatedContent.value.id)
-      appStore.showSnackbar('콘텐츠가 발행되었습니다', 'success')
-      showPreview.value = false
-      router.push('/content')
-    }
-  } catch (error) {
-    console.error('콘텐츠 발행 실패:', error)
-    appStore.showSnackbar('콘텐츠 발행에 실패했습니다', 'error')
-  } finally {
-    isPublishing.value = false
-  }
+const truncateText = (text, length) => {
+  if (!text || text.length <= length) return text
+  return text.substring(0, length) + '...'
 }
 
 // 오늘 날짜를 기본값으로 설정
@@ -705,51 +1053,82 @@ formData.value.endDate = today
 </script>
 
 <style scoped>
+.left-panel {
+  border-right: 1px solid #e0e0e0;
+  background-color: #fafafa;
+}
+
+.right-panel {
+  background-color: #f5f5f5;
+}
+
 .cursor-pointer {
   cursor: pointer;
 }
 
-.upload-area {
-  border: 2px dashed #e0e0e0;
-  border-radius: 8px;
-  padding: 1rem;
-  text-align: center;
-  transition: border-color 0.3s;
+.version-card {
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.upload-area:hover {
-  border-color: #1976d2;
+.version-card:hover {
+  transform: translateY(-2px);
 }
 
-.drop-zone {
-  padding: 2rem;
-  text-align: center;
+.content-preview {
+  max-height: 80px;
+  overflow: hidden;
 }
 
-.image-preview {
+.content-text {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.hashtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.images {
+  margin-top: 8px;
+}
+
+.image-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.image-preview-item {
   position: relative;
 }
 
 .remove-btn {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 4px;
+  right: 4px;
   background-color: rgba(255, 255, 255, 0.9);
 }
 
-.preview-content {
-  max-height: 60vh;
-  overflow-y: auto;
+/* 스크롤바 스타일링 */
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-.content-text {
-  white-space: pre-wrap;
-  line-height: 1.6;
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
 }
 
-.hashtags .v-chip {
-  margin-right: 4px;
-  margin-bottom: 4px;
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 @media (max-width: 600px) {
