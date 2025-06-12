@@ -309,7 +309,7 @@
                     <v-icon class="mr-2">
                       {{ useAI ? 'mdi-robot' : 'mdi-content-save' }}
                     </v-icon>
-                    {{ useAI ? 'AI 신규 콘텐츠 신규 생성' : '콘텐츠 저장' }}
+                    {{ useAI ? 'AI 콘텐츠 신규 생성' : '콘텐츠 저장' }}
                   </v-btn>
 
 
