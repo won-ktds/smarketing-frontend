@@ -1,4 +1,3 @@
-//* vite.config.js
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
@@ -25,13 +24,6 @@ export default defineConfig({
           vuetify: ['vuetify'],
           icons: ['@mdi/font'],
         },
-      },
-    },
-  },
-  css: {
-    preprocessorOptions: {
-      scss: {
-        additionalData: `@import "@/styles/variables.scss";`,
       },
     },
   },

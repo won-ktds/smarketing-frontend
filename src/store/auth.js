@@ -2,116 +2,154 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
-/**
- * 인증 관리 스토어
- * 로그인/로그아웃 상태 관리
- */
 export const useAuthStore = defineStore('auth', () => {
-  // State
+  // 상태
   const user = ref(null)
-  const token = ref(localStorage.getItem('auth_token') || null)
+  const token = ref(null)
+  const refreshToken = ref(null)
   const isLoading = ref(false)
 
-  // Getters
-  const isAuthenticated = computed(() => !!token.value && !!user.value)
-  const userInfo = computed(() => user.value)
+  // 컴퓨티드 - 더 엄격한 인증 체크
+  const isAuthenticated = computed(() => {
+    return !!(token.value && user.value)
+  })
 
-  // Actions
+  // 액션
   const login = async (credentials) => {
-    isLoading.value = true
-    try {
-      console.log('Auth Store - 로그인 시도:', credentials)
+    console.log('=== AUTH STORE 로그인 시작 ===')
+    console.log('받은 자격증명:', credentials)
 
-      // 임시 로그인 로직 (실제 API 연동 전)
-      if (credentials.userId === 'user01' && credentials.password === 'passw0rd') {
-        const userData = {
+    isLoading.value = true
+
+    try {
+      // 실제 API 호출 시뮬레이션
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // 정확한 자격증명 확인 (대소문자 구분, 공백 제거)
+      const username = credentials.username?.trim()
+      const password = credentials.password?.trim()
+
+      console.log('정제된 자격증명:', { username, password })
+      console.log('예상 자격증명:', { username: 'user01', password: 'passw0rd' })
+      console.log('username 일치:', username === 'user01')
+      console.log('password 일치:', password === 'passw0rd')
+
+      if (username === 'user01' && password === 'passw0rd') {
+        const mockToken = 'mock_jwt_token_' + Date.now()
+        const mockUser = {
           id: 1,
-          userId: credentials.userId,
-          name: '테스트 사용자',
-          email: 'test@example.com',
+          username: username,
+          nickname: '김사장',
+          businessName: '김사장님의 분식점',
+          email: 'kim@example.com',
+          avatar: '/images/avatar.png',
         }
 
-        const tokenData = 'temp_jwt_token_' + Date.now()
-
-        // 상태 업데이트
-        token.value = tokenData
-        user.value = userData
+        // 토큰과 사용자 정보 저장
+        token.value = mockToken
+        user.value = mockUser
 
         // 로컬 스토리지에 저장
-        localStorage.setItem('auth_token', tokenData)
-        localStorage.setItem('user_info', JSON.stringify(userData))
+        localStorage.setItem('auth_token', mockToken)
+        localStorage.setItem('user_info', JSON.stringify(mockUser))
 
-        console.log('Auth Store - 로그인 성공:', { token: tokenData, user: userData })
-        console.log('Auth Store - isAuthenticated:', isAuthenticated.value)
-
-        return { success: true, user: userData, token: tokenData }
+        console.log('로그인 성공! 사용자:', mockUser.nickname)
+        return { success: true }
       } else {
-        return { success: false, message: '아이디 또는 비밀번호가 틀렸습니다' }
+        console.log('로그인 실패 - 자격증명 불일치')
+        throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.')
       }
     } catch (error) {
-      console.error('Auth Store - 로그인 에러:', error)
-      return { success: false, message: '로그인 중 오류가 발생했습니다' }
+      console.error('로그인 실패:', error)
+      return { success: false, error: error.message }
     } finally {
       isLoading.value = false
     }
   }
 
-  const logout = () => {
-    console.log('Auth Store - 로그아웃')
-    token.value = null
-    user.value = null
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('user_info')
-  }
+  const logout = async () => {
+    try {
+      // 로컬 상태 초기화
+      user.value = null
+      token.value = null
+      refreshToken.value = null
 
-  const clearAuth = () => {
-    console.log('Auth Store - 인증 정보 클리어')
-    logout()
-  }
+      // 로컬 스토리지 정리
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('refresh_token')
+      localStorage.removeItem('user_info')
 
-  const checkAuth = () => {
-    console.log('Auth Store - 인증 상태 체크')
-    const storedToken = localStorage.getItem('auth_token')
-    const storedUser = localStorage.getItem('user_info')
-
-    if (storedToken && storedUser) {
-      try {
-        token.value = storedToken
-        user.value = JSON.parse(storedUser)
-        console.log('Auth Store - 저장된 인증 정보 복원:', { token: storedToken, user: user.value })
-      } catch (error) {
-        console.error('Auth Store - 인증 정보 복원 실패:', error)
-        clearAuth()
-      }
+      console.log('로그아웃 완료')
+      return { success: true }
+    } catch (error) {
+      console.error('로그아웃 실패:', error)
+      return { success: false, error: error.message }
     }
+  }
+
+  const checkAuthState = () => {
+    try {
+      const savedToken = localStorage.getItem('auth_token')
+      const savedUser = localStorage.getItem('user_info')
+
+      if (savedToken && savedUser) {
+        // JSON 파싱이 가능한지 확인
+        const parsedUser = JSON.parse(savedUser)
+        if (parsedUser && parsedUser.id) {
+          token.value = savedToken
+          user.value = parsedUser
+          console.log('저장된 인증 정보 복원됨:', parsedUser.nickname)
+        } else {
+          // 잘못된 사용자 정보인 경우 정리
+          clearAuthData()
+        }
+      } else {
+        console.log('저장된 인증 정보가 없음')
+      }
+    } catch (error) {
+      console.error('인증 상태 확인 실패:', error)
+      clearAuthData()
+    }
+  }
+
+  const clearAuthData = () => {
+    user.value = null
+    token.value = null
+    refreshToken.value = null
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('user_info')
+    console.log('인증 데이터 초기화됨')
   }
 
   const refreshUserInfo = async () => {
-    console.log('Auth Store - 사용자 정보 갱신')
-    // 임시로 현재 사용자 정보 반환
-    if (token.value) {
-      return Promise.resolve(user.value)
-    } else {
-      throw new Error('토큰이 없습니다')
+    if (!token.value) return
+
+    try {
+      // 실제 API 호출로 사용자 정보 갱신
+      // const response = await api.get('/auth/me')
+      // user.value = response.data
+    } catch (error) {
+      console.error('사용자 정보 갱신 실패:', error)
+      // 토큰이 유효하지 않은 경우 로그아웃
+      logout()
     }
   }
 
-  // 초기 인증 상태 체크
-  checkAuth()
-
   return {
-    // State
+    // 상태
     user,
     token,
     isLoading,
-    // Getters
+
+    // 컴퓨티드
     isAuthenticated,
-    userInfo,
-    // Actions
+
+    // 액션
     login,
     logout,
-    clearAuth,
-    checkAuth,
     refreshUserInfo,
+    checkAuthState,
+    clearAuthData,
   }
 })
