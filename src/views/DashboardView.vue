@@ -64,13 +64,6 @@
                   {{ animatedValues[index] || '0' }}
                 </span>
               </div>
-
-              <!-- 추가 정보 -->
-              <div class="metric-detail">
-                <span class="text-caption text-grey">
-                  {{ metric.detail || '전월 대비' }}
-                </span>
-              </div>
             </v-card-text>
           </v-card>
         </v-col>
