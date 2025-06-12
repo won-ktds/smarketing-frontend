@@ -6,15 +6,13 @@
       <!-- 왼쪽 패널: 콘텐츠 생성 기능 -->
       <v-col cols="6" class="left-panel">
         <v-card flat tile style="height: 100vh; overflow-y: auto;">
-          <!-- 헤더 -->
-          <v-card-title class="text-h5 pa-4 bg-primary text-white d-flex align-center">
-            <v-btn icon variant="text" @click="$router.go(-1)" class="mr-2" color="white">
-              <v-icon>mdi-arrow-left</v-icon>
-            </v-btn>
-            <v-icon class="mr-2">mdi-creation</v-icon>
-            콘텐츠 생성
-            (최대 3개)
-          </v-card-title>
+          <!-- 헤더 - 제목 형태로 변경 -->
+          <div class="pa-4 d-flex align-center" style="min-height: 64px;">
+            <v-icon class="mr-2" color="primary">mdi-creation</v-icon>
+            <h2 class="text-h5 font-weight-bold">콘텐츠 생성 (최대 3개)</h2>
+          </div>
+
+          <v-divider />
 
           <v-card-text class="pa-4">
             <!-- 1. 콘텐츠 타입 선택 -->
@@ -311,7 +309,7 @@
                     <v-icon class="mr-2">
                       {{ useAI ? 'mdi-robot' : 'mdi-content-save' }}
                     </v-icon>
-                    {{ useAI ? 'AI 콘텐츠 생성' : '콘텐츠 저장' }}
+                    {{ useAI ? 'AI 신규 콘텐츠 생성' : '콘텐츠 저장' }}
                   </v-btn>
 
 
@@ -325,20 +323,23 @@
       <!-- 오른쪽 패널: 생성된 콘텐츠 버전 관리 -->
       <v-col cols="6" class="right-panel">
         <v-card flat tile style="height: 100vh; overflow-y: auto;">
-          <v-card-title class="text-h5 pa-4 bg-primary text-white d-flex align-center">
-            <v-icon class="mr-2">mdi-file-document-multiple</v-icon>
-            콘텐츠 이력
-            <v-spacer />
+          <!-- 헤더 - 제목 형태로 변경 -->
+          <div class="pa-4 d-flex align-center justify-between">
+            <div class="d-flex align-center" style="min-height: 32px;">
+              <v-icon class="mr-2" color="primary">mdi-file-document-multiple</v-icon>
+              <h2 class="text-h5 font-weight-bold">콘텐츠 생성</h2>
+            </div>
             <v-btn
               v-if="generatedVersions.length > 0"
               icon
               variant="text"
-              color="white"
               @click="clearAllVersions"
             >
               <v-icon>mdi-delete-sweep</v-icon>
             </v-btn>
-          </v-card-title>
+          </div>
+
+          <v-divider />
 
           <v-card-text class="pa-4">
             <!-- 생성된 콘텐츠가 없는 경우 -->
