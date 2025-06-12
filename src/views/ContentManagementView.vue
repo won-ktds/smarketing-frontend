@@ -102,21 +102,6 @@
                   선택 삭제 ({{ selectedItems.length }})
                 </v-btn>
               </div>
-              
-              <!-- 뷰 옵션 -->
-              <v-btn-toggle
-                v-model="viewMode"
-                mandatory
-                class="mr-3"
-              >
-                <v-btn icon size="small" value="list">
-                  <v-icon>mdi-view-list</v-icon>
-                </v-btn>
-                <v-btn icon size="small" value="grid">
-                  <v-icon>mdi-view-grid</v-icon>
-                </v-btn>
-              </v-btn-toggle>
-              
               <!-- 새 콘텐츠 생성 -->
               <v-btn
                 color="primary"
@@ -168,7 +153,7 @@
                     </th>
                     <th width="450">제목</th>
                     <th width="150">플랫폼</th>
-                    <th width="150">생성일</th>
+                    <th width="150">프로모션 기간</th>
                     <th width="120">액션</th>
                   </tr>
                 </thead>
@@ -418,7 +403,7 @@
                 </v-chip>
               </v-col>
               <v-col cols="6">
-                <div class="text-caption grey--text">생성일</div>
+                <div class="text-caption grey--text">프로모션 기간</div>
                 <div class="text-body-2 mt-1">{{ formatDateTime(selectedContent.createdAt) }}</div>
               </v-col>
               <v-col cols="6">
