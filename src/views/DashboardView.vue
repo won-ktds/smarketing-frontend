@@ -1,22 +1,8 @@
 //* src/views/DashboardView.vue
 <template>
   <div>
-    <!-- 상단 AppBar - 로그아웃 버튼을 알림 위치로 이동 -->
-    <v-app-bar color="primary" dark app>
-      <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
-    
-      <v-spacer></v-spacer>
-      
-      <!-- 알림 자리에 로그아웃 버튼 배치 (알림 기능 삭제) -->
-      <v-btn icon @click="handleLogout">
-        <v-icon>mdi-logout</v-icon>
-        <v-tooltip activator="parent" location="bottom">로그아웃</v-tooltip>
-      </v-btn>
-    </v-app-bar>
-
-
     <!-- 메인 컨텐츠 -->
-    <v-container fluid class="pa-4" style="margin-top: 80px;">
+    <v-container fluid class="pa-4">
       <!-- 주요 지표 카드 - 제목과 증감율 위치 변경 -->
       <v-row class="mb-6">
         <v-col
@@ -295,10 +281,10 @@ import { useAppStore } from '@/store/app'
 import { formatCurrency, formatNumber, formatRelativeTime } from '@/utils/formatters'
 
 /**
- * 대시보드 메인 페이지 - 완전 수정된 버전
- * - AppBar에서 알림 자리에 로그아웃 버튼 배치 (알림 기능 삭제)
- * - 카드에서 제목과 증감율 위치 변경
- * - 매출 추이 분석에 실제같은 차트와 명확한 임시 데이터 적용
+ * 대시보드 메인 페이지 - App.vue의 단일 AppBar 사용
+ * - 중복된 AppBar 제거 (App.vue에서 제공)
+ * - 로그아웃 확인 다이얼로그 유지
+ * - 메인 컨텐츠는 그대로 유지
  */
 
 const router = useRouter()
@@ -306,7 +292,6 @@ const authStore = useAuthStore()
 const appStore = useAppStore()
 
 // 반응형 데이터
-const drawer = ref(false)
 const loading = ref(false)
 const aiLoading = ref(false)
 const chartPeriod = ref('7d')
@@ -604,7 +589,7 @@ const hideTooltip = () => {
   tooltip.value.show = false
 }
 
-// 로그아웃 핸들러
+// 로그아웃 핸들러 (App.vue의 로그아웃 버튼과 연결 가능)
 const handleLogout = () => {
   logoutDialog.value = true
 }
@@ -640,6 +625,11 @@ const refreshData = async () => {
   }
 }
 
+// 로그아웃 함수를 전역에서 호출할 수 있도록 노출 (App.vue에서 사용 가능)
+defineExpose({
+  handleLogout
+})
+
 // 라이프사이클
 onMounted(async () => {
   console.log('DashboardView 마운트됨')
@@ -673,11 +663,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* AppBar 사용자 정보 스타일 */
-.header-user-info {
-  text-align: right;
-}
-
 /* 메트릭 카드 스타일 - 수정된 버전 */
 .metric-card {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -923,10 +908,6 @@ onBeforeUnmount(() => {
 
 /* 반응형 디자인 */
 @media (max-width: 960px) {
-  .header-user-info {
-    display: none;
-  }
-  
   .metric-value {
     font-size: 1.75rem !important;
   }
@@ -972,5 +953,4 @@ onBeforeUnmount(() => {
 .v-theme--dark .chart-stats {
   background: #1E293B !important;
   border-color: #334155;
-}
-</style>
+}</style>
