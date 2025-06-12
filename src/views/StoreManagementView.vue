@@ -586,13 +586,13 @@
                 />
               </v-col>
 
-              <!-- SNS 정보 -->
+              <!-- SNS 정보 섹션 -->
               <div class="form-section">
                 <h3 class="text-h6 font-weight-bold mb-4">SNS 계정 정보</h3>
                 
                 <v-row>
                   <!-- 인스타그램 -->
-                  <v-col cols="12" md="6">
+                  <v-col cols="12">
                     <div class="d-flex align-center mb-2">
                       <v-icon color="purple" class="mr-2">mdi-instagram</v-icon>
                       <span class="text-subtitle-2 font-weight-medium">인스타그램</span>
@@ -607,42 +607,44 @@
                         prepend-inner-icon="mdi-at"
                         hide-details="auto"
                         class="flex-grow-1"
+                        style="min-width: 300px;"
                       />
                       <v-btn
                         color="purple"
-                        size="small"
                         variant="tonal"
                         :loading="snsCheckLoading.instagram"
                         @click="checkSnsConnection('instagram')"
+                        style="min-width: 80px; flex-shrink: 0;"
                       >
                         연동 확인
                       </v-btn>
                     </div>
                   </v-col>
-                  
+
                   <!-- 네이버 블로그 -->
-                  <v-col cols="12" md="6">
+                  <v-col cols="12">
                     <div class="d-flex align-center mb-2">
-                      <v-icon color="green" class="mr-2">mdi-blogger</v-icon>
+                      <v-icon color="green" class="mr-2">mdi-web</v-icon>
                       <span class="text-subtitle-2 font-weight-medium">네이버 블로그</span>
                     </div>
                     
                     <div class="d-flex gap-2 align-center">
                       <v-text-field
                         v-model="formData.blogUrl"
-                        placeholder="blog.naver.com/계정명"
+                        placeholder="blog.naver.com/계정명 형식으로 입력"
                         variant="outlined"
                         density="comfortable"
                         prepend-inner-icon="mdi-web"
                         hide-details="auto"
                         class="flex-grow-1"
+                        style="min-width: 300px;"
                       />
                       <v-btn
                         color="green"
-                        size="small"
                         variant="tonal"
-                        :loading="snsCheckLoading.naver_blog"
-                        @click="checkSnsConnection('naver_blog')"
+                        :loading="snsCheckLoading.blog"
+                        @click="checkSnsConnection('blog')"
+                        style="min-width: 80px; flex-shrink: 0;"
                       >
                         연동 확인
                       </v-btn>

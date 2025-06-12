@@ -1,6 +1,23 @@
 //* src/views/ContentManagementView.vue
 <template>
   <v-container fluid class="pa-4">
+    <!-- 페이지 헤더 -->
+    <v-row>
+      <v-col cols="12">
+        <div class="d-flex align-center mb-4">
+          <v-btn
+            icon
+            @click="$router.go(-1)"
+            class="mr-3"
+          >
+            <v-icon>mdi-arrow-left</v-icon>
+          </v-btn>
+          <h1 class="text-h5">📝 콘텐츠 관리</h1>
+        </div>
+        <p class="text-subtitle-1 grey--text">생성된 콘텐츠를 관리하고 성과를 분석합니다</p>
+      </v-col>
+    </v-row>
+
     <!-- 콘텐츠 타입 필터 (상단 이동) -->
     <v-row class="mb-4">
       <v-col cols="12">
@@ -10,8 +27,8 @@
             <div class="d-flex align-center flex-wrap">
               <div class="text-subtitle-2 mr-4 mb-2">콘텐츠 타입:</div>
               <v-chip-group 
-                v-model="selectedContentTypes" 
-                multiple 
+                v-model="selectedContentType" 
+                mandatory
                 @update:model-value="applyContentTypeFilter"
                 class="mb-2"
               >
@@ -75,8 +92,76 @@
 
     <!-- 메인 콘텐츠 영역 -->
     <v-row>
-      <!-- 콘텐츠 목록 -->
-      <v-col cols="12" md="9">
+      <!-- 좌측 사이드바 필터 - Desktop 비율 수정 -->
+      <v-col cols="12" lg="3" md="4">
+        <v-card elevation="2" height="400" class="sticky-sidebar">
+          <v-card-title class="text-h6 pa-4">
+            <v-icon class="mr-2" color="primary">mdi-filter</v-icon>
+            추가 필터
+          </v-card-title>
+          
+          <v-card-text class="pa-4">
+            <!-- 상태 필터 -->
+            <div class="mb-4">
+              <div class="text-subtitle-2 mb-2">상태</div>
+              <v-checkbox
+                v-model="filters.published"
+                label="게시됨 (18)"
+                color="success"
+                @change="applyFilters"
+                density="compact"
+              />
+              <v-checkbox
+                v-model="filters.draft"
+                label="임시저장 (6)"
+                color="orange"
+                @change="applyFilters"
+                density="compact"
+              />
+            </div>
+
+            <!-- 기간 필터 -->
+            <div class="mb-4">
+              <div class="text-subtitle-2 mb-2">기간</div>
+              <v-select
+                v-model="filters.period"
+                label="전체 기간"
+                variant="outlined"
+                density="compact"
+                :items="periodOptions"
+                @update:model-value="applyFilters"
+              />
+            </div>
+
+            <!-- 정렬 필터 -->
+            <div class="mb-4">
+              <div class="text-subtitle-2 mb-2">정렬</div>
+              <v-select
+                v-model="sortBy"
+                label="최신순"
+                variant="outlined"
+                density="compact"
+                :items="sortOptions"
+                @update:model-value="applySorting"
+              />
+            </div>
+
+            <!-- 필터 초기화 -->
+            <v-btn
+              color="grey"
+              variant="outlined"
+              block
+              @click="resetFilters"
+            >
+              <v-icon class="mr-1">mdi-refresh</v-icon>
+              필터 초기화
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </v-col>
+
+      <!-- 콘텐츠 목록 - Desktop 비율 수정 -->
+      <v-col cols="12" lg="9" md="8">
         <v-card elevation="2">
           <!-- 상단 툴바 -->
           <v-card-title class="d-flex align-center justify-space-between pa-4">
@@ -102,6 +187,29 @@
                   선택 삭제 ({{ selectedItems.length }})
                 </v-btn>
               </div>
+              
+              <!-- 뷰 옵션 -->
+              <v-btn-toggle
+                v-model="viewMode"
+                mandatory
+                class="mr-3"
+              >
+                <v-btn icon size="small" value="list">
+                  <v-icon>mdi-view-list</v-icon>
+                </v-btn>
+                <v-btn icon size="small" value="grid">
+                  <v-icon>mdi-view-grid</v-icon>
+                </v-btn>
+              </v-btn-toggle>
+              
+              <!-- 새 콘텐츠 생성 -->
+              <v-btn
+                color="primary"
+                @click="$router.push('/content/create')"
+              >
+                <v-icon class="mr-1">mdi-plus</v-icon>
+                새 콘텐츠
+              </v-btn>
             </div>
           </v-card-title>
 
@@ -131,63 +239,113 @@
               </v-btn>
             </div>
 
-            <!-- 리스트 뷰 -->
+            <!-- 리스트 뷰 - 테이블 형태 -->
             <div v-else-if="viewMode === 'list'">
-              <v-list>
-                <template v-for="(content, index) in paginatedContents" :key="content.id">
-                  <v-list-item
-                    class="px-4 py-3"
-                    @click="showDetail(content)"
-                  >
-                    <template #prepend>
+              <v-table>
+                <thead>
+                  <tr>
+                    <th width="50">
+                      <v-checkbox
+                        v-model="selectAll"
+                        @change="toggleSelectAll"
+                        density="compact"
+                      />
+                    </th>
+                    <th width="450">제목</th>
+                    <th width="150">플랫폼</th>
+                    <th width="150">생성일</th>
+                    <th width="120">액션</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="content in paginatedContents" :key="content.id" class="cursor-pointer" @click="showDetail(content)">
+                    <td @click.stop>
                       <v-checkbox
                         v-model="selectedItems"
                         :value="content.id"
-                        @click.stop
                         density="compact"
                       />
-                    </template>
-
-                    <v-list-item-title class="d-flex align-center">
+                    </td>
+                    <td>
+                      <div class="d-flex flex-column">
+                        <div class="d-flex align-center mb-1">
+                          <span class="font-weight-medium text-subtitle-2 mr-2">{{ content.title }}</span>
+                          <v-chip
+                            :color="getStatusColor(content.status)"
+                            size="x-small"
+                            variant="tonal"
+                          >
+                            {{ getStatusText(content.status) }}
+                          </v-chip>
+                        </div>
+                        <div class="text-caption text-truncate grey--text" style="max-width: 400px;">
+                          {{ content.content }}
+                        </div>
+                        <div v-if="content.hashtags?.length" class="mt-1">
+                          <v-chip
+                            v-for="tag in content.hashtags.slice(0, 3)"
+                            :key="tag"
+                            size="x-small"
+                            color="primary"
+                            variant="outlined"
+                            class="mr-1"
+                          >
+                            {{ tag }}
+                          </v-chip>
+                          <span v-if="content.hashtags.length > 3" class="text-caption grey--text">
+                            +{{ content.hashtags.length - 3 }}개
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
                       <v-chip
                         :color="getPlatformColor(content.platform)"
                         size="small"
-                        class="mr-3"
+                        variant="tonal"
                       >
                         <v-icon class="mr-1" size="14">{{ getPlatformIcon(content.platform) }}</v-icon>
                         {{ getPlatformText(content.platform) }}
                       </v-chip>
-                      <span class="font-weight-medium">{{ content.title }}</span>
-                    </v-list-item-title>
-
-                    <v-list-item-subtitle class="mt-1">
-                      <div class="d-flex align-center justify-space-between">
-                        <div class="d-flex align-center">
-                          <v-chip
-                            :color="getStatusColor(content.status)"
-                            size="x-small"
-                            class="mr-2"
-                          >
-                            {{ getStatusText(content.status) }}
-                          </v-chip>
-                          <span class="text-caption">{{ formatDateTime(content.createdAt) }}</span>
-                          <span class="text-caption ml-3">조회수: {{ formatNumber(content.views || 0) }}</span>
-                        </div>
+                    </td>
+                    <td>
+                      <div class="text-body-2">{{ formatDate(content.createdAt) }}</div>
+                      <div class="text-caption grey--text">{{ formatTime(content.createdAt) }}</div>
+                    </td>
+                    <td @click.stop>
+                      <div class="d-flex">
                         <v-btn
                           icon
                           size="small"
                           variant="text"
-                          @click.stop="confirmDelete(content)"
+                          @click="showDetail(content)"
+                          class="mr-1"
                         >
-                          <v-icon size="16">mdi-delete-outline</v-icon>
+                          <v-icon size="16">mdi-eye</v-icon>
+                        </v-btn>
+                        <v-btn
+                          icon
+                          size="small"
+                          variant="text"
+                          @click="editContent(content)"
+                          class="mr-1"
+                        >
+                          <v-icon size="16">mdi-pencil</v-icon>
+                        </v-btn>
+                        <v-btn
+                          icon
+                          size="small"
+                          variant="text"
+                          color="error"
+                          @click="confirmDelete(content)"
+                        >
+                          <v-icon size="16">mdi-delete</v-icon>
                         </v-btn>
                       </div>
-                    </v-list-item-subtitle>
-                  </v-list-item>
-                  
-                  <v-divider v-if="index < paginatedContents.length - 1" />
-                </template>
-              </v-list>
+                    </td>
+                  </tr>
+                </tbody>
+              </v-table>
             </div>
 
             <!-- 그리드 뷰 -->
@@ -199,6 +357,7 @@
                   cols="12"
                   sm="6"
                   md="4"
+                  lg="3"
                 >
                   <v-card
                     elevation="2"
@@ -410,7 +569,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useContentStore } from '@/store/content'
 
@@ -434,8 +593,8 @@ const selectedItems = ref([])
 const currentPage = ref(1)
 const itemsPerPage = ref(20)
 
-// 콘텐츠 타입 필터 (새로운 방식)
-const selectedContentTypes = ref(['all'])
+// 콘텐츠 타입 필터 (단순한 방식으로 변경)
+const selectedContentType = ref('all')
 
 // 기존 필터 상태
 const filters = ref({
@@ -478,6 +637,9 @@ const sortOptions = [
   { title: '조회수순', value: 'views' }
 ]
 
+// 콘텐츠 타입 옵션 제거 (더 이상 필요 없음)
+// const contentTypeOptions = [...]
+
 // 계산된 속성
 const filteredContents = computed(() => {
   let contents = contentStore.contents || []
@@ -494,10 +656,10 @@ const filteredContents = computed(() => {
     )
   }
 
-  // 콘텐츠 타입 필터링
-  if (!selectedContentTypes.value.includes('all')) {
+  // 콘텐츠 타입 필터링 (수정된 로직)
+  if (selectedContentType.value && selectedContentType.value !== 'all') {
     contents = contents.filter(content => 
-      selectedContentTypes.value.includes(content.platform)
+      content.platform === selectedContentType.value
     )
   }
 
@@ -575,21 +737,8 @@ const getTypeCount = (type) => {
   return contentStore.contents?.filter(content => content.platform === type).length || 0
 }
 
-// 필터 메서드
+// 필터 메서드 (수정된 로직)
 const applyContentTypeFilter = () => {
-  // 전체 선택시 다른 필터 해제
-  if (selectedContentTypes.value.includes('all')) {
-    selectedContentTypes.value = ['all']
-  } else {
-    // 다른 필터 선택시 전체 해제
-    selectedContentTypes.value = selectedContentTypes.value.filter(type => type !== 'all')
-    
-    // 아무것도 선택되지 않으면 전체 선택
-    if (selectedContentTypes.value.length === 0) {
-      selectedContentTypes.value = ['all']
-    }
-  }
-  
   currentPage.value = 1
 }
 
@@ -602,7 +751,7 @@ const applySorting = () => {
 }
 
 const resetFilters = () => {
-  selectedContentTypes.value = ['all']
+  selectedContentType.value = 'all' // 전체 선택
   searchQuery.value = ''
   filters.value = {
     published: false,
@@ -647,6 +796,14 @@ const showDetail = (content) => {
 const showEditMode = () => {
   editingContent.value = { ...selectedContent.value }
   isEditMode.value = true
+}
+
+// 편집 관련 메서드
+const editContent = (content) => {
+  selectedContent.value = content
+  editingContent.value = { ...content }
+  isEditMode.value = true
+  showDetailDialog.value = true
 }
 
 const cancelEdit = () => {
@@ -726,6 +883,25 @@ const getStatusColor = (status) => {
   }
 }
 
+const formatDate = (dateTime) => {
+  if (!dateTime) return '-'
+  const date = new Date(dateTime)
+  return date.toLocaleDateString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit'
+  })
+}
+
+const formatTime = (dateTime) => {
+  if (!dateTime) return '-'
+  const date = new Date(dateTime)
+  return date.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+}
+
 const formatDateTime = (dateTime) => {
   if (!dateTime) return '-'
   const date = new Date(dateTime)
@@ -758,6 +934,11 @@ const showErrorMessage = (message) => {
   showError.value = true
 }
 
+// selectedItems 변화 감지
+watch(selectedItems, (newVal) => {
+  selectAll.value = newVal.length === paginatedContents.value.length && paginatedContents.value.length > 0
+}, { deep: true })
+
 // 라이프사이클
 onMounted(async () => {
   loading.value = true
@@ -772,6 +953,48 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* 테이블 스타일 - 개선된 Border */
+.v-table {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.v-table thead th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  border-bottom: 2px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
+  padding: 12px 16px;
+}
+
+.v-table thead th:last-child {
+  border-right: none;
+}
+
+.v-table tbody td {
+  border-bottom: 1px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
+  padding: 12px 16px;
+  vertical-align: top;
+}
+
+.v-table tbody td:last-child {
+  border-right: none;
+}
+
+.v-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.v-table tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
 .v-chip-group {
   max-width: 100%;
 }
@@ -790,6 +1013,36 @@ onMounted(async () => {
   position: absolute;
 }
 
+.sticky-sidebar {
+  position: sticky;
+  top: 20px;
+}
+
+/* Desktop 레이아웃 최적화 */
+@media (min-width: 1264px) {
+  .v-col-lg-3 {
+    flex: 0 0 20%;
+    max-width: 20%;
+  }
+  
+  .v-col-lg-9 {
+    flex: 0 0 80%;
+    max-width: 80%;
+  }
+}
+
+@media (min-width: 960px) and (max-width: 1263px) {
+  .v-col-md-4 {
+    flex: 0 0 25%;
+    max-width: 25%;
+  }
+  
+  .v-col-md-8 {
+    flex: 0 0 75%;
+    max-width: 75%;
+  }
+}
+
 /* 모바일 반응형 */
 @media (max-width: 768px) {
   .d-flex.align-center.justify-space-between.flex-wrap > div {
@@ -799,6 +1052,10 @@ onMounted(async () => {
   
   .d-flex.align-center.justify-space-between.flex-wrap > div:last-child {
     margin-bottom: 0;
+  }
+  
+  .sticky-sidebar {
+    position: static;
   }
 }
 </style>
