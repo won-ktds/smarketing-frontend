@@ -170,18 +170,6 @@
                   </div>
                 </v-alert>
               </div>
-
-              <v-btn
-                color="primary"
-                variant="outlined"
-                block
-                size="small"
-                class="mt-2"
-                @click="router.push('/recommend')"
-              >
-                <v-icon start>mdi-lightbulb-on</v-icon>
-                더 많은 추천 보기
-              </v-btn>
             </div>
           </v-card-text>
         </v-card>
