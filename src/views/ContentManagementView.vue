@@ -1,23 +1,6 @@
 //* src/views/ContentManagementView.vue
 <template>
   <v-container fluid class="pa-4">
-    <!-- 페이지 헤더 -->
-    <v-row>
-      <v-col cols="12">
-        <div class="d-flex align-center mb-4">
-          <v-btn
-            icon
-            @click="$router.go(-1)"
-            class="mr-3"
-          >
-            <v-icon>mdi-arrow-left</v-icon>
-          </v-btn>
-          <h1 class="text-h5">📝 콘텐츠 관리</h1>
-        </div>
-        <p class="text-subtitle-1 grey--text">생성된 콘텐츠를 관리하고 성과를 분석합니다</p>
-      </v-col>
-    </v-row>
-
     <!-- 콘텐츠 타입 필터 (상단 이동) -->
     <v-row class="mb-4">
       <v-col cols="12">
@@ -92,74 +75,6 @@
 
     <!-- 메인 콘텐츠 영역 -->
     <v-row>
-      <!-- 좌측 사이드바 필터 - Desktop 비율 수정 -->
-      <v-col cols="12" lg="3" md="4">
-        <v-card elevation="2" height="400" class="sticky-sidebar">
-          <v-card-title class="text-h6 pa-4">
-            <v-icon class="mr-2" color="primary">mdi-filter</v-icon>
-            추가 필터
-          </v-card-title>
-          
-          <v-card-text class="pa-4">
-            <!-- 상태 필터 -->
-            <div class="mb-4">
-              <div class="text-subtitle-2 mb-2">상태</div>
-              <v-checkbox
-                v-model="filters.published"
-                label="게시됨 (18)"
-                color="success"
-                @change="applyFilters"
-                density="compact"
-              />
-              <v-checkbox
-                v-model="filters.draft"
-                label="임시저장 (6)"
-                color="orange"
-                @change="applyFilters"
-                density="compact"
-              />
-            </div>
-
-            <!-- 기간 필터 -->
-            <div class="mb-4">
-              <div class="text-subtitle-2 mb-2">기간</div>
-              <v-select
-                v-model="filters.period"
-                label="전체 기간"
-                variant="outlined"
-                density="compact"
-                :items="periodOptions"
-                @update:model-value="applyFilters"
-              />
-            </div>
-
-            <!-- 정렬 필터 -->
-            <div class="mb-4">
-              <div class="text-subtitle-2 mb-2">정렬</div>
-              <v-select
-                v-model="sortBy"
-                label="최신순"
-                variant="outlined"
-                density="compact"
-                :items="sortOptions"
-                @update:model-value="applySorting"
-              />
-            </div>
-
-            <!-- 필터 초기화 -->
-            <v-btn
-              color="grey"
-              variant="outlined"
-              block
-              @click="resetFilters"
-            >
-              <v-icon class="mr-1">mdi-refresh</v-icon>
-              필터 초기화
-            </v-btn>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
       <!-- 콘텐츠 목록 - Desktop 비율 수정 -->
       <v-col cols="12" lg="9" md="8">
         <v-card elevation="2">
