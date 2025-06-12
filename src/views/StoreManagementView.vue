@@ -1,17 +1,5 @@
 <template>
   <v-container fluid class="pa-4">
-    <!-- 페이지 헤더 -->
-    <v-row class="mb-4">
-      <v-col cols="12">
-        <div class="d-flex align-center justify-space-between">
-          <div>
-            <h1 class="text-h4 font-weight-bold mb-2">매장 관리</h1>
-            <p class="text-grey">매장 정보를 관리하고 설정을 변경할 수 있습니다</p>
-          </div>
-        </div>
-      </v-col>
-    </v-row>
-
     <!-- 매장 정보가 없는 경우 -->
     <div v-if="!storeStore.hasStoreInfo && !storeStore.loading">
       <v-row justify="center">

@@ -1,23 +1,6 @@
 //* src/views/ContentManagementView.vue
 <template>
   <v-container fluid class="pa-4">
-    <!-- 페이지 헤더 -->
-    <v-row>
-      <v-col cols="12">
-        <div class="d-flex align-center mb-4">
-          <v-btn
-            icon
-            @click="$router.go(-1)"
-            class="mr-3"
-          >
-            <v-icon>mdi-arrow-left</v-icon>
-          </v-btn>
-          <h1 class="text-h5">📝 콘텐츠 관리</h1>
-        </div>
-        <p class="text-subtitle-1 grey--text">생성된 콘텐츠를 관리하고 성과를 분석합니다</p>
-      </v-col>
-    </v-row>
-
     <!-- 필터 섹션 -->
     <v-row class="mb-4">
       <v-col cols="12" md="3">

@@ -1,20 +1,6 @@
 //* src/views/DashboardView.vue
 <template>
   <v-container fluid class="pa-4">
-    <!-- 페이지 헤더 -->
-    <div class="d-flex align-center justify-between mb-6">
-      <div>
-        <h1 class="text-h4 font-weight-bold text-grey-darken-4">대시보드</h1>
-        <p class="text-body-1 text-grey-darken-1 mb-0">
-          {{ businessName }}의 실시간 현황을 확인하세요
-        </p>
-      </div>
-      <v-chip :color="'success'" variant="flat" class="text-body-2 font-weight-medium">
-        <v-icon start size="16">mdi-circle</v-icon>
-        실시간 업데이트
-      </v-chip>
-    </div>
-
     <!-- 주요 지표 카드 - 새로운 스타일 적용 (3개 카드) -->
     <v-row class="mb-6">
       <v-col
