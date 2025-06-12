@@ -3,7 +3,7 @@
   <div>
     <!-- 메인 컨텐츠 -->
     <v-container fluid class="pa-4">
-      <!-- 주요 지표 카드 - 제목과 증감율 위치 변경 -->
+      <!-- 주요 지표 카드 - 아이콘을 카드 맨 오른쪽으로 이동 -->
       <v-row class="mb-6">
         <v-col
           v-for="(metric, index) in dashboardMetrics"
@@ -18,18 +18,20 @@
             elevation="0"
             border
           >
-            <v-card-text class="pa-6">
-              <!-- 제목 먼저 표시 -->
-              <div class="d-flex align-center justify-between mb-2">
+            <v-card-text class="pa-6 position-relative">
+              <!-- 아이콘을 카드 맨 오른쪽 상단에 절대 위치로 배치 -->
+              <div class="metric-icon-wrapper-absolute" :class="`bg-${metric.color}`">
+                <v-icon :icon="metric.icon" size="20" :color="`${metric.color}-darken-2`" />
+              </div>
+
+              <!-- 제목 -->
+              <div class="mb-2">
                 <h4 class="metric-title text-subtitle-1 font-weight-bold">
                   {{ metric.title }}
                 </h4>
-                <div class="metric-icon-wrapper" :class="`bg-${metric.color}`">
-                  <v-icon :icon="metric.icon" size="20" :color="`${metric.color}-darken-2`" />
-                </div>
               </div>
 
-              <!-- 증감율 두 번째로 표시 -->
+              <!-- 증감율 -->
               <div class="mb-3">
                 <v-chip
                   :color="
@@ -52,7 +54,7 @@
                 </v-chip>
               </div>
 
-              <!-- 메트릭 값 세 번째로 표시 -->
+              <!-- 메트릭 값 -->
               <div class="metric-value-wrapper mb-2">
                 <span
                   class="metric-value text-h4 font-weight-bold"
@@ -63,7 +65,7 @@
                 </span>
               </div>
 
-              <!-- 추가 정보 마지막에 표시 -->
+              <!-- 추가 정보 -->
               <div class="metric-detail">
                 <span class="text-caption text-grey">
                   {{ metric.detail || '전월 대비' }}
@@ -693,7 +695,11 @@ onBeforeUnmount(() => {
   background: linear-gradient(90deg, var(--v-theme-warning), var(--v-theme-warning-lighten-1));
 }
 
-.metric-icon-wrapper {
+/* 아이콘을 카드 맨 오른쪽 상단에 절대 위치로 배치 */
+.metric-icon-wrapper-absolute {
+  position: absolute;
+  top: 16px;
+  right: 16px;
   width: 40px;
   height: 40px;
   border-radius: 10px;
@@ -701,11 +707,13 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   opacity: 0.15;
+  z-index: 1;
 }
 
 .metric-title {
   color: var(--v-theme-on-surface);
   font-weight: 600;
+  padding-right: 48px; /* 아이콘 공간 확보 */
 }
 
 .metric-value {
@@ -912,9 +920,15 @@ onBeforeUnmount(() => {
     font-size: 1.75rem !important;
   }
 
-  .metric-icon-wrapper {
+  .metric-icon-wrapper-absolute {
     width: 36px;
     height: 36px;
+    top: 12px;
+    right: 12px;
+  }
+  
+  .metric-title {
+    padding-right: 44px;
   }
   
   .chart-area {
@@ -925,6 +939,17 @@ onBeforeUnmount(() => {
 @media (max-width: 600px) {
   .metric-value {
     font-size: 1.5rem !important;
+  }
+
+  .metric-icon-wrapper-absolute {
+    width: 32px;
+    height: 32px;
+    top: 10px;
+    right: 10px;
+  }
+  
+  .metric-title {
+    padding-right: 40px;
   }
 
   .chart-area {
