@@ -404,13 +404,6 @@
                           <span class="text-h6 font-weight-bold text-primary">
                             {{ formatCurrency(menu.price) }}
                           </span>
-                          <v-rating
-                            :model-value="menu.rating || 0"
-                            readonly
-                            size="small"
-                            color="warning"
-                            density="compact"
-                          />
                         </div>
                       </v-card-text>
                     </v-card>
@@ -434,22 +427,6 @@
           <div class="d-flex align-center">
             <v-icon class="mr-2" color="primary">mdi-food</v-icon>
             <span class="text-h6">메뉴 상세 정보</span>
-          </div>
-          <div class="d-flex gap-2">
-            <v-btn
-              color="primary"
-              variant="outlined"
-              prepend-icon="mdi-pencil"
-              @click="editFromDetail"
-            >
-              수정
-            </v-btn>
-            <v-btn
-              icon
-              @click="showMenuDetailDialog = false"
-            >
-              <v-icon>mdi-close</v-icon>
-            </v-btn>
           </div>
         </v-card-title>
 
@@ -502,14 +479,6 @@
                 {{ formatCurrency(selectedMenuDetail.price) }}
               </span>
             </div>
-
-            <v-rating
-              :model-value="selectedMenuDetail.rating || 0"
-              readonly
-              color="warning"
-              density="comfortable"
-              class="mb-4"
-            />
           </div>
 
           <!-- 메뉴 설명 -->
@@ -1625,9 +1594,9 @@ const resetMenuForm = () => {
     price: 0,
     category: '',
     description: '',
-    ingredients: '',
-    spicyLevel: '보통',
-    calories: 0,
+    ingredients: '',      // 누락된 필드 추가
+    spicyLevel: '보통',   // 누락된 필드 추가
+    calories: 0,          // 누락된 필드 추가
     available: true,
     recommended: false,
     imageUrl: ''
@@ -1671,17 +1640,6 @@ onMounted(async () => {
 const showMenuDetailDialog = ref(false)
 const selectedMenuDetail = ref(null)
 
-// 메뉴 폼 데이터에서 불필요한 필드 제거 (기존 menuFormData 수정)
-const menuFormData = reactive({
-  menuName: '',
-  price: 0,
-  category: '',
-  description: '',
-  available: true,
-  recommended: false,
-  imageUrl: ''
-})
-
 // 메뉴 관리 메서드에 추가할 함수들
 
 /**
@@ -1702,20 +1660,6 @@ const editFromDetail = () => {
   showMenuDialog.value = true
 }
 
-/**
- * 메뉴 폼 초기화 (기존 함수 수정)
- */
-const resetMenuForm = () => {
-  Object.assign(menuFormData, {
-    menuName: '',
-    price: 0,
-    category: '',
-    description: '',
-    available: true,
-    recommended: false,
-    imageUrl: ''
-  })
-}
 </script>
 
 <style scoped>
@@ -1921,11 +1865,6 @@ const resetMenuForm = () => {
 /* 메뉴 상태 칩 스타일 */
 .v-chip--variant-elevated {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* 평점 스타일 */
-.v-rating {
-  justify-content: flex-end;
 }
 
 /* 스낵바 스타일 커스터마이징 */
