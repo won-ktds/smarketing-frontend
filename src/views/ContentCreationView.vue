@@ -314,14 +314,7 @@
                     {{ useAI ? 'AI 콘텐츠 생성' : '콘텐츠 저장' }}
                   </v-btn>
 
-                  <v-btn
-                    variant="outlined"
-                    block
-                    @click="saveDraft"
-                    :disabled="!formData.title"
-                  >
-                    임시저장
-                  </v-btn>
+
                 </v-card-text>
               </v-card>
             </div>

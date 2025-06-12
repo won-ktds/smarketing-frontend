@@ -54,12 +54,10 @@
 
       <v-spacer />
 
-      <!-- 알림 버튼 -->
-      <v-btn icon color="white" @click="showNotifications = true">
-        <v-badge v-if="notificationCount > 0" :content="notificationCount" color="error">
-          <v-icon>mdi-bell</v-icon>
-        </v-badge>
-        <v-icon v-else>mdi-bell</v-icon>
+      <!-- 종모양 알림 제거하고 로그아웃 버튼으로 대체 -->
+      <v-btn icon color="white" @click="logout">
+        <v-icon>mdi-logout</v-icon>
+        <v-tooltip activator="parent" location="bottom">로그아웃</v-tooltip>
       </v-btn>
     </v-app-bar>
 
@@ -67,25 +65,6 @@
     <v-main>
       <router-view />
     </v-main>
-
-    <!-- 알림 다이얼로그 -->
-    <v-dialog v-model="showNotifications" max-width="500">
-      <v-card>
-        <v-card-title>
-          <span class="text-h6">알림</span>
-          <v-spacer />
-          <v-btn icon variant="text" @click="showNotifications = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-card-title>
-        <v-card-text>
-          <div v-if="notifications.length === 0" class="text-center pa-4">
-            <v-icon size="48" color="grey-lighten-2">mdi-bell-off</v-icon>
-            <p class="text-grey mt-2">새로운 알림이 없습니다</p>
-          </div>
-        </v-card-text>
-      </v-card>
-    </v-dialog>
 
     <!-- 글로벌 스낵바 -->
     <v-snackbar
@@ -115,15 +94,12 @@ const appStore = useAppStore()
 
 // 반응형 데이터
 const drawer = ref(false)
-const showNotifications = ref(false)
 const loading = ref(false)
 
 // 컴퓨티드 속성
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const isLoginPage = computed(() => route.name === 'Login')
 const userStore = computed(() => authStore)
-const notificationCount = computed(() => appStore.notificationCount || 0)
-const notifications = computed(() => appStore.notifications || [])
 const snackbar = computed(() => appStore.snackbar)
 
 // 현재 페이지 제목
