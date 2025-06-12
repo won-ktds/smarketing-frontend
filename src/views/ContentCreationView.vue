@@ -309,7 +309,7 @@
                     <v-icon class="mr-2">
                       {{ useAI ? 'mdi-robot' : 'mdi-content-save' }}
                     </v-icon>
-                    {{ useAI ? 'AI 신규 콘텐츠 생성' : '콘텐츠 저장' }}
+                    {{ useAI ? 'AI 신규 콘텐츠 신규 생성' : '콘텐츠 저장' }}
                   </v-btn>
 
 
@@ -327,7 +327,7 @@
           <div class="pa-4 d-flex align-center justify-between">
             <div class="d-flex align-center" style="min-height: 32px;">
               <v-icon class="mr-2" color="primary">mdi-file-document-multiple</v-icon>
-              <h2 class="text-h5 font-weight-bold">콘텐츠 생성</h2>
+              <h2 class="text-h5 font-weight-bold">콘텐츠 생성 결과</h2>
             </div>
             <v-btn
               v-if="generatedVersions.length > 0"
