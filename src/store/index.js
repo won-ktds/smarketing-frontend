@@ -148,10 +148,14 @@ export const useStoreStore = defineStore('store', {
   },
   
   actions: {
+    setStoreInfo(storeInfo) {
+      this.storeInfo = storeInfo
+    },
+
     async fetchStoreInfo() {
       try {
         this.loading = true
-        const response = await storeService.getStoreInfo()
+        const response = await storeService.getStore() // getStoreInfo가 아닌 getStore
         this.storeInfo = response.data
         return response
       } catch (error) {
@@ -161,10 +165,23 @@ export const useStoreStore = defineStore('store', {
       }
     },
     
-    async updateStoreInfo(storeData) {
+    async registerStore(storeData) {
       try {
         this.loading = true
-        const response = await storeService.updateStoreInfo(storeData)
+        const response = await storeService.registerStore(storeData)
+        this.storeInfo = response.data
+        return response
+      } catch (error) {
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+    
+    async updateStore(storeId, storeData) {
+      try {
+        this.loading = true
+        const response = await storeService.updateStore(storeId, storeData)
         this.storeInfo = response.data
         return response
       } catch (error) {
