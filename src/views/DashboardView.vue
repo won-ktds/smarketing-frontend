@@ -174,12 +174,22 @@
                     </div>
                   </div>
 
-                  <!-- X축 라벨 -->
-                  <div class="x-axis-labels mt-3">
-                    <div class="d-flex justify-between px-8">
-                      <span v-for="item in currentChartData" :key="item.label" 
-                            class="x-label text-caption">
-                        {{ item.label }}
+                  <!-- X축 라벨 - 데이터 포인트와 동일한 위치에 배치 -->
+                  <div class="x-axis-labels mt-3" style="position: relative; height: 20px;">
+                    <div class="x-axis-container" style="position: relative; padding-left: 60px; padding-right: 20px;">
+                      <span 
+                        v-for="(point, index) in chartDataPoints" 
+                        :key="index" 
+                        class="x-label text-caption"
+                        :style="{ 
+                          position: 'absolute',
+                          left: `${point.x}%`,
+                          transform: 'translateX(-50%)',
+                          textAlign: 'center',
+                          whiteSpace: 'nowrap'
+                        }"
+                      >
+                        {{ currentChartData[index].label }}
                       </span>
                     </div>
                   </div>
@@ -390,18 +400,27 @@ const aiRecommendations = ref([
 // 계산된 속성들
 const currentChartData = computed(() => chartData.value[chartPeriod.value])
 
+// 수정된 chartDataPoints - 차트 컨테이너의 실제 여백을 고려
 const chartDataPoints = computed(() => {
   const data = currentChartData.value
   const maxSales = Math.max(...data.map(d => Math.max(d.sales, d.target)))
   
-  return data.map((item, index) => ({
-    x: 10 + (index * 80 / (data.length - 1)), // 10%에서 90%까지 분산
-    y: 10 + ((item.sales / maxSales) * 80), // 10%에서 90%까지 높이
-    targetY: 10 + ((item.target / maxSales) * 80),
-    sales: item.sales,
-    target: item.target,
-    label: item.label
-  }))
+  return data.map((item, index) => {
+    // 차트 영역의 실제 너비를 고려한 위치 계산
+    // 차트 컨테이너에서 Y축 라벨 영역(60px)과 오른쪽 여백(20px)을 제외한 영역에서 계산
+    const chartStartPercent = 8  // 차트 시작 지점 (약간의 여백)
+    const chartEndPercent = 92   // 차트 끝 지점 (약간의 여백)
+    const chartWidth = chartEndPercent - chartStartPercent
+    
+    return {
+      x: chartStartPercent + (index * chartWidth / (data.length - 1)),
+      y: 10 + ((item.sales / maxSales) * 80), // 10%에서 90%까지 높이
+      targetY: 10 + ((item.target / maxSales) * 80),
+      sales: item.sales,
+      target: item.target,
+      label: item.label
+    }
+  })
 })
 
 const avgSales = computed(() => {
@@ -854,13 +873,22 @@ onBeforeUnmount(() => {
   transform: scale(1.5);
 }
 
+/* 수정된 X축 라벨 스타일 */
 .x-axis-labels {
-  padding: 0 40px;
+  position: relative;
+  margin-top: 12px;
+}
+
+.x-axis-container {
+  position: relative;
+  width: 100%;
 }
 
 .x-label {
   font-size: 0.75rem;
   color: #6B7280;
+  min-width: 40px;
+  display: inline-block;
 }
 
 /* 툴팁 스타일 */
@@ -952,6 +980,11 @@ onBeforeUnmount(() => {
   .y-axis-labels {
     width: 30px;
   }
+  
+  .x-label {
+    font-size: 0.65rem;
+    min-width: 30px;
+  }
 }
 
 /* 다크 테마 지원 */
@@ -971,4 +1004,5 @@ onBeforeUnmount(() => {
 .v-theme--dark .chart-stats {
   background: #1E293B !important;
   border-color: #334155;
-}</style>
+}
+</style>
