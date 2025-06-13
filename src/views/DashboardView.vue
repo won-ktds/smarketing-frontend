@@ -220,42 +220,178 @@
           </v-card>
         </v-col>
 
-        <!-- AI 추천 요약 -->
+        <!-- AI 추천 활용 - 단일 상세 콘텐츠로 변경 -->
         <v-col cols="12" lg="4">
           <v-card elevation="0" border class="ai-recommend-card h-100">
-            <v-card-title class="pa-6 pb-0">
-              <div class="d-flex align-center mb-1">
-                <v-icon color="primary" class="mr-2">mdi-robot</v-icon>
-                <h3 class="text-h6 font-weight-bold">AI 추천 활용</h3>
+            <v-card-title class="pa-4 pb-0">
+              <div class="d-flex align-center justify-space-between w-100">
+                <div class="d-flex align-center">
+                  <v-icon color="primary" class="mr-2">mdi-robot</v-icon>
+                  <div>
+                    <h3 class="text-h6 font-weight-bold mb-0">AI 추천 활용</h3>
+                    <p class="text-caption text-grey-darken-1 mb-0">맞춤형 마케팅 제안</p>
+                  </div>
+                </div>
+                <v-btn 
+                  icon="mdi-refresh" 
+                  size="small" 
+                  variant="text" 
+                  color="primary"
+                  :loading="aiLoading"
+                  @click="refreshAiRecommendation"
+                />
               </div>
-              <p class="text-body-2 text-grey-darken-1 mb-0">맞춤형 마케팅 제안</p>
             </v-card-title>
-            <v-card-text class="pa-6">
+            
+            <v-card-text class="pa-4 pt-2">
               <div v-if="aiLoading" class="text-center py-8">
                 <v-progress-circular color="primary" indeterminate size="40" />
                 <p class="text-body-2 text-grey mt-3">AI가 분석 중...</p>
               </div>
-              <div v-else>
-                <div
-                  v-for="(recommendation, index) in aiRecommendations"
-                  :key="index"
-                  class="ai-recommendation-item mb-4"
-                >
-                  <v-alert
-                    :type="recommendation.type"
-                    variant="tonal"
-                    density="compact"
-                    :icon="recommendation.icon"
-                    class="mb-0"
-                  >
-                    <v-alert-title class="text-subtitle-2 font-weight-bold mb-1">
-                      {{ recommendation.title }}
-                    </v-alert-title>
-                    <div class="text-body-2">
-                      {{ recommendation.content }}
-                    </div>
-                  </v-alert>
+              
+              <div v-else-if="aiRecommendation" class="ai-recommendation-content">
+                <!-- 추천 제목 -->
+                <div class="recommendation-header mb-4">
+                  <div class="d-flex align-center mb-2">
+                    <span class="recommendation-emoji mr-2">{{ aiRecommendation.emoji }}</span>
+                    <h4 class="text-h6 font-weight-bold text-primary">
+                      {{ aiRecommendation.title }}
+                    </h4>
+                  </div>
                 </div>
+
+                <!-- 스크롤 가능한 콘텐츠 영역 -->
+                <div class="recommendation-scroll-content" style="max-height: 400px; overflow-y: auto;">
+                  <!-- 기획 아이디어 섹션 -->
+                  <div v-if="aiRecommendation.sections?.ideas" class="recommendation-section mb-4">
+                    <h5 class="text-subtitle-1 font-weight-bold mb-2 d-flex align-center">
+                      <v-icon icon="mdi-lightbulb" size="16" color="warning" class="mr-1" />
+                      {{ aiRecommendation.sections.ideas.title }}
+                    </h5>
+                    <div class="ml-4">
+                      <div 
+                        v-for="(idea, index) in aiRecommendation.sections.ideas.items" 
+                        :key="index" 
+                        class="idea-item mb-2"
+                      >
+                        <div class="d-flex align-start">
+                          <v-icon icon="mdi-circle-small" size="12" color="primary" class="mt-1 mr-1" />
+                          <span class="text-body-2" v-html="idea"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 비용 및 효과 섹션 -->
+                  <div v-if="aiRecommendation.sections?.costs" class="recommendation-section mb-4">
+                    <h5 class="text-subtitle-1 font-weight-bold mb-3 d-flex align-center">
+                      <v-icon icon="mdi-calculator" size="16" color="success" class="mr-1" />
+                      {{ aiRecommendation.sections.costs.title }}
+                    </h5>
+                    
+                    <!-- 비용 테이블 -->
+                    <div v-if="aiRecommendation.sections.costs.items" class="ml-4 mb-3">
+                      <v-table density="compact" class="cost-table">
+                        <tbody>
+                          <tr v-for="(cost, index) in aiRecommendation.sections.costs.items" :key="index">
+                            <td class="text-body-2 font-weight-medium">{{ cost.item }}</td>
+                            <td class="text-body-2 text-primary font-weight-bold text-right">{{ cost.amount }}</td>
+                          </tr>
+                        </tbody>
+                      </v-table>
+                    </div>
+
+                    <!-- 기대 효과 -->
+                    <div v-if="aiRecommendation.sections.costs.effects" class="ml-4">
+                      <p class="text-body-2 font-weight-bold mb-2">📈 기대 효과:</p>
+                      <div 
+                        v-for="(effect, index) in aiRecommendation.sections.costs.effects" 
+                        :key="index" 
+                        class="effect-item mb-1"
+                      >
+                        <div class="d-flex align-start">
+                          <v-icon icon="mdi-check-circle" size="12" color="success" class="mt-1 mr-1" />
+                          <span class="text-body-2">{{ effect }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 주의사항 섹션 -->
+                  <div v-if="aiRecommendation.sections?.warnings" class="recommendation-section mb-4">
+                    <h5 class="text-subtitle-1 font-weight-bold mb-2 d-flex align-center">
+                      <v-icon icon="mdi-alert" size="16" color="warning" class="mr-1" />
+                      {{ aiRecommendation.sections.warnings.title }}
+                    </h5>
+                    <div class="ml-4">
+                      <div 
+                        v-for="(warning, index) in aiRecommendation.sections.warnings.items" 
+                        :key="index" 
+                        class="warning-item mb-2"
+                      >
+                        <div class="d-flex align-start">
+                          <v-icon icon="mdi-alert-circle" size="12" color="warning" class="mt-1 mr-1" />
+                          <span class="text-body-2" v-html="warning"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 현재 상황 정보 -->
+                  <div v-if="aiRecommendation.currentInfo" class="recommendation-section">
+                    <h5 class="text-subtitle-1 font-weight-bold mb-2 d-flex align-center">
+                      <v-icon :icon="aiRecommendation.currentInfo.icon" size="16" :color="aiRecommendation.currentInfo.color" class="mr-1" />
+                      {{ aiRecommendation.currentInfo.title }}
+                    </h5>
+                    <div class="current-info-box pa-3" :class="`bg-${aiRecommendation.currentInfo.color}-lighten-5`">
+                      <div 
+                        v-for="(info, index) in aiRecommendation.currentInfo.items" 
+                        :key="index" 
+                        class="info-item mb-1"
+                      >
+                        <span class="text-body-2">
+                          <strong>{{ info.label }}:</strong> {{ info.value }}
+                        </span>
+                      </div>
+                      <div v-if="aiRecommendation.currentInfo.insight" class="insight-box mt-2 pa-2 bg-white rounded">
+                        <div class="d-flex align-start">
+                          <v-icon icon="mdi-lightbulb" size="16" color="amber" class="mt-1 mr-2" />
+                          <span class="text-body-2 font-weight-medium" v-html="aiRecommendation.currentInfo.insight"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+        
+              </div>
+
+              <!-- 에러 상태 -->
+              <div v-else-if="aiError" class="text-center py-8">
+                <v-icon icon="mdi-alert-circle" size="48" color="error" class="mb-4" />
+                <p class="text-body-2 text-error mb-4">{{ aiError }}</p>
+                <v-btn 
+                  color="primary" 
+                  variant="outlined" 
+                  @click="refreshAiRecommendation"
+                >
+                  다시 시도
+                </v-btn>
+              </div>
+
+              <!-- 초기 상태 -->
+              <div v-else class="text-center py-8">
+                <v-icon icon="mdi-robot" size="48" color="grey-lighten-2" class="mb-4" />
+                <p class="text-body-2 text-grey-darken-1 mb-4">
+                  AI 추천을 불러오고 있습니다
+                </p>
+                <v-btn 
+                  color="primary" 
+                  variant="outlined" 
+                  @click="refreshAiRecommendation"
+                >
+                  추천 받기
+                </v-btn>
               </div>
             </v-card-text>
           </v-card>
@@ -287,9 +423,8 @@ import { formatCurrency, formatNumber, formatRelativeTime } from '@/utils/format
 
 /**
  * 대시보드 메인 페이지 - App.vue의 단일 AppBar 사용
- * - 중복된 AppBar 제거 (App.vue에서 제공)
- * - 로그아웃 확인 다이얼로그 유지
- * - 메인 컨텐츠는 그대로 유지
+ * - AI 추천을 단일 상세 콘텐츠로 변경
+ * - Claude API 연동 준비된 구조
  */
 
 const router = useRouter()
@@ -304,6 +439,7 @@ const animatedValues = ref({})
 const logoutDialog = ref(false)
 const chartCanvas = ref(null)
 const currentTime = ref('')
+const aiError = ref('')
 
 // 툴팁 관련
 const tooltip = ref({
@@ -315,7 +451,7 @@ const tooltip = ref({
   target: 0
 })
 
-// 대시보드 지표 - 제목과 증감율 위치 변경
+// 대시보드 지표
 const dashboardMetrics = ref([
   {
     title: '오늘의 매출',
@@ -346,7 +482,7 @@ const dashboardMetrics = ref([
   },
 ])
 
-// 실제 차트 데이터 (더 구체적이고 현실적인 데이터)
+// 차트 데이터
 const chartData = ref({
   '7d': [
     { label: '6일전', sales: 45, target: 50, date: '06-04' },
@@ -372,49 +508,69 @@ const chartData = ref({
   ],
 })
 
-// Y축 라벨
 const yAxisLabels = ref(['0', '25', '50', '75', '100'])
 
-// AI 추천
-const aiRecommendations = ref([
-  {
-    type: 'info',
+// AI 추천 데이터 (Claude API 연동용 구조)
+const aiRecommendation = ref({
+  emoji: '☀️',
+  title: '여름 시즌 인스타그램 마케팅 계획',
+  sections: {
+    ideas: {
+      title: '1. 기획 아이디어',
+      items: [
+        '여름 음료 메뉴 개발 예: 시원한 아이스 아메리카노, 프라페 등',
+        '카페 내부에서 <strong>음료와 함께 촬영한 인스타그램용 사진 및 영상</strong> 제작',
+        '<strong>지역 인플루언서</strong>와 협업하여 방문 후기 및 신메뉴 소개 게시물 게시',
+        '<strong>인스타그램 스토리</strong>를 활용해 <strong>매일 음료 프로모션</strong> 소식 공유'
+      ]
+    },
+    costs: {
+      title: '2. 예상 비용 및 기대 효과',
+      items: [
+        { item: '촬영 및 편집', amount: '약 300,000원' },
+        { item: '인플루언서 협찬', amount: '약 200,000원' }
+      ],
+      effects: [
+        '고객 관심 유도 및 매출 상승',
+        'SNS를 통한 브랜드 인지도 상승',
+        '재방문율 및 공유 유도'
+      ]
+    },
+    warnings: {
+      title: '3. 주의사항 및 유의점',
+      items: [
+        '인스타그램 콘텐츠는 <strong>창의적이고 시각적으로 매력적</strong>이어야 함',
+        '인플루언서 협업 시, <strong>합리적인 혜택과 협의 조건</strong> 필요'
+      ]
+    }
+  },
+  currentInfo: {
+    title: '현재 지역 날씨 (서울 강남구 역삼동 기준)',
     icon: 'mdi-weather-sunny',
-    title: '날씨 기반 추천',
-    content: '오늘은 맑은 날씨로 야외 테이크아웃 주문이 증가할 예정입니다.',
-  },
-  {
-    type: 'success',
-    icon: 'mdi-trending-up',
-    title: '트렌드 알림',
-    content: '최근 #떡볶이챌린지가 인기입니다. 관련 콘텐츠를 만들어보세요.',
-  },
-  {
-    type: 'warning',
-    icon: 'mdi-clock-outline',
-    title: '시간대 팁',
-    content: '점심시간(12-14시) 주문 집중. 미리 재료를 준비하세요.',
-  },
-])
+    color: 'orange',
+    items: [
+      { label: '기온', value: '30도' },
+      { label: '기상 상황', value: '무더위 지속' }
+    ],
+    insight: '<strong>시원한 음료에 대한 수요가 매우 높을 것으로 예상</strong>'
+  }
+})
 
 // 계산된 속성들
 const currentChartData = computed(() => chartData.value[chartPeriod.value])
 
-// 수정된 chartDataPoints - 차트 컨테이너의 실제 여백을 고려
 const chartDataPoints = computed(() => {
   const data = currentChartData.value
   const maxSales = Math.max(...data.map(d => Math.max(d.sales, d.target)))
   
   return data.map((item, index) => {
-    // 차트 영역의 실제 너비를 고려한 위치 계산
-    // 차트 컨테이너에서 Y축 라벨 영역(60px)과 오른쪽 여백(20px)을 제외한 영역에서 계산
-    const chartStartPercent = 8  // 차트 시작 지점 (약간의 여백)
-    const chartEndPercent = 92   // 차트 끝 지점 (약간의 여백)
+    const chartStartPercent = 8
+    const chartEndPercent = 92
     const chartWidth = chartEndPercent - chartStartPercent
     
     return {
       x: chartStartPercent + (index * chartWidth / (data.length - 1)),
-      y: 10 + ((item.sales / maxSales) * 80), // 10%에서 90%까지 높이
+      y: 10 + ((item.sales / maxSales) * 80),
       targetY: 10 + ((item.target / maxSales) * 80),
       sales: item.sales,
       target: item.target,
@@ -444,7 +600,7 @@ const achievementRate = computed(() => {
   return Math.round((totalSales / totalTarget) * 100)
 })
 
-// 현재 기간 라벨
+// 메서드들
 const getCurrentPeriodLabel = () => {
   switch (chartPeriod.value) {
     case '7d': return '7일'
@@ -454,21 +610,6 @@ const getCurrentPeriodLabel = () => {
   }
 }
 
-// 시간 업데이트
-const updateTime = () => {
-  const now = new Date()
-  const options = {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
-  }
-  currentTime.value = now.toLocaleString('ko-KR', options)
-}
-
-// 숫자 애니메이션 함수
 const animateNumber = (targetValue, index, duration = 2000) => {
   const startValue = 0
   const startTime = Date.now()
@@ -477,17 +618,13 @@ const animateNumber = (targetValue, index, duration = 2000) => {
     const elapsed = Date.now() - startTime
     const progress = Math.min(elapsed / duration, 1)
 
-    // easeOutCubic 애니메이션
     const easedProgress = 1 - Math.pow(1 - progress, 3)
     const currentValue = Math.floor(startValue + (targetValue - startValue) * easedProgress)
 
-    // 숫자 형식에 따라 표시
     if (typeof targetValue === 'number') {
       if (index === 0 || index === 1) {
-        // 매출 - 원화 표시
         animatedValues.value[index] = `₩${currentValue.toLocaleString()}`
       } else {
-        // 일반 숫자 (조회수 등)
         animatedValues.value[index] = currentValue.toLocaleString()
       }
     }
@@ -500,7 +637,6 @@ const animateNumber = (targetValue, index, duration = 2000) => {
   updateValue()
 }
 
-// 모든 지표 애니메이션 시작
 const startMetricsAnimation = () => {
   dashboardMetrics.value.forEach((metric, index) => {
     setTimeout(() => {
@@ -509,7 +645,6 @@ const startMetricsAnimation = () => {
   })
 }
 
-// 차트 그리기
 const drawChart = async () => {
   await nextTick()
   
@@ -519,7 +654,6 @@ const drawChart = async () => {
   const ctx = canvas.getContext('2d')
   const data = currentChartData.value
   
-  // 캔버스 초기화
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   
   const padding = 60
@@ -569,14 +703,12 @@ const drawChart = async () => {
   ctx.setLineDash([])
 }
 
-// 차트 업데이트
 const updateChart = async (period) => {
   console.log('차트 기간 변경:', period)
   await nextTick()
   drawChart()
 }
 
-// 툴팁 표시
 const showDataTooltip = (index, event) => {
   const data = currentChartData.value[index]
   const unit = chartPeriod.value === '90d' ? 100 : chartPeriod.value === '30d' ? 10 : 1
@@ -603,14 +735,76 @@ const hideTooltip = () => {
   tooltip.value.show = false
 }
 
-// 로그아웃 핸들러 (App.vue의 로그아웃 버튼과 연결 가능)
-const handleLogout = () => {
-  logoutDialog.value = true
+// AI 추천 관련 메서드들
+const refreshAiRecommendation = async () => {
+  console.log('AI 추천 새로고침')
+  aiLoading.value = true
+  aiError.value = ''
+  
+  try {
+    // Claude API 호출 시뮬레이션
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    // 실제 Claude API 호출은 여기서
+    // const response = await callClaudeAPI(prompt)
+    // aiRecommendation.value = parseClaudeResponse(response)
+    
+    console.log('AI 추천 새로고침 완료')
+    appStore.showSnackbar('AI 추천이 업데이트되었습니다', 'success')
+  } catch (error) {
+    console.error('AI 추천 로드 실패:', error)
+    aiError.value = 'AI 추천을 불러오는데 실패했습니다'
+    appStore.showSnackbar('AI 추천 로드에 실패했습니다', 'error')
+  } finally {
+    aiLoading.value = false
+  }
+}
+
+const copyRecommendation = async () => {
+  try {
+    let text = `${aiRecommendation.value.emoji} ${aiRecommendation.value.title}\n\n`
+    
+    // 각 섹션을 텍스트로 변환
+    Object.values(aiRecommendation.value.sections).forEach(section => {
+      text += `${section.title}\n`
+      if (section.items) {
+        section.items.forEach(item => {
+          // HTML 태그 제거
+          const cleanItem = item.replace(/<[^>]*>/g, '')
+          text += `• ${cleanItem}\n`
+        })
+      }
+      if (section.effects) {
+        text += '\n기대 효과:\n'
+        section.effects.forEach(effect => {
+          text += `• ${effect}\n`
+        })
+      }
+      text += '\n'
+    })
+    
+    await navigator.clipboard.writeText(text)
+    appStore.showSnackbar('추천 내용이 복사되었습니다', 'success')
+  } catch (error) {
+    console.error('복사 실패:', error)
+    appStore.showSnackbar('복사에 실패했습니다', 'error')
+  }
+}
+
+const createContentFromRecommendation = () => {
+  // 추천 내용을 기반으로 콘텐츠 생성 페이지로 이동
+  router.push({
+    path: '/content/create',
+    query: {
+      type: 'sns',
+      title: aiRecommendation.value.title,
+      template: 'ai_recommendation'
+    }
+  })
 }
 
 const confirmLogout = () => {
   try {
-    // 로그아웃 처리
     authStore.logout()
     appStore.showSnackbar('로그아웃되었습니다.', 'success')
     router.push('/login')
@@ -622,40 +816,11 @@ const confirmLogout = () => {
   }
 }
 
-// 데이터 새로고침
-const refreshData = async () => {
-  try {
-    loading.value = true
-
-    // API 호출 시뮬레이션
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    console.log('대시보드 데이터 새로고침 완료')
-  } catch (error) {
-    console.error('데이터 새로고침 실패:', error)
-    appStore.showSnackbar('데이터를 불러오는데 실패했습니다.', 'error')
-  } finally {
-    loading.value = false
-  }
-}
-
-// 로그아웃 함수를 전역에서 호출할 수 있도록 노출 (App.vue에서 사용 가능)
-defineExpose({
-  handleLogout
-})
-
 // 라이프사이클
 onMounted(async () => {
   console.log('DashboardView 마운트됨')
 
   try {
-    // 시간 업데이트
-    updateTime()
-    setInterval(updateTime, 60000) // 1분마다 업데이트
-
-    // 초기 데이터 로드
-    await refreshData()
-
     // 지표 애니메이션 시작
     setTimeout(() => {
       startMetricsAnimation()
@@ -665,19 +830,24 @@ onMounted(async () => {
     setTimeout(() => {
       drawChart()
     }, 1000)
+
+    // AI 추천 로드
+    setTimeout(() => {
+      // 자동으로 AI 추천을 로드하지 않고 사용자 액션 대기
+      // refreshAiRecommendation()
+    }, 1500)
   } catch (error) {
     console.error('대시보드 초기화 실패:', error)
   }
 })
 
 onBeforeUnmount(() => {
-  // 애니메이션 정리
   animatedValues.value = {}
 })
 </script>
 
 <style scoped>
-/* 메트릭 카드 스타일 - 수정된 버전 */
+/* 기존 스타일들 유지 */
 .metric-card {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -707,7 +877,6 @@ onBeforeUnmount(() => {
   background: linear-gradient(90deg, var(--v-theme-warning), var(--v-theme-warning-lighten-1));
 }
 
-/* 아이콘을 카드 맨 오른쪽 상단에 절대 위치로 배치 */
 .metric-icon-wrapper-absolute {
   position: absolute;
   top: 16px;
@@ -725,7 +894,7 @@ onBeforeUnmount(() => {
 .metric-title {
   color: var(--v-theme-on-surface);
   font-weight: 600;
-  padding-right: 48px; /* 아이콘 공간 확보 */
+  padding-right: 48px;
 }
 
 .metric-value {
@@ -739,12 +908,7 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
-.metric-detail {
-  font-size: 0.75rem;
-  opacity: 0.7;
-}
-
-/* 차트 카드 스타일 */
+/* 차트 스타일들 유지 */
 .chart-card {
   transition: all 0.3s ease;
 }
@@ -759,7 +923,6 @@ onBeforeUnmount(() => {
   height: 100%;
 }
 
-/* 실제 차트 스타일 */
 .real-chart {
   width: 100%;
   height: 100%;
@@ -873,7 +1036,6 @@ onBeforeUnmount(() => {
   transform: scale(1.5);
 }
 
-/* 수정된 X축 라벨 스타일 */
 .x-axis-labels {
   position: relative;
   margin-top: 12px;
@@ -891,7 +1053,6 @@ onBeforeUnmount(() => {
   display: inline-block;
 }
 
-/* 툴팁 스타일 */
 .chart-tooltip {
   position: fixed;
   z-index: 1000;
@@ -917,7 +1078,7 @@ onBeforeUnmount(() => {
   margin: 2px 0;
 }
 
-/* AI 추천 카드 스타일 */
+/* AI 추천 카드 새로운 스타일 */
 .ai-recommend-card {
   transition: all 0.3s ease;
 }
@@ -927,12 +1088,88 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
 }
 
-.ai-recommendation-item {
-  transition: all 0.2s ease;
+.ai-recommendation-content {
+  animation: fadeInUp 0.5s ease-out;
 }
 
-.ai-recommendation-item:hover {
-  transform: translateX(2px);
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.recommendation-emoji {
+  font-size: 1.5rem;
+}
+
+.recommendation-section {
+  border-left: 3px solid var(--v-theme-primary);
+  padding-left: 12px;
+}
+
+.recommendation-scroll-content {
+  scrollbar-width: thin;
+  scrollbar-color: #ddd transparent;
+}
+
+.recommendation-scroll-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.recommendation-scroll-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.recommendation-scroll-content::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 2px;
+}
+
+.recommendation-scroll-content::-webkit-scrollbar-thumb:hover {
+  background: #bbb;
+}
+
+.idea-item,
+.warning-item,
+.effect-item {
+  line-height: 1.5;
+}
+
+.cost-table {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.cost-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.cost-table tr:last-child td {
+  border-bottom: none;
+}
+
+.current-info-box {
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.insight-box {
+  border: 1px solid #e8f5e8;
+}
+
+.recommendation-actions {
+  border-top: 1px solid #e0e0e0;
+}
+
+.info-item {
+  line-height: 1.4;
 }
 
 /* 반응형 디자인 */
@@ -954,6 +1191,10 @@ onBeforeUnmount(() => {
   
   .chart-area {
     height: 250px !important;
+  }
+
+  .recommendation-scroll-content {
+    max-height: 300px !important;
   }
 }
 
@@ -985,6 +1226,14 @@ onBeforeUnmount(() => {
     font-size: 0.65rem;
     min-width: 30px;
   }
+
+  .recommendation-scroll-content {
+    max-height: 250px !important;
+  }
+
+  .recommendation-emoji {
+    font-size: 1.2rem;
+  }
 }
 
 /* 다크 테마 지원 */
@@ -1004,5 +1253,18 @@ onBeforeUnmount(() => {
 .v-theme--dark .chart-stats {
   background: #1E293B !important;
   border-color: #334155;
+}
+
+.v-theme--dark .current-info-box {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.v-theme--dark .insight-box {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.v-theme--dark .recommendation-actions {
+  border-color: rgba(255, 255, 255, 0.1);
 }
 </style>
