@@ -1,99 +1,47 @@
 //* src/views/ContentManagementView.vue
 <template>
   <v-container fluid class="pa-4">
-  <!-- 콘텐츠 타입 필터 - 칩 형태로 변경 -->
-    <div class="mb-6">
-      <div class="d-flex align-center flex-wrap ga-2">
-        <span class="text-subtitle-2 font-weight-medium mr-3">콘텐츠 타입:</span>
-        
-        <!-- 전체 필터 -->
-        <v-chip
-          :color="selectedContentType === 'all' ? 'primary' : 'default'"
-          :variant="selectedContentType === 'all' ? 'flat' : 'outlined'"
-          class="cursor-pointer"
-          @click="selectContentType('all')"
-        >
-          <v-icon start size="16">mdi-view-grid</v-icon>
-          전체 ({{ getTotalCount() }})
-        </v-chip>
-
-        <!-- Instagram 필터 -->
-        <v-chip
-          :color="selectedContentType === 'instagram' ? 'pink' : 'default'"
-          :variant="selectedContentType === 'instagram' ? 'flat' : 'outlined'"
-          class="cursor-pointer"
-          @click="selectContentType('instagram')"
-        >
-          <v-icon start size="16" color="pink">mdi-instagram</v-icon>
-          Instagram ({{ getTypeCount('instagram') }})
-        </v-chip>
-
-        <!-- 네이버 블로그 필터 -->
-        <v-chip
-          :color="selectedContentType === 'blog' ? 'green' : 'default'"
-          :variant="selectedContentType === 'blog' ? 'flat' : 'outlined'"
-          class="cursor-pointer"
-          @click="selectContentType('blog')"
-        >
-          <v-icon start size="16" color="green">mdi-blogger</v-icon>
-          네이버 블로그 ({{ getTypeCount('blog') }})
-        </v-chip>
-
-        <!-- 포스터 필터 -->
-        <v-chip
-          :color="selectedContentType === 'poster' ? 'orange' : 'default'"
-          :variant="selectedContentType === 'poster' ? 'flat' : 'outlined'"
-          class="cursor-pointer"
-          @click="selectContentType('poster')"
-        >
-          <v-icon start size="16" color="orange">mdi-file-image</v-icon>
-          포스터 ({{ getTypeCount('poster') }})
-        </v-chip>
-      </div>
+    <!-- 상단 헤더 - 제목과 생성 버튼만 -->
+    <div class="d-flex justify-space-between align-center mb-6">      
+      <!-- 새 콘텐츠 생성 버튼 -->
+      <v-btn
+        color="primary"
+        size="large"
+        prepend-icon="mdi-plus"
+        @click="$router.push('/content/create')"
+      >
+        새 콘텐츠 생성
+      </v-btn>
     </div>
 
-    <!-- 추가 필터 및 정렬 -->
+    <!-- 필터 영역 - 통합된 필터 -->
     <v-card class="mb-6">
       <v-card-text>
         <v-row align="center">
-          <!-- 추가 필터 -->
-          <v-col cols="12" md="6">
-            <!-- 검색 -->
-            <v-spacer />
+          <!-- 콘텐츠 타입 필터 -->
+          <v-col cols="12" md="3">
+            <v-select
+              v-model="selectedContentType"
+              :items="contentTypeOptions"
+              label="콘텐츠 타입"
+              variant="outlined"
+              density="compact"
+              prepend-inner-icon="mdi-filter-variant"
+              @update:model-value="applyFilters"
+            />
+          </v-col>
+
+          <!-- 제목 검색 -->
+          <v-col cols="12" md="4">
             <v-text-field
               v-model="searchQuery"
               label="제목, 해시태그로 검색"
               prepend-inner-icon="mdi-magnify"
               variant="outlined"
               density="compact"
-              style="min-width: 300px;"
               clearable
               @update:model-value="applyFilters"
             />
-          </v-col>
-          
-          <!-- 정렬 및 기간 필터 -->
-          <v-col cols="12" md="3">
-            <v-select
-              v-model="filters.period"
-              :items="periodOptions"
-              label="생성 기간"
-              variant="outlined"
-              density="compact"
-              @update:model-value="applyFilters"
-            />
-          </v-col>
-
-          <v-col cols="12" md="3">
-            <!-- 새 콘텐츠 생성 버튼 -->
-            <v-btn
-              color="primary"
-              size="large"
-              prepend-icon="mdi-plus"
-              @click="$router.push('/content/create')"
-            >
-              새 콘텐츠 생성
-            </v-btn>
           </v-col>
         </v-row>
       </v-card-text>
@@ -135,7 +83,7 @@
           </v-btn>
         </div>
 
-        <!-- 리스트 뷰 - 테이블 형태 -->
+        <!-- 리스트 뷰 - 정렬 가능한 테이블 -->
         <div v-else>
           <v-table>
             <thead>
@@ -149,7 +97,27 @@
                 </th>
                 <th width="450">제목</th>
                 <th width="150">플랫폼</th>
-                <th width="200">프로모션 기간</th>
+                <!-- 프로모션 기간 - 정렬 가능 -->
+                <th 
+                  width="200" 
+                  class="sortable-header cursor-pointer"
+                  @click="sortByPromotionDate"
+                >
+                  <div class="d-flex align-center">
+                    <span>프로모션 기간</span>
+                    <v-icon 
+                      :color="promotionSortOrder === 'none' ? 'grey-lighten-1' : 'primary'"
+                      size="16" 
+                      class="ml-1"
+                    >
+                      {{
+                        promotionSortOrder === 'asc' ? 'mdi-arrow-up' :
+                        promotionSortOrder === 'desc' ? 'mdi-arrow-down' :
+                        'mdi-unfold-more-horizontal'
+                      }}
+                    </v-icon>
+                  </div>
+                </th>
                 <th width="120">액션</th>
               </tr>
             </thead>
@@ -429,6 +397,7 @@ import { useContentStore } from '@/store/content'
  * - 생성된 콘텐츠 목록 조회
  * - 필터링 및 검색
  * - 콘텐츠 상세 보기, 수정, 삭제
+ * - 프로모션 기간 정렬 기능
  */
 
 // 스토어 및 라우터
@@ -446,15 +415,17 @@ const itemsPerPage = ref(20)
 // 콘텐츠 타입 필터
 const selectedContentType = ref('all')
 
-// 기존 필터 상태
+// 기존 필터 상태 (생성 기간 제거)
 const filters = ref({
   published: false,
-  draft: false,
-  period: '전체'
+  draft: false
 })
 
 // 정렬 상태
 const sortBy = ref('latest')
+
+// 프로모션 기간 정렬 상태
+const promotionSortOrder = ref('none') // 'none', 'asc', 'desc'
 
 // 다이얼로그 상태
 const showDetailDialog = ref(false)
@@ -472,6 +443,13 @@ const successMessage = ref('')
 const errorMessage = ref('')
 
 // 옵션 데이터
+const contentTypeOptions = [
+  { title: '전체', value: 'all' },
+  { title: 'Instagram', value: 'instagram' },
+  { title: '네이버 블로그', value: 'blog' },
+  { title: '포스터', value: 'poster' }
+]
+
 const statusOptions = [
   { title: '발행됨', value: 'published' },
   { title: '임시저장', value: 'draft' },
@@ -483,14 +461,6 @@ const sortOptions = [
   { title: '오래된순', value: 'oldest' },
   { title: '제목순', value: 'title' },
   { title: '조회수순', value: 'views' }
-]
-
-const periodOptions = [
-  { title: '전체', value: '전체' },
-  { title: '최근 1주일', value: '1주일' },
-  { title: '최근 1개월', value: '1개월' },
-  { title: '최근 3개월', value: '3개월' },
-  { title: '최근 6개월', value: '6개월' }
 ]
 
 const titleRules = [
@@ -525,46 +495,35 @@ const filteredContents = computed(() => {
       return false
     })
   }
-  
-  // 기간 필터
-  if (filters.value.period !== '전체') {
-    const now = new Date()
-    const startDate = new Date()
-    
-    switch (filters.value.period) {
-      case '1주일':
-        startDate.setDate(now.getDate() - 7)
+
+  // 정렬 (프로모션 기간 정렬이 활성화되어 있지 않을 때만)
+  if (promotionSortOrder.value === 'none') {
+    switch (sortBy.value) {
+      case 'latest':
+        contents.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         break
-      case '1개월':
-        startDate.setMonth(now.getMonth() - 1)
+      case 'oldest':
+        contents.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
         break
-      case '3개월':
-        startDate.setMonth(now.getMonth() - 3)
+      case 'title':
+        contents.sort((a, b) => a.title.localeCompare(b.title))
         break
-      case '6개월':
-        startDate.setMonth(now.getMonth() - 6)
+      case 'views':
+        contents.sort((a, b) => (b.views || 0) - (a.views || 0))
         break
     }
-    
-    contents = contents.filter(content => 
-      new Date(content.createdAt) >= startDate
-    )
-  }
-
-  // 정렬
-  switch (sortBy.value) {
-    case 'latest':
-      contents.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      break
-    case 'oldest':
-      contents.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
-      break
-    case 'title':
-      contents.sort((a, b) => a.title.localeCompare(b.title))
-      break
-    case 'views':
-      contents.sort((a, b) => (b.views || 0) - (a.views || 0))
-      break
+  } else {
+    // 프로모션 기간 정렬
+    contents.sort((a, b) => {
+      const dateA = new Date(a.startDate || 0)
+      const dateB = new Date(b.startDate || 0)
+      
+      if (promotionSortOrder.value === 'asc') {
+        return dateA - dateB
+      } else {
+        return dateB - dateA
+      }
+    })
   }
 
   return contents
@@ -675,17 +634,35 @@ const formatDateRange = (startDate, endDate) => {
   return `${start} ~ ${end}`
 }
 
-// 필터 관련 메서드
-const selectContentType = (type) => {
-  selectedContentType.value = type
+// 정렬 관련 메서드
+const sortByPromotionDate = () => {
+  // 프로모션 기간 정렬 토글
+  if (promotionSortOrder.value === 'none') {
+    promotionSortOrder.value = 'asc'
+  } else if (promotionSortOrder.value === 'asc') {
+    promotionSortOrder.value = 'desc'
+  } else {
+    promotionSortOrder.value = 'none'
+  }
+  
+  // 다른 정렬 옵션을 리셋
+  if (promotionSortOrder.value !== 'none') {
+    sortBy.value = 'latest' // 기본값으로 리셋
+  }
+  
   currentPage.value = 1
 }
 
+// 필터 관련 메서드
 const applyFilters = () => {
+  // 필터 적용 시 프로모션 정렬 리셋
+  promotionSortOrder.value = 'none'
   currentPage.value = 1
 }
 
 const applySorting = () => {
+  // 다른 정렬 적용 시 프로모션 정렬 리셋
+  promotionSortOrder.value = 'none'
   currentPage.value = 1
 }
 
@@ -807,6 +784,14 @@ onMounted(async () => {
 watch(selectedItems, (newVal) => {
   selectAll.value = newVal.length === paginatedContents.value.length && newVal.length > 0
 })
+
+// 프로모션 정렬 상태가 변경될 때 다른 정렬 옵션 리셋
+watch(promotionSortOrder, (newVal) => {
+  if (newVal !== 'none') {
+    // 프로모션 정렬이 활성화될 때는 다른 정렬 옵션을 비활성화
+    console.log(`프로모션 기간 정렬: ${newVal === 'asc' ? '오름차순' : '내림차순'}`)
+  }
+})
 </script>
 
 <style scoped>
@@ -818,6 +803,19 @@ watch(selectedItems, (newVal) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 정렬 가능한 헤더 스타일 */
+.sortable-header {
+  transition: background-color 0.2s ease-in-out;
+}
+
+.sortable-header:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.sortable-header .v-icon {
+  transition: color 0.2s ease-in-out;
 }
 
 /* 버튼 hover 효과 */
@@ -855,18 +853,6 @@ watch(selectedItems, (newVal) => {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
-/* 칩 필터 스타일링 */
-.v-chip.cursor-pointer:hover {
-  transform: scale(1.05);
-  transition: transform 0.2s ease-in-out;
-}
-
-/* 플랫폼 칩 특별 스타일링 */
-.v-chip.v-chip--variant-flat {
-  font-weight: 600;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
 /* 비활성화된 입력 필드 스타일 */
 .bg-grey-lighten-4 {
   background-color: #f5f5f5;
@@ -883,25 +869,52 @@ watch(selectedItems, (newVal) => {
   background-color: #f8f9fa;
   font-weight: 600;
   color: #495057;
+  position: relative;
 }
 
 .v-table tbody td {
   vertical-align: middle;
 }
 
+/* 필터 카드 스타일 */
+.v-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
 /* 반응형 디자인 */
 @media (max-width: 768px) {
-  .d-flex.align-center.flex-wrap.ga-2 {
+  .d-flex.justify-space-between.align-center {
     flex-direction: column;
     align-items: stretch;
+    gap: 16px;
   }
   
-  .d-flex.align-center.flex-wrap.ga-2 .v-chip {
+  .v-row .v-col {
     margin-bottom: 8px;
   }
   
-  .v-text-field {
-    min-width: 100% !important;
+  .v-table {
+    font-size: 0.875rem;
   }
+  
+  .v-table th,
+  .v-table td {
+    padding: 8px 4px;
+  }
+  
+  .sortable-header {
+    font-size: 0.8rem;
+  }
+}
+
+/* 정렬 아이콘 애니메이션 */
+@keyframes sortActive {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.sortable-header .v-icon[style*="color: rgb(25, 118, 210)"] {
+  animation: sortActive 0.3s ease-in-out;
 }
 </style>
