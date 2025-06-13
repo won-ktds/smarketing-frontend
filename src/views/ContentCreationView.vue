@@ -22,7 +22,7 @@
             <div v-if="currentStep === 1">
               <!-- 1. 콘텐츠 타입 선택 -->
               <v-card class="mb-4" elevation="1">
-                <v-card-title class="text-h6 py-3">1. 콘텐츠 유형 선택</v-card-title>
+                <v-card-title class="text-h6 py-3">콘텐츠 유형 선택</v-card-title>
                 <v-card-text>
                   <v-row>
                     <v-col
@@ -65,7 +65,7 @@
               <div v-if="selectedType">
                 <!-- 2. 기본 정보 -->
                 <v-card class="mb-4" elevation="1">
-                  <v-card-title class="text-h6 py-3">2. 기본 정보</v-card-title>
+                  <v-card-title class="text-h6 py-3">기본 정보</v-card-title>
                   <v-card-text>
                     <v-form ref="contentForm" v-model="formValid">
                       <!-- 제목 -->
@@ -153,7 +153,7 @@
 
                 <!-- 4. 이미지 업로드 -->
                 <v-card class="mb-4" elevation="1">
-                  <v-card-title class="text-h6 py-3">4. 이미지 첨부</v-card-title>
+                  <v-card-title class="text-h6 py-3">이미지 첨부</v-card-title>
                   <v-card-text>
                     <v-file-input
                       v-model="uploadedFiles"
@@ -227,7 +227,7 @@
 
               <!-- 3. AI 옵션 설정 -->
               <v-card class="mb-4" elevation="1" v-if="useAI">
-                <v-card-title class="text-h6 py-3">3. AI 옵션 설정</v-card-title>
+                <v-card-title class="text-h6 py-3">AI 옵션 설정</v-card-title>
                 <v-card-text>
                   <!-- 톤앤매너 -->
                   <v-select
@@ -284,7 +284,7 @@
 
               <!-- 수동 입력 (AI 사용하지 않는 경우) -->
               <v-card class="mb-4" elevation="1" v-if="!useAI">
-                <v-card-title class="text-h6 py-3">3. 콘텐츠 직접 입력</v-card-title>
+                <v-card-title class="text-h6 py-3">콘텐츠 직접 입력</v-card-title>
                 <v-card-text>
                   <v-textarea
                     v-model="formData.content"
