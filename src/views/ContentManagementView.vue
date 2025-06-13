@@ -1,47 +1,56 @@
 //* src/views/ContentManagementView.vue
 <template>
   <v-container fluid class="pa-4">
-    <!-- 상단 헤더 - 제목과 생성 버튼만 -->
-    <div class="d-flex justify-space-between align-center mb-6">      
-      <!-- 새 콘텐츠 생성 버튼 -->
-      <v-btn
-        color="primary"
-        size="large"
-        prepend-icon="mdi-plus"
-        @click="$router.push('/content/create')"
-      >
-        새 콘텐츠 생성
-      </v-btn>
-    </div>
-
-    <!-- 필터 영역 - 통합된 필터 -->
+    <!-- 필터 영역 -->
     <v-card class="mb-6">
       <v-card-text>
         <v-row align="center">
-          <!-- 콘텐츠 타입 필터 -->
-          <v-col cols="12" md="3">
-            <v-select
-              v-model="selectedContentType"
-              :items="contentTypeOptions"
-              label="콘텐츠 타입"
-              variant="outlined"
-              density="compact"
-              prepend-inner-icon="mdi-filter-variant"
-              @update:model-value="applyFilters"
-            />
+          <!-- 콘텐츠 타입 필터 - 칩 형태로 변경 -->
+          <v-col cols="12" md="6">
+            <div class="d-flex align-center flex-wrap ga-2">
+              <span class="text-subtitle-2 font-weight-medium mr-2">콘텐츠 타입:</span>
+              <v-chip
+                v-for="type in contentTypeOptions"
+                :key="type.value"
+                :color="selectedContentType === type.value ? type.color : 'default'"
+                :variant="selectedContentType === type.value ? 'flat' : 'outlined'"
+                size="small"
+                class="mr-1 chip-hover"
+                @click="selectContentType(type.value)"
+              >
+                <span class="mr-1">{{ type.emoji }}</span>
+                {{ type.title.replace(type.emoji + ' ', '') }}
+                <span v-if="type.value !== 'all'" class="ml-1">({{ getTypeCount(type.value) }})</span>
+                <span v-else class="ml-1">({{ getTotalCount() }})</span>
+              </v-chip>
+            </div>
           </v-col>
 
-          <!-- 제목 검색 -->
-          <v-col cols="12" md="4">
-            <v-text-field
-              v-model="searchQuery"
-              label="제목, 해시태그로 검색"
-              prepend-inner-icon="mdi-magnify"
-              variant="outlined"
-              density="compact"
-              clearable
-              @update:model-value="applyFilters"
-            />
+          <!-- 검색 및 새콘텐츠생성 버튼 -->
+          <v-col cols="12" md="6">
+            <div class="d-flex align-center ga-2">
+              <!-- 제목 검색 -->
+              <v-text-field
+                v-model="searchQuery"
+                label="제목, 해시태그로 검색"
+                prepend-inner-icon="mdi-magnify"
+                variant="outlined"
+                density="compact"
+                clearable
+                hide-details
+                @update:model-value="applyFilters"
+              />
+              
+              <!-- 새 콘텐츠 생성 버튼 -->
+              <v-btn
+                color="primary"
+                prepend-icon="mdi-plus"
+                @click="$router.push('/content/create')"
+                class="ml-2"
+              >
+                새콘텐츠생성
+              </v-btn>
+            </div>
           </v-col>
         </v-row>
       </v-card-text>
@@ -143,21 +152,7 @@
                       </v-chip>
                     </div>
                     <div class="text-caption text-truncate grey--text" style="max-width: 400px;">
-                      {{ content.content }}
-                    </div>
-                    <div v-if="content.hashtags?.length" class="mt-1">
-                      <v-chip
-                        v-for="tag in content.hashtags.slice(0, 3)"
-                        :key="tag"
-                        size="x-small"
-                        variant="outlined"
-                        class="mr-1"
-                      >
-                        #{{ tag }}
-                      </v-chip>
-                      <span v-if="content.hashtags.length > 3" class="text-caption text-grey-600">
-                        +{{ content.hashtags.length - 3 }}개
-                      </span>
+                      {{ content.content ? content.content.substring(0, 80) + '...' : '' }}
                     </div>
                   </div>
                 </td>
@@ -167,9 +162,6 @@
                     size="small"
                     variant="tonal"
                   >
-                    <v-icon start size="16" :color="getPlatformColor(content.platform)">
-                      {{ getPlatformIcon(content.platform) }}
-                    </v-icon>
                     {{ getPlatformText(content.platform) }}
                   </v-chip>
                 </td>
@@ -179,13 +171,18 @@
                   </div>
                 </td>
                 <td @click.stop>
-                  <div class="d-flex ga-2">
+                  <div class="d-flex ga-1">
+                    <v-btn
+                      icon="mdi-eye"
+                      size="small"
+                      variant="text"
+                      @click="showDetail(content)"
+                    />
                     <v-btn
                       icon="mdi-pencil"
                       size="small"
                       variant="text"
-                      color="primary"
-                      @click="editContent(content)"
+                      @click="showDetailWithEdit(content)"
                     />
                     <v-btn
                       icon="mdi-delete"
@@ -201,62 +198,64 @@
           </v-table>
         </div>
       </v-card-text>
-
-      <!-- 페이지네이션 -->
-      <v-card-actions v-if="totalPages > 1" class="justify-center">
-        <v-pagination
-          v-model="currentPage"
-          :length="totalPages"
-          :total-visible="7"
-          circle
-        />
-      </v-card-actions>
     </v-card>
 
-    <!-- 상세보기/편집 다이얼로그 -->
-    <v-dialog v-model="showDetailDialog" max-width="800" scrollable>
-      <v-card v-if="selectedContent">
+    <!-- 페이지네이션 -->
+    <div v-if="totalPages > 1" class="d-flex justify-center mt-6">
+      <v-pagination
+        v-model="currentPage"
+        :length="totalPages"
+        :total-visible="7"
+        color="primary"
+        @update:model-value="scrollToTop"
+      />
+    </div>
+
+    <!-- 상세 보기/수정 다이얼로그 -->
+    <v-dialog v-model="showDetailDialog" max-width="800px" scrollable>
+      <v-card>
         <v-card-title class="d-flex justify-space-between align-center">
-          <span>{{ isEditMode ? '콘텐츠 편집' : '콘텐츠 상세보기' }}</span>
-          <v-btn icon="mdi-close" variant="text" @click="showDetailDialog = false" />
+          <span>{{ isEditMode ? '콘텐츠 수정' : '콘텐츠 상세 정보' }}</span>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            @click="closeDialog"
+          />
         </v-card-title>
         
         <v-divider />
         
-        <v-card-text style="max-height: 600px;">
-          <v-form ref="editForm" v-model="editFormValid">
+        <v-card-text class="pa-4" style="max-height: 70vh;">
+          <v-form ref="editForm" v-model="editFormValid" v-if="selectedContent">
             <!-- 제목 -->
             <div class="mb-4">
               <label class="text-subtitle-2 font-weight-medium mb-2 d-block">제목</label>
               <v-text-field
                 v-if="isEditMode"
                 v-model="editingContent.title"
+                :rules="titleRules"
                 variant="outlined"
                 density="compact"
-                :rules="titleRules"
               />
-              <div v-else class="text-body-1">{{ selectedContent.title }}</div>
+              <div v-else class="text-body-1 font-weight-medium">
+                {{ selectedContent.title }}
+              </div>
             </div>
 
             <!-- 플랫폼 (수정 시 비활성화) -->
             <div class="mb-4">
               <label class="text-subtitle-2 font-weight-medium mb-2 d-block">플랫폼</label>
-              <div class="d-flex align-center">
-                <v-chip :color="getPlatformColor(selectedContent.platform)" variant="tonal">
-                  <v-icon start size="16" :color="getPlatformColor(selectedContent.platform)">
-                    {{ getPlatformIcon(selectedContent.platform) }}
-                  </v-icon>
-                  {{ getPlatformText(selectedContent.platform) }}
-                </v-chip>
-                <span v-if="isEditMode" class="text-caption text-grey-600 ml-2">
-                  (플랫폼은 수정할 수 없습니다)
-                </span>
+              <v-chip :color="getPlatformColor(selectedContent.platform)" variant="tonal">
+                {{ getPlatformText(selectedContent.platform) }}
+              </v-chip>
+              <div v-if="isEditMode" class="text-caption text-grey-600 mt-1">
+                플랫폼은 수정할 수 없습니다.
               </div>
             </div>
 
-            <!-- 프로모션 기간 -->
+            <!-- 홍보 기간 -->
             <div class="mb-4">
-              <label class="text-subtitle-2 font-weight-medium mb-2 d-block">프로모션 기간</label>
+              <label class="text-subtitle-2 font-weight-medium mb-2 d-block">홍보 기간</label>
               <div v-if="isEditMode" class="d-flex ga-2">
                 <v-text-field
                   v-model="editingContent.startDate"
@@ -278,15 +277,12 @@
               </div>
             </div>
 
-            <!-- 콘텐츠 내용 (수정 시 비활성화) -->
+            <!-- 내용 (수정 시 비활성화) -->
             <div class="mb-4">
-              <label class="text-subtitle-2 font-weight-medium mb-2 d-block">콘텐츠 내용</label>
-              <div v-if="isEditMode">
-                <div class="pa-3 bg-grey-lighten-4 rounded text-body-2" style="white-space: pre-wrap;">
-                  {{ selectedContent.content }}
-                </div>
-                <div class="text-caption text-grey-600 mt-1">
-                  콘텐츠 내용은 수정할 수 없습니다. 새로 생성해주세요.
+              <label class="text-subtitle-2 font-weight-medium mb-2 d-block">내용</label>
+              <div v-if="isEditMode" class="pa-3 bg-grey-lighten-4 rounded">
+                <div class="text-body-2 text-grey-600 mb-2">
+                  내용은 수정할 수 없습니다. 새로 생성해주세요.
                 </div>
               </div>
               <div v-else class="text-body-1" style="white-space: pre-wrap;">
@@ -444,10 +440,10 @@ const errorMessage = ref('')
 
 // 옵션 데이터
 const contentTypeOptions = [
-  { title: '전체', value: 'all' },
-  { title: 'Instagram', value: 'instagram' },
-  { title: '네이버 블로그', value: 'blog' },
-  { title: '포스터', value: 'poster' }
+  { title: '📊 전체', value: 'all', color: 'primary', emoji: '📊' },
+  { title: '📷 Instagram', value: 'instagram', color: 'pink', emoji: '📷' },
+  { title: '📝 네이버 블로그', value: 'blog', color: 'green', emoji: '📝' },
+  { title: '🎨 포스터', value: 'poster', color: 'orange', emoji: '🎨' }
 ]
 
 const statusOptions = [
@@ -474,7 +470,17 @@ const filteredContents = computed(() => {
   
   // 콘텐츠 타입 필터
   if (selectedContentType.value !== 'all') {
-    contents = contents.filter(content => content.platform === selectedContentType.value)
+    contents = contents.filter(content => {
+      // 플랫폼 매핑 처리
+      const platformMapping = {
+        'instagram': ['instagram', 'INSTAGRAM'],
+        'blog': ['blog', 'NAVER_BLOG', 'naver_blog'],
+        'poster': ['poster', 'POSTER']
+      }
+      
+      const allowedPlatforms = platformMapping[selectedContentType.value] || [selectedContentType.value]
+      return allowedPlatforms.includes(content.platform)
+    })
   }
   
   // 검색 필터
@@ -539,6 +545,135 @@ const totalPages = computed(() => {
   return Math.ceil(filteredContents.value.length / itemsPerPage.value)
 })
 
+// 메서드
+const loadContents = async () => {
+  loading.value = true
+  try {
+    await contentStore.loadContents()
+  } catch (error) {
+    console.error('콘텐츠 로딩 실패:', error)
+    showError.value = true
+    errorMessage.value = '콘텐츠를 불러오는데 실패했습니다.'
+  } finally {
+    loading.value = false
+  }
+}
+
+const selectContentType = (type) => {
+  selectedContentType.value = type
+  currentPage.value = 1
+  // 필터 변경 시 정렬 상태 초기화하지 않음 (별도 처리)
+}
+
+const applyFilters = () => {
+  currentPage.value = 1
+}
+
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const showDetail = (content) => {
+  selectedContent.value = { ...content }
+  isEditMode.value = false
+  showDetailDialog.value = true
+}
+
+const showDetailWithEdit = (content) => {
+  selectedContent.value = { ...content }
+  editingContent.value = { ...content }
+  isEditMode.value = true
+  showDetailDialog.value = true
+}
+
+const showEditMode = () => {
+  editingContent.value = { ...selectedContent.value }
+  isEditMode.value = true
+}
+
+const cancelEdit = () => {
+  isEditMode.value = false
+  editingContent.value = null
+}
+
+const saveEdit = async () => {
+  if (!editForm.value.validate()) return
+  
+  updating.value = true
+  try {
+    await contentStore.updateContent(editingContent.value.id, editingContent.value)
+    selectedContent.value = { ...editingContent.value }
+    isEditMode.value = false
+    editingContent.value = null
+    showSuccess.value = true
+    successMessage.value = '콘텐츠가 성공적으로 수정되었습니다.'
+  } catch (error) {
+    console.error('콘텐츠 수정 실패:', error)
+    showError.value = true
+    errorMessage.value = '콘텐츠 수정에 실패했습니다.'
+  } finally {
+    updating.value = false
+  }
+}
+
+const closeDialog = () => {
+  showDetailDialog.value = false
+  isEditMode.value = false
+  selectedContent.value = null
+  editingContent.value = null
+}
+
+const confirmDelete = async (content) => {
+  if (confirm(`"${content.title}" 콘텐츠를 삭제하시겠습니까?`)) {
+    try {
+      await contentStore.deleteContent(content.id)
+      showSuccess.value = true
+      successMessage.value = '콘텐츠가 성공적으로 삭제되었습니다.'
+      closeDialog()
+    } catch (error) {
+      console.error('콘텐츠 삭제 실패:', error)
+      showError.value = true
+      errorMessage.value = '콘텐츠 삭제에 실패했습니다.'
+    }
+  }
+}
+
+const deleteSelectedItems = async () => {
+  if (selectedItems.value.length === 0) return
+  
+  if (confirm(`선택된 ${selectedItems.value.length}개의 콘텐츠를 삭제하시겠습니까?`)) {
+    try {
+      await Promise.all(selectedItems.value.map(id => contentStore.deleteContent(id)))
+      selectedItems.value = []
+      selectAll.value = false
+      showSuccess.value = true
+      successMessage.value = '선택된 콘텐츠가 성공적으로 삭제되었습니다.'
+    } catch (error) {
+      console.error('콘텐츠 일괄 삭제 실패:', error)
+      showError.value = true
+      errorMessage.value = '콘텐츠 삭제에 실패했습니다.'
+    }
+  }
+}
+
+const toggleSelectAll = () => {
+  if (selectAll.value) {
+    selectedItems.value = paginatedContents.value.map(content => content.id)
+  } else {
+    selectedItems.value = []
+  }
+}
+
+const sortByPromotionDate = () => {
+  if (promotionSortOrder.value === 'none') {
+    promotionSortOrder.value = 'asc'
+  } else if (promotionSortOrder.value === 'asc') {
+    promotionSortOrder.value = 'desc'
+  } else {
+    promotionSortOrder.value = 'none'
+  }
+}
+
 // 헬퍼 메서드
 const getTotalCount = () => {
   return contentStore.contents?.length || 0
@@ -546,7 +681,17 @@ const getTotalCount = () => {
 
 const getTypeCount = (type) => {
   if (type === 'all') return getTotalCount()
-  return contentStore.contents?.filter(content => content.platform === type).length || 0
+  return contentStore.contents?.filter(content => {
+    // 플랫폼 매핑 처리
+    const platformMapping = {
+      'instagram': ['instagram', 'INSTAGRAM'],
+      'blog': ['blog', 'NAVER_BLOG', 'naver_blog'],
+      'poster': ['poster', 'POSTER']
+    }
+    
+    const allowedPlatforms = platformMapping[type] || [type]
+    return allowedPlatforms.includes(content.platform)
+  }).length || 0
 }
 
 const getPlatformColor = (platform) => {
@@ -559,18 +704,6 @@ const getPlatformColor = (platform) => {
     'POSTER': 'orange'
   }
   return colors[platform] || 'grey'
-}
-
-const getPlatformIcon = (platform) => {
-  const icons = {
-    'instagram': 'mdi-instagram',
-    'INSTAGRAM': 'mdi-instagram',
-    'blog': 'mdi-blogger',
-    'NAVER_BLOG': 'mdi-blogger',
-    'poster': 'mdi-file-image',
-    'POSTER': 'mdi-file-image'
-  }
-  return icons[platform] || 'mdi-web'
 }
 
 const getPlatformText = (platform) => {
@@ -588,9 +721,7 @@ const getPlatformText = (platform) => {
 const getStatusColor = (status) => {
   const colors = {
     'published': 'success',
-    'PUBLISHED': 'success',
     'draft': 'warning',
-    'DRAFT': 'warning',
     'archived': 'grey'
   }
   return colors[status] || 'grey'
@@ -599,173 +730,36 @@ const getStatusColor = (status) => {
 const getStatusText = (status) => {
   const texts = {
     'published': '발행됨',
-    'PUBLISHED': '발행됨',
     'draft': '임시저장',
-    'DRAFT': '임시저장',
     'archived': '보관됨'
   }
   return texts[status] || status
 }
 
-const formatDate = (date) => {
-  if (!date) return '-'
-  return new Date(date).toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).replace(/\./g, '.').replace(/ /g, '')
-}
-
 const formatDateRange = (startDate, endDate) => {
-  if (!startDate || !endDate) return '-'
+  if (!startDate && !endDate) return '-'
   
-  const start = new Date(startDate).toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).replace(/\./g, '.').replace(/ /g, '')
-  
-  const end = new Date(endDate).toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).replace(/\./g, '.').replace(/ /g, '')
-  
-  return `${start} ~ ${end}`
-}
-
-// 정렬 관련 메서드
-const sortByPromotionDate = () => {
-  // 프로모션 기간 정렬 토글
-  if (promotionSortOrder.value === 'none') {
-    promotionSortOrder.value = 'asc'
-  } else if (promotionSortOrder.value === 'asc') {
-    promotionSortOrder.value = 'desc'
-  } else {
-    promotionSortOrder.value = 'none'
+  const formatDate = (date) => {
+    if (!date) return ''
+    return new Date(date).toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
   }
   
-  // 다른 정렬 옵션을 리셋
-  if (promotionSortOrder.value !== 'none') {
-    sortBy.value = 'latest' // 기본값으로 리셋
+  const start = formatDate(startDate)
+  const end = formatDate(endDate)
+  
+  if (start && end) {
+    return `${start} ~ ${end}`
+  } else if (start) {
+    return `${start} ~`
+  } else if (end) {
+    return `~ ${end}`
   }
   
-  currentPage.value = 1
-}
-
-// 필터 관련 메서드
-const applyFilters = () => {
-  // 필터 적용 시 프로모션 정렬 리셋
-  promotionSortOrder.value = 'none'
-  currentPage.value = 1
-}
-
-const applySorting = () => {
-  // 다른 정렬 적용 시 프로모션 정렬 리셋
-  promotionSortOrder.value = 'none'
-  currentPage.value = 1
-}
-
-// 선택 관련 메서드
-const toggleSelectAll = () => {
-  if (selectAll.value) {
-    selectedItems.value = paginatedContents.value.map(content => content.id)
-  } else {
-    selectedItems.value = []
-  }
-}
-
-const deleteSelectedItems = async () => {
-  if (selectedItems.value.length === 0) return
-  
-  if (confirm(`선택된 ${selectedItems.value.length}개의 콘텐츠를 삭제하시겠습니까?`)) {
-    try {
-      await contentStore.deleteMultipleContents(selectedItems.value)
-      selectedItems.value = []
-      selectAll.value = false
-      showSuccessMessage('선택된 콘텐츠가 삭제되었습니다.')
-    } catch (error) {
-      showErrorMessage('콘텐츠 삭제 중 오류가 발생했습니다.')
-    }
-  }
-}
-
-// 상세 보기 관련 메서드
-const showDetail = (content) => {
-  selectedContent.value = content
-  showDetailDialog.value = true
-  isEditMode.value = false
-}
-
-const showEditMode = () => {
-  editingContent.value = { 
-    ...selectedContent.value,
-    hashtags: [...(selectedContent.value.hashtags || [])]
-  }
-  isEditMode.value = true
-}
-
-// 편집 관련 메서드
-const editContent = (content) => {
-  selectedContent.value = content
-  editingContent.value = { 
-    ...content,
-    hashtags: [...(content.hashtags || [])]
-  }
-  isEditMode.value = true
-  showDetailDialog.value = true
-}
-
-const cancelEdit = () => {
-  editingContent.value = null
-  isEditMode.value = false
-}
-
-const saveEdit = async () => {
-  if (!editFormValid.value) return
-  
-  updating.value = true
-  try {
-    await contentStore.updateContent(editingContent.value.id, editingContent.value)
-    selectedContent.value = { ...editingContent.value }
-    showSuccessMessage('콘텐츠가 수정되었습니다.')
-    isEditMode.value = false
-    editingContent.value = null
-  } catch (error) {
-    showErrorMessage('콘텐츠 수정 중 오류가 발생했습니다.')
-  } finally {
-    updating.value = false
-  }
-}
-
-// 삭제 관련 메서드
-const confirmDelete = (content) => {
-  if (confirm(`"${content.title}" 콘텐츠를 삭제하시겠습니까?`)) {
-    deleteContent(content.id)
-  }
-}
-
-const deleteContent = async (contentId) => {
-  try {  
-    await contentStore.deleteContent(contentId)
-    showSuccessMessage('콘텐츠가 삭제되었습니다.')
-    if (showDetailDialog.value) {
-      showDetailDialog.value = false
-    }
-  } catch (error) {
-    showErrorMessage('콘텐츠 삭제 중 오류가 발생했습니다.')
-  }
-}
-
-// 메시지 관련 메서드
-const showSuccessMessage = (message) => {
-  successMessage.value = message
-  showSuccess.value = true
-}
-
-const showErrorMessage = (message) => {
-  errorMessage.value = message
-  showError.value = true
+  return '-'
 }
 
 // 라이프사이클
@@ -774,7 +768,9 @@ onMounted(async () => {
   try {
     await contentStore.loadContents()
   } catch (error) {
-    showErrorMessage('콘텐츠를 불러오는 중 오류가 발생했습니다.')
+    console.error('콘텐츠 로딩 실패:', error)
+    showError.value = true
+    errorMessage.value = '콘텐츠를 불러오는데 실패했습니다.'
   } finally {
     loading.value = false
   }
@@ -816,6 +812,28 @@ watch(promotionSortOrder, (newVal) => {
 
 .sortable-header .v-icon {
   transition: color 0.2s ease-in-out;
+}
+
+/* 칩 hover 효과 강화 */
+.v-chip {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.v-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chip-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 선택된 칩 강조 */
+.v-chip.v-chip--variant-flat {
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 /* 버튼 hover 효과 */
