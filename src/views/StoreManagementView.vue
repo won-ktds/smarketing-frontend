@@ -1,3 +1,4 @@
+//* src/views/StoreManagementView.vue
 <template>
   <v-container fluid class="pa-4">
     <!-- 매장 정보가 없는 경우 -->
@@ -141,16 +142,7 @@
                         <p class="text-body-1">{{ storeInfo.instagramUrl || '등록되지 않음' }}</p>
                       </div>
                     </div>
-                    <v-btn
-                      v-if="storeInfo.instagramUrl"
-                      color="purple"
-                      size="small"
-                      variant="tonal"
-                      @click="checkSnsConnection('instagram')"
-                      :loading="snsCheckLoading.instagram"
-                    >
-                      연동 확인
-                    </v-btn>
+                  
                   </div>
                 </v-col>
                 
@@ -163,16 +155,7 @@
                         <p class="text-body-1">{{ storeInfo.blogUrl || '등록되지 않음' }}</p>
                       </div>
                     </div>
-                    <v-btn
-                      v-if="storeInfo.blogUrl"
-                      color="green"
-                      size="small"
-                      variant="tonal"
-                      @click="checkSnsConnection('naver_blog')"
-                      :loading="snsCheckLoading.naver_blog"
-                    >
-                      연동 확인
-                    </v-btn>
+                  
                   </div>
                 </v-col>
               </v-row>
@@ -369,18 +352,18 @@
                             icon
                             size="small"
                             variant="text"
-                            @click.stop="editMenu(menu)"
+                            color="error"
+                            @click.stop="confirmDeleteMenu(menu)"
                           >
-                            <v-icon size="small">mdi-pencil</v-icon>
+                            <v-icon size="small">mdi-delete</v-icon>
                           </v-btn>
                           <v-btn
                             icon
                             size="small"
                             variant="text"
-                            color="error"
-                            @click.stop="confirmDeleteMenu(menu)"
+                            @click.stop="editMenu(menu)"
                           >
-                            <v-icon size="small">mdi-delete</v-icon>
+                            <v-icon size="small">mdi-pencil</v-icon>
                           </v-btn>
                         </div>
                       </div>
@@ -586,77 +569,79 @@
                 />
               </v-col>
 
-              <!-- SNS 정보 섹션 -->
-              <div class="form-section">
-                <h3 class="text-h6 font-weight-bold mb-4">SNS 계정 정보</h3>
-                
-                <v-row>
-                  <!-- 인스타그램 -->
-                  <v-col cols="12">
-                    <div class="d-flex align-center mb-2">
-                      <v-icon color="purple" class="mr-2">mdi-instagram</v-icon>
-                      <span class="text-subtitle-2 font-weight-medium">인스타그램</span>
-                    </div>
-                    
-                    <div class="d-flex gap-2 align-center">
-                      <v-text-field
-                        v-model="formData.instagramUrl"
-                        placeholder="@계정명 또는 URL 입력"
-                        variant="outlined"
-                        density="comfortable"
-                        prepend-inner-icon="mdi-at"
-                        hide-details="auto"
-                        class="flex-grow-1"
-                        style="min-width: 300px;"
-                      />
-                      <v-btn
-                        color="purple"
-                        variant="tonal"
-                        :loading="snsCheckLoading.instagram"
-                        @click="checkSnsConnection('instagram')"
-                        style="min-width: 80px; flex-shrink: 0;"
-                      >
-                        연동 확인
-                      </v-btn>
-                    </div>
-                  </v-col>
+            </v-row>
 
-                  <!-- 네이버 블로그 -->
-                  <v-col cols="12">
-                    <div class="d-flex align-center mb-2">
-                      <v-icon color="green" class="mr-2">mdi-web</v-icon>
-                      <span class="text-subtitle-2 font-weight-medium">네이버 블로그</span>
-                    </div>
-                    
-                    <div class="d-flex gap-2 align-center">
-                      <v-text-field
-                        v-model="formData.blogUrl"
-                        placeholder="blog.naver.com/계정명 형식으로 입력"
-                        variant="outlined"
-                        density="comfortable"
-                        prepend-inner-icon="mdi-web"
-                        hide-details="auto"
-                        class="flex-grow-1"
-                        style="min-width: 300px;"
-                      />
-                      <v-btn
-                        color="green"
-                        variant="tonal"
-                        :loading="snsCheckLoading.blog"
-                        @click="checkSnsConnection('blog')"
-                        style="min-width: 80px; flex-shrink: 0;"
-                      >
-                        연동 확인
-                      </v-btn>
-                    </div>
-                  </v-col>
-                </v-row>
+            <!-- SNS 정보 섹션 -->
+            <v-divider class="my-4" />
+            <h3 class="text-h6 font-weight-bold mb-6">SNS 계정 정보</h3>
+            
+            <!-- 인스타그램 -->
+            <div class="mb-6">
+              <div class="d-flex align-center mb-3">
+                <v-icon color="purple" class="mr-2">mdi-instagram</v-icon>
+                <span class="text-subtitle-2 font-weight-medium">인스타그램</span>
               </div>
+              
+              <div class="sns-input-container">
+                <div class="sns-input-row">
+                  <v-text-field
+                    v-model="formData.instagramUrl"
+                    placeholder="@계정명 또는 URL 입력"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-at"
+                    hide-details="auto"
+                    class="sns-text-field"
+                  />
+                  <v-btn
+                    color="purple"
+                    variant="tonal"
+                    :loading="snsCheckLoading.instagram"
+                    @click="checkSnsConnection('instagram')"
+                    class="sns-check-btn ml-4"
+                  >
+                    연동 확인
+                  </v-btn>
+                </div>
+              </div>
+            </div>
 
-              <!-- 운영 정보 -->
-              <v-col cols="12">
-                <h4 class="text-subtitle-1 font-weight-bold mb-3">운영 정보</h4>
-              </v-col>
+            <!-- 네이버 블로그 -->
+            <div class="mb-6">
+              <div class="d-flex align-center mb-3">
+                <v-icon color="green" class="mr-2">mdi-web</v-icon>
+                <span class="text-subtitle-2 font-weight-medium">네이버 블로그</span>
+              </div>
+              
+              <div class="sns-input-container">
+                <div class="sns-input-row">
+                  <v-text-field
+                    v-model="formData.blogUrl"
+                    placeholder="blog.naver.com/계정명 형식으로 입력"
+                    variant="outlined"
+                    density="comfortable"
+                    prepend-inner-icon="mdi-web"
+                    hide-details="auto"
+                    class="sns-text-field"
+                  />
+                  <v-btn
+                    color="green"
+                    variant="tonal"
+                    :loading="snsCheckLoading.blog"
+                    @click="checkSnsConnection('blog')"
+                    class="sns-check-btn ml-4"
+                  >
+                    연동 확인
+                  </v-btn>
+                </div>
+              </div>
+            </div>
+
+            <!-- 운영 정보 -->
+            <v-divider class="my-4" />
+            <h4 class="text-subtitle-1 font-weight-bold mb-3">운영 정보</h4>
+            
+            <v-row>
 
               <v-col cols="12" sm="6">
                 <v-text-field
@@ -736,9 +721,8 @@
       scrollable
     >
       <v-card>
-        <v-card-title class="pa-4">
+        <v-card-title class="pa-4 d-flex align-center justify-space-between">
           <span class="text-h6">{{ editMenuMode ? '메뉴 수정' : '메뉴 등록' }}</span>
-          <v-spacer />
           <v-btn
             icon
             @click="closeMenuDialog"
@@ -894,9 +878,8 @@
     <!-- 메뉴 상세 다이얼로그 -->
     <v-dialog v-model="showMenuDetailDialog" max-width="500">
       <v-card class="menu-detail-card">
-        <v-card-title class="pa-4">
+        <v-card-title class="pa-4 d-flex align-center justify-space-between">
           <span class="text-h6">메뉴 상세 정보</span>
-          <v-spacer />
           <v-btn
             icon
             @click="showMenuDetailDialog = false"
@@ -1030,7 +1013,7 @@ const menuStatusFilter = ref('전체')
 // SNS 연동 관련 상태
 const snsCheckLoading = ref({
   instagram: false,
-  naver_blog: false
+  blog: false
 })
 const showSnsResultDialog = ref(false)
 const snsConnectionResult = ref({
@@ -1229,7 +1212,7 @@ const getCategoryColor = (category) => {
 
 /**
  * SNS 계정 연동 확인
- * @param {string} platform - SNS 플랫폼 (instagram, naver_blog)
+ * @param {string} platform - SNS 플랫폼 (instagram, blog)
  */
 const checkSnsConnection = async (platform) => {
   console.log(`${platform} 연동 확인 시작`)
@@ -1677,6 +1660,29 @@ onMounted(async () => {
   color: rgb(244, 67, 54);
 }
 
+/* SNS 입력 컨테이너 스타일 - 마진 추가 */
+.sns-input-container {
+  margin: 16px 0;
+}
+
+.sns-input-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  margin-bottom: 8px;
+}
+
+.sns-text-field {
+  flex: 1 !important;
+}
+
+.sns-check-btn {
+  flex-shrink: 0 !important;
+  min-width: 120px !important;
+  height: 56px !important;
+  margin-left: 16px !important;
+}
+
 /* 카드 스타일 개선 */
 .v-card {
   border-radius: 12px;
@@ -1786,6 +1792,18 @@ onMounted(async () => {
   /* 메뉴 그리드 반응형 */
   .v-col {
     padding: 8px;
+  }
+
+  /* SNS 입력 반응형 */
+  .sns-input-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .sns-check-btn {
+    margin-left: 0 !important;
+    width: 100% !important;
   }
 }
 
@@ -2172,22 +2190,5 @@ onMounted(async () => {
 .v-card[variant="tonal"]:hover {
   transform: scale(1.02);
   transition: transform 0.2s ease;
-}
-
-/* SNS 입력 행 레이아웃 - 우선순위가 높은 스타일 */
-.sns-input-row {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-}
-
-.sns-text-field {
-  flex: 1 !important;
-}
-
-.sns-check-btn {
-  flex-shrink: 0 !important;
-  min-width: 120px !important;
-  height: 56px !important;
 }
 </style>
