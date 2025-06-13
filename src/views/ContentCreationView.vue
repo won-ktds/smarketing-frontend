@@ -646,54 +646,34 @@ const targetTypes = [
   { title: '이벤트', value: 'event' },
 ]
 
-// AI 옵션들
-const toneOptions = Object.entries(TONE_AND_MANNER).map(([key, value]) => ({
-  title:
-    key === 'FRIENDLY'
-      ? '친근함'
-      : key === 'PROFESSIONAL'
-      ? '전문적'
-      : key === 'HUMOROUS'
-      ? '유머러스'
-      : '고급스러운',
-  value,
-}))
+// AI 옵션들 - 중복 제거 및 명시적 매핑
+const toneOptions = [
+  { title: '친근함', value: 'friendly' },
+  { title: '전문적', value: 'professional' },
+  { title: '유머러스', value: 'humorous' },
+  { title: '고급스러운', value: 'luxurious' },
+]
 
-const promotionOptions = Object.entries(PROMOTION_TYPES).map(([key, value]) => ({
-  title:
-    key === 'DISCOUNT'
-      ? '할인 정보'
-      : key === 'EVENT'
-      ? '이벤트 정보'
-      : key === 'NEW_MENU'
-      ? '신메뉴 알림'
-      : '없음',
-  value,
-}))
+const promotionOptions = [
+  { title: '할인 정보', value: 'discount' },
+  { title: '이벤트 정보', value: 'event' },
+  { title: '신메뉴 알림', value: 'new_menu' },
+  { title: '없음', value: 'none' },
+]
 
-const emotionOptions = Object.entries(EMOTION_INTENSITY).map(([key, value]) => ({
-  title:
-    key === 'CALM'
-      ? '차분함'
-      : key === 'NORMAL'
-      ? '보통'
-      : key === 'ENTHUSIASTIC'
-      ? '열정적'
-      : '과장된',
-  value,
-}))
+const emotionOptions = [
+  { title: '차분함', value: 'calm' },
+  { title: '보통', value: 'normal' },
+  { title: '열정적', value: 'enthusiastic' },
+  { title: '과장된', value: 'exaggerated' },
+]
 
-const photoStyleOptions = Object.entries(PHOTO_STYLES).map(([key, value]) => ({
-  title:
-    key === 'MODERN'
-      ? '모던'
-      : key === 'CLASSIC'
-      ? '클래식'
-      : key === 'EMOTIONAL'
-      ? '감성적'
-      : '미니멀',
-  value,
-}))
+const photoStyleOptions = [
+  { title: '모던', value: 'modern' },
+  { title: '클래식', value: 'classic' },
+  { title: '감성적', value: 'emotional' },
+  { title: '미니멀', value: 'minimal' },
+]
 
 // 유효성 검사 규칙
 const titleRules = [
