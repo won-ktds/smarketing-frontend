@@ -210,34 +210,6 @@
 
         <!-- 메뉴 관리 탭 -->
         <v-tabs-window-item value="menu">
-          <!-- 메뉴 통계 카드 -->
-          <v-row class="mb-4">
-            <v-col cols="6" sm="3">
-              <v-card class="text-center pa-4" variant="tonal" color="primary">
-                <div class="text-h4 font-weight-bold">{{ menus.length }}</div>
-                <div class="text-caption text-grey">전체 메뉴</div>
-              </v-card>
-            </v-col>
-            <v-col cols="6" sm="3">
-              <v-card class="text-center pa-4" variant="tonal" color="success">
-                <div class="text-h4 font-weight-bold">{{ availableMenusCount }}</div>
-                <div class="text-caption text-grey">판매중</div>
-              </v-card>
-            </v-col>
-            <v-col cols="6" sm="3">
-              <v-card class="text-center pa-4" variant="tonal" color="warning">
-                <div class="text-h4 font-weight-bold">{{ recommendedMenusCount }}</div>
-                <div class="text-caption text-grey">추천메뉴</div>
-              </v-card>
-            </v-col>
-            <v-col cols="6" sm="3">
-              <v-card class="text-center pa-4" variant="tonal" color="info">
-                <div class="text-h4 font-weight-bold">{{ averagePrice }}</div>
-                <div class="text-caption text-grey">평균가격</div>
-              </v-card>
-            </v-col>
-          </v-row>
-
           <!-- 메뉴 관리 도구 -->
           <v-card class="mb-4">
             <v-card-title class="pa-4 d-flex align-center justify-space-between">
@@ -275,15 +247,6 @@
                     label="카테고리 필터"
                     variant="outlined"
                     :items="['전체', ...menuCategories]"
-                    hide-details
-                  />
-                </v-col>
-                <v-col cols="12" sm="3">
-                  <v-select
-                    v-model="menuStatusFilter"
-                    label="상태 필터"
-                    variant="outlined"
-                    :items="['전체', '판매중', '품절']"
                     hide-details
                   />
                 </v-col>

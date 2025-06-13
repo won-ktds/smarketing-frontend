@@ -308,21 +308,6 @@
                 해시태그는 수정할 수 없습니다. 새로 생성해주세요.
               </div>
             </div>
-
-            <!-- 상태 -->
-            <div class="mb-4">
-              <label class="text-subtitle-2 font-weight-medium mb-2 d-block">상태</label>
-              <v-select
-                v-if="isEditMode"
-                v-model="editingContent.status"
-                :items="statusOptions"
-                variant="outlined"
-                density="compact"
-              />
-              <v-chip v-else :color="getStatusColor(selectedContent.status)" variant="tonal">
-                {{ getStatusText(selectedContent.status) }}
-              </v-chip>
-            </div>
           </v-form>
         </v-card-text>
         
@@ -446,12 +431,6 @@ const contentTypeOptions = [
   { title: '🎨 포스터', value: 'poster', color: 'orange', emoji: '🎨' }
 ]
 
-const statusOptions = [
-  { title: '발행됨', value: 'published' },
-  { title: '임시저장', value: 'draft' },
-  { title: '보관됨', value: 'archived' }
-]
-
 const sortOptions = [
   { title: '최신순', value: 'latest' },
   { title: '오래된순', value: 'oldest' },
@@ -491,15 +470,6 @@ const filteredContents = computed(() => {
       content.content.toLowerCase().includes(query) ||
       content.hashtags?.some(tag => tag.toLowerCase().includes(query))
     )
-  }
-  
-  // 상태 필터
-  if (filters.value.published || filters.value.draft) {
-    contents = contents.filter(content => {
-      if (filters.value.published && content.status === 'published') return true
-      if (filters.value.draft && content.status === 'draft') return true
-      return false
-    })
   }
 
   // 정렬 (프로모션 기간 정렬이 활성화되어 있지 않을 때만)
@@ -725,15 +695,6 @@ const getStatusColor = (status) => {
     'archived': 'grey'
   }
   return colors[status] || 'grey'
-}
-
-const getStatusText = (status) => {
-  const texts = {
-    'published': '발행됨',
-    'draft': '임시저장',
-    'archived': '보관됨'
-  }
-  return texts[status] || status
 }
 
 const formatDateRange = (startDate, endDate) => {
