@@ -282,55 +282,13 @@
                 </v-card-text>
               </v-card>
 
-              <!-- 수동 입력 (AI 사용하지 않는 경우) -->
-              <v-card class="mb-4" elevation="1" v-if="!useAI">
-                <v-card-title class="text-h6 py-3">콘텐츠 직접 입력</v-card-title>
-                <v-card-text>
-                  <v-textarea
-                    v-model="formData.content"
-                    label="콘텐츠 내용"
-                    variant="outlined"
-                    rows="5"
-                    :rules="contentRules"
-                    placeholder="콘텐츠 내용을 직접 입력해주세요"
-                    class="mb-3"
-                  />
-
-                  <v-text-field
-                    v-model="hashtagInput"
-                    label="해시태그"
-                    variant="outlined"
-                    density="compact"
-                    placeholder="#해시태그를 입력하고 엔터"
-                    @keydown.enter="addHashtag"
-                    class="mb-3"
-                  />
-
-                  <div v-if="formData.hashtags.length" class="mb-3">
-                    <v-chip
-                      v-for="(tag, index) in formData.hashtags"
-                      :key="index"
-                      closable
-                      @click:close="removeHashtag(index)"
-                      class="mr-1 mb-1"
-                    >
-                      #{{ tag }}
-                    </v-chip>
-                  </div>
-                </v-card-text>
-              </v-card>
+            
 
               <!-- 생성 방식 선택 및 버튼 -->
               <v-card elevation="1">
                 <v-card-text>
                   <!-- AI 사용 여부 토글 -->
-                  <v-switch
-                    v-model="useAI"
-                    label="AI 자동 생성 사용"
-                    color="primary"
-                    hide-details
-                    class="mb-4"
-                  />
+  
 
                   <!-- 생성 버튼 -->
                   <v-btn
