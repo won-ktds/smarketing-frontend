@@ -1,82 +1,217 @@
-//* src/store/auth.js 수정 - 기존 구조 유지하고 API 연동만 추가
+//* src/store/auth.js - 토큰 관리 수정버전
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import authService from '@/services/auth'
 
-export const useAuthStore = defineStore('auth', () => {
-  // 기존 상태들 유지
-  const user = ref(null)
-  const token = ref(null)
-  const isAuthenticated = ref(false)
-  const isLoading = ref(false)
+export const useAuthStore = defineStore('auth', {
+  state: () => ({
+    user: null,
+    token: null,
+    refreshToken: null,
+    isAuthenticated: false,
+  }),
 
-  // 기존 checkAuthState 메서드 유지
-  const checkAuthState = () => {
-    const storedToken = localStorage.getItem('accessToken')
-    const storedUser = localStorage.getItem('userInfo')
-    
-    if (storedToken && storedUser) {
-      token.value = storedToken
-      user.value = JSON.parse(storedUser)
-      isAuthenticated.value = true
-    } else {
-      token.value = null
-      user.value = null
-      isAuthenticated.value = false
-    }
-  }
-
-  // login 메서드를 실제 API 호출로 수정
-  const login = async (credentials) => {
-    isLoading.value = true
-    
-    try {
-      const result = await authService.login(credentials)
+  getters: {
+    isLoggedIn: (state) => !!state.token && !!state.user,
+    userInfo: (state) => state.user,
+    hasValidToken: (state) => {
+      if (!state.token) return false
       
-      if (result.success) {
-        token.value = result.data.token
-        user.value = result.data.user
-        isAuthenticated.value = true
-        
-        return { success: true }
-      } else {
-        return { success: false, error: result.message }
+      try {
+        // JWT 토큰 만료 확인 (간단한 체크)
+        const payload = JSON.parse(atob(state.token.split('.')[1]))
+        const now = Date.now() / 1000
+        return payload.exp > now
+      } catch {
+        return false
       }
-    } catch (error) {
-      return { success: false, error: '네트워크 오류가 발생했습니다.' }
-    } finally {
-      isLoading.value = false
     }
-  }
+  },
 
-  // logout 메서드를 실제 API 호출로 수정
-  const logout = async () => {
-    isLoading.value = true
-    
-    try {
-      await authService.logout()
-    } catch (error) {
-      console.warn('로그아웃 API 호출 실패:', error)
-    } finally {
-      // 상태 초기화
-      token.value = null
-      user.value = null
-      isAuthenticated.value = false
-      isLoading.value = false
+  actions: {
+    /**
+     * 로그인 처리
+     */
+    async login(credentials) {
+      try {
+        // 로그인 API 호출은 별도 서비스에서 처리
+        const { authService } = await import('@/services/auth')
+        const response = await authService.login(credentials)
+        
+        if (response.success) {
+          this.setAuth(response.data)
+          return response
+        } else {
+          throw new Error(response.message)
+        }
+      } catch (error) {
+        this.clearAuth()
+        throw error
+      }
+    },
+
+    /**
+     * 회원가입 처리
+     */
+    async register(userData) {
+      try {
+        const { authService } = await import('@/services/auth')
+        const response = await authService.register(userData)
+        return response
+      } catch (error) {
+        throw error
+      }
+    },
+
+    /**
+     * 로그아웃 처리
+     */
+    async logout() {
+      try {
+        if (this.token) {
+          const { authService } = await import('@/services/auth')
+          await authService.logout()
+        }
+      } catch (error) {
+        console.error('로그아웃 API 오류:', error)
+      } finally {
+        this.clearAuth()
+      }
+    },
+
+    /**
+     * 사용자 정보 새로고침
+     */
+    async refreshUserInfo() {
+      try {
+        if (!this.token) {
+          throw new Error('토큰이 없습니다')
+        }
+
+        const { authService } = await import('@/services/auth')
+        const response = await authService.getUserInfo()
+        
+        if (response.success) {
+          this.user = response.data
+          this.isAuthenticated = true
+          return response
+        } else {
+          throw new Error(response.message)
+        }
+      } catch (error) {
+        this.clearAuth()
+        throw error
+      }
+    },
+
+    /**
+     * 인증 정보 설정
+     * ⚠️ 수정: 토큰을 여러 형태로 저장하여 호환성 확보
+     */
+    setAuth(authData) {
+      console.log('인증 정보 설정:', authData)
+      
+      this.user = authData.user || authData.userInfo
+      this.token = authData.accessToken || authData.token
+      this.refreshToken = authData.refreshToken
+      this.isAuthenticated = true
+
+      // localStorage에 여러 형태로 저장 (호환성)
+      if (this.token) {
+        localStorage.setItem('accessToken', this.token)
+        localStorage.setItem('token', this.token)
+      }
+      if (this.refreshToken) {
+        localStorage.setItem('refreshToken', this.refreshToken)
+      }
+      if (this.user) {
+        localStorage.setItem('userInfo', JSON.stringify(this.user))
+      }
+      
+      console.log('토큰 저장 완료:', {
+        token: this.token?.substring(0, 20) + '...',
+        hasRefreshToken: !!this.refreshToken,
+        hasUser: !!this.user
+      })
+    },
+
+    /**
+     * 인증 정보 초기화
+     */
+    clearAuth() {
+      console.log('인증 정보 초기화')
+      
+      this.user = null
+      this.token = null
+      this.refreshToken = null
+      this.isAuthenticated = false
+
+      // localStorage에서 모든 토큰 제거
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('token')
+      localStorage.removeItem('refreshToken')
+      localStorage.removeItem('userInfo')
+    },
+
+    /**
+     * 앱 시작 시 인증 상태 복원
+     */
+    checkAuthState() {
+      console.log('인증 상태 확인 중...')
+      
+      try {
+        // localStorage에서 토큰 복원
+        const accessToken = localStorage.getItem('accessToken') || localStorage.getItem('token')
+        const refreshToken = localStorage.getItem('refreshToken')
+        const userInfo = localStorage.getItem('userInfo')
+
+        if (accessToken && userInfo) {
+          this.token = accessToken
+          this.refreshToken = refreshToken
+          this.user = JSON.parse(userInfo)
+          
+          // 토큰 유효성 간단 확인
+          if (this.hasValidToken) {
+            this.isAuthenticated = true
+            console.log('인증 상태 복원 성공')
+          } else {
+            console.log('토큰 만료됨 - 재로그인 필요')
+            this.clearAuth()
+          }
+        } else {
+          console.log('저장된 인증 정보 없음')
+          this.clearAuth()
+        }
+      } catch (error) {
+        console.error('인증 상태 복원 실패:', error)
+        this.clearAuth()
+      }
+    },
+
+    /**
+     * 토큰 갱신
+     */
+    async refreshAccessToken() {
+      try {
+        if (!this.refreshToken) {
+          throw new Error('리프레시 토큰이 없습니다')
+        }
+
+        const { authService } = await import('@/services/auth')
+        const response = await authService.refreshToken(this.refreshToken)
+        
+        if (response.success) {
+          this.setAuth({
+            ...response.data,
+            user: this.user // 기존 사용자 정보 유지
+          })
+          return response
+        } else {
+          throw new Error(response.message)
+        }
+      } catch (error) {
+        console.error('토큰 갱신 실패:', error)
+        this.clearAuth()
+        throw error
+      }
     }
-  }
-
-  // 초기화 시 인증 상태 확인
-  checkAuthState()
-
-  return {
-    user,
-    token,
-    isAuthenticated,
-    isLoading,
-    login,
-    logout,
-    checkAuthState
   }
 })
-

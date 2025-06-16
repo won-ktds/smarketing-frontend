@@ -1,202 +1,170 @@
-//* src/store/store.js 수정 - 기존 구조 유지하고 API 연동만 추가
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import storeService from '@/services/store'
+//* src/services/store.js - 수정버전
+import { storeApi, handleApiError, formatSuccessResponse } from './api.js'
 
-export const useStoreStore = defineStore('store', () => {
-  // 기존 상태들 유지
-  const storeInfo = ref(null)
-  const menus = ref([])
-  const salesData = ref(null)
-  const isLoading = ref(false)
-
-  // 기존 computed 속성들 유지
-  const hasStoreInfo = computed(() => !!storeInfo.value)
-  const menuCount = computed(() => menus.value?.length || 0)
-
-  // fetchStoreInfo를 실제 API 호출로 수정
-  const fetchStoreInfo = async () => {
-    if (import.meta.env.DEV) {
-      console.log('개발 모드: 매장 정보 API 호출 건너뛰기')
-      return { success: true }
-    }
-    
-    isLoading.value = true
-    
+/**
+ * 매장 관련 API 서비스
+ * 유저스토리: STR-005, STR-010, STR-015, STR-020, STR-025, STR-030, STR-035, STR-040
+ */
+class StoreService {
+  /**
+   * 매장 등록 (STR-015: 매장 등록)
+   * @param {Object} storeData - 매장 정보
+   * @returns {Promise<Object>} 매장 등록 결과
+   */
+  async registerStore(storeData) {
     try {
-      const result = await storeService.getStore()
-      
-      if (result.success) {
-        storeInfo.value = result.data
-        return { success: true }
-      } else {
-        console.warn('매장 정보 조회 실패:', result.message)
-        return { success: false, error: result.message }
-      }
+      const response = await storeApi.post('/register', {
+        storeName: storeData.storeName,
+        storeImage: storeData.storeImage,
+        businessType: storeData.businessType,
+        address: storeData.address,
+        phoneNumber: storeData.phoneNumber,
+        businessNumber: storeData.businessNumber,
+        instaAccount: storeData.instaAccount,
+        naverBlogAccount: storeData.naverBlogAccount,
+        operatingHours: storeData.operatingHours,
+        closedDays: storeData.closedDays,
+        seatCount: storeData.seatCount,
+      })
+
+      return formatSuccessResponse(response.data.data, '매장이 등록되었습니다.')
     } catch (error) {
-      console.warn('매장 정보 조회 실패:', error)
-      return { success: false, error: '네트워크 오류가 발생했습니다.' }
-    } finally {
-      isLoading.value = false
+      return handleApiError(error)
     }
   }
 
-  // saveStoreInfo를 실제 API 호출로 수정
-  const saveStoreInfo = async (storeData) => {
-    isLoading.value = true
-    
+  /**
+   * 매장 정보 조회 (현재 로그인 사용자) - STR-005: 매장 정보 관리
+   * @returns {Promise<Object>} 매장 정보
+   */
+  async getStore() {
     try {
-      let result
-      if (storeInfo.value) {
-        // 기존 매장 정보 수정
-        result = await storeService.updateStore(storeData)
-      } else {
-        // 새 매장 등록
-        result = await storeService.registerStore(storeData)
-      }
-      
-      if (result.success) {
-        storeInfo.value = result.data
-        return { success: true, message: '매장 정보가 저장되었습니다.' }
-      } else {
-        return { success: false, error: result.message }
-      }
+      const response = await storeApi.get('/')
+      return formatSuccessResponse(response.data.data, '매장 정보를 조회했습니다.')
     } catch (error) {
-      return { success: false, error: '네트워크 오류가 발생했습니다.' }
-    } finally {
-      isLoading.value = false
+      return handleApiError(error)
     }
   }
 
-  // fetchMenus를 실제 API 호출로 수정
-  const fetchMenus = async () => {
-    if (!storeInfo.value?.storeId) {
-      console.warn('매장 ID가 없어 메뉴를 조회할 수 없습니다.')
-      return { success: false, error: '매장 정보가 필요합니다.' }
-    }
-
-    isLoading.value = true
-    
+  /**
+   * 매장 정보 수정 (STR-010: 매장 수정)
+   * @param {Object} storeData - 수정할 매장 정보 (storeId 불필요 - JWT에서 추출)
+   * @returns {Promise<Object>} 매장 수정 결과
+   */
+  async updateStore(storeData) {
     try {
-      const result = await storeService.getMenus(storeInfo.value.storeId)
-      
-      if (result.success) {
-        menus.value = result.data
-        return { success: true }
-      } else {
-        return { success: false, error: result.message }
-      }
+      const response = await storeApi.put('/', storeData)
+      return formatSuccessResponse(response.data.data, '매장 정보가 수정되었습니다.')
     } catch (error) {
-      return { success: false, error: '네트워크 오류가 발생했습니다.' }
-    } finally {
-      isLoading.value = false
+      return handleApiError(error)
     }
   }
 
-  // 메뉴 관련 메서드들 API 연동 추가
-  const saveMenu = async (menuData) => {
-    isLoading.value = true
-    
+  /**
+   * 메뉴 등록 (STR-030: 메뉴 등록)
+   * @param {Object} menuData - 메뉴 정보
+   * @returns {Promise<Object>} 메뉴 등록 결과
+   */
+  async registerMenu(menuData) {
     try {
-      const result = await storeService.registerMenu(menuData)
-      
-      if (result.success) {
-        // 메뉴 목록 새로고침
-        await fetchMenus()
-        return { success: true, message: '메뉴가 등록되었습니다.' }
-      } else {
-        return { success: false, error: result.message }
-      }
+      const response = await storeApi.post('/menu/register', {
+        menuName: menuData.menuName,
+        menuCategory: menuData.menuCategory,
+        menuImage: menuData.menuImage,
+        price: menuData.price,
+        description: menuData.description,
+        isPopular: menuData.isPopular || false,
+        isRecommended: menuData.isRecommended || false,
+      })
+
+      return formatSuccessResponse(response.data.data, '메뉴가 등록되었습니다.')
     } catch (error) {
-      return { success: false, error: '네트워크 오류가 발생했습니다.' }
-    } finally {
-      isLoading.value = false
+      return handleApiError(error)
     }
   }
 
-  const updateMenu = async (menuId, menuData) => {
-    isLoading.value = true
-    
+  /**
+   * 메뉴 목록 조회 (STR-025: 메뉴 조회)
+   * @param {Object} filters - 필터링 옵션
+   * @returns {Promise<Object>} 메뉴 목록
+   */
+  async getMenus(filters = {}) {
     try {
-      const result = await storeService.updateMenu(menuId, menuData)
-      
-      if (result.success) {
-        // 메뉴 목록 새로고침
-        await fetchMenus()
-        return { success: true, message: '메뉴가 수정되었습니다.' }
-      } else {
-        return { success: false, error: result.message }
-      }
+      const queryParams = new URLSearchParams()
+
+      if (filters.category) queryParams.append('category', filters.category)
+      if (filters.sortBy) queryParams.append('sortBy', filters.sortBy)
+      if (filters.isPopular !== undefined) queryParams.append('isPopular', filters.isPopular)
+
+      const response = await storeApi.get(`/menu?${queryParams.toString()}`)
+
+      return formatSuccessResponse(response.data.data, '메뉴 목록을 조회했습니다.')
     } catch (error) {
-      return { success: false, error: '네트워크 오류가 발생했습니다.' }
-    } finally {
-      isLoading.value = false
+      return handleApiError(error)
     }
   }
 
-  const deleteMenu = async (menuId) => {
-    isLoading.value = true
-    
+  /**
+   * 메뉴 수정 (STR-035: 메뉴 수정)
+   * @param {number} menuId - 메뉴 ID
+   * @param {Object} menuData - 수정할 메뉴 정보
+   * @returns {Promise<Object>} 메뉴 수정 결과
+   */
+  async updateMenu(menuId, menuData) {
     try {
-      const result = await storeService.deleteMenu(menuId)
-      
-      if (result.success) {
-        // 메뉴 목록 새로고침
-        await fetchMenus()
-        return { success: true, message: '메뉴가 삭제되었습니다.' }
-      } else {
-        return { success: false, error: result.message }
-      }
+      const response = await storeApi.put(`/menu/${menuId}`, menuData)
+
+      return formatSuccessResponse(response.data.data, '메뉴가 수정되었습니다.')
     } catch (error) {
-      return { success: false, error: '네트워크 오류가 발생했습니다.' }
-    } finally {
-      isLoading.value = false
+      return handleApiError(error)
     }
   }
 
-  // 매출 정보 조회 추가
-  const fetchSalesData = async () => {
-    if (!storeInfo.value?.storeId) {
-      return { success: false, error: '매장 정보가 필요합니다.' }
-    }
-
-    isLoading.value = true
-    
+  /**
+   * 메뉴 삭제 (STR-040: 메뉴 삭제)
+   * @param {number} menuId - 메뉴 ID
+   * @returns {Promise<Object>} 메뉴 삭제 결과
+   */
+  async deleteMenu(menuId) {
     try {
-      const result = await storeService.getSales(storeInfo.value.storeId)
-      
-      if (result.success) {
-        salesData.value = result.data
-        return { success: true }
-      } else {
-        return { success: false, error: result.message }
-      }
+      await storeApi.delete(`/menu/${menuId}`)
+
+      return formatSuccessResponse(null, '메뉴가 삭제되었습니다.')
     } catch (error) {
-      return { success: false, error: '네트워크 오류가 발생했습니다.' }
-    } finally {
-      isLoading.value = false
+      return handleApiError(error)
     }
   }
 
-  return {
-    // 상태
-    storeInfo,
-    menus,
-    salesData,
-    isLoading,
-    
-    // 컴퓨티드
-    hasStoreInfo,
-    menuCount,
-    
-    // 메서드
-    fetchStoreInfo,
-    saveStoreInfo,
-    fetchMenus,
-    saveMenu,
-    updateMenu,
-    deleteMenu,
-    fetchSalesData
-  }
-})
+  /**
+   * 다중 메뉴 삭제
+   * @param {number[]} menuIds - 삭제할 메뉴 ID 배열
+   * @returns {Promise<Object>} 삭제 결과
+   */
+  async deleteMenus(menuIds) {
+    try {
+      const deletePromises = menuIds.map((menuId) => this.deleteMenu(menuId))
+      await Promise.all(deletePromises)
 
+      return formatSuccessResponse(null, `${menuIds.length}개의 메뉴가 삭제되었습니다.`)
+    } catch (error) {
+      return handleApiError(error)
+    }
+  }
+
+  /**
+   * 매장 통계 정보 조회
+   * @returns {Promise<Object>} 매장 통계
+   */
+  async getStoreStatistics() {
+    try {
+      const response = await storeApi.get('/statistics')
+
+      return formatSuccessResponse(response.data.data, '매장 통계를 조회했습니다.')
+    } catch (error) {
+      return handleApiError(error)
+    }
+  }
+}
+
+export const storeService = new StoreService()
+export default storeService

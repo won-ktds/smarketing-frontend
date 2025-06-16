@@ -1,9 +1,9 @@
-//* src/services/store.js - 기존 파일 수정 (API 설계서 기준)
-import { storeApi, menuApi, salesApi, handleApiError, formatSuccessResponse } from './api.js'
+//* src/services/store.js - 매출 API 수정버전
+import { storeApi, salesApi, handleApiError, formatSuccessResponse } from './api.js'
 
 /**
  * 매장 관련 API 서비스
- * API 설계서 기준으로 수정됨
+ * 유저스토리: STR-005, STR-010, STR-015, STR-020, STR-025, STR-030, STR-035, STR-040
  */
 class StoreService {
   /**
@@ -15,14 +15,17 @@ class StoreService {
     try {
       const response = await storeApi.post('/register', {
         storeName: storeData.storeName,
+        storeImage: storeData.storeImage,
         businessType: storeData.businessType,
         address: storeData.address,
         phoneNumber: storeData.phoneNumber,
-        businessHours: storeData.businessHours || storeData.operatingHours,
+        businessNumber: storeData.businessNumber,
+        instaAccounts: storeData.instaAccounts,
+        blogAccounts: storeData.blogAccounts,
+        businessHours: storeData.businessHours,
         closedDays: storeData.closedDays,
         seatCount: storeData.seatCount,
-        snsAccounts: storeData.snsAccounts || `인스타그램: ${storeData.instaAccount || ''}, 네이버블로그: ${storeData.naverBlogAccount || ''}`,
-        description: storeData.description || ''
+        description: storeData.description,
       })
 
       return formatSuccessResponse(response.data.data, '매장이 등록되었습니다.')
@@ -32,7 +35,7 @@ class StoreService {
   }
 
   /**
-   * 매장 정보 조회 (STR-005: 매장 조회)
+   * 매장 정보 조회 (STR-005: 매장 정보 관리)
    * @returns {Promise<Object>} 매장 정보
    */
   async getStore() {
@@ -52,17 +55,7 @@ class StoreService {
    */
   async updateStore(storeData) {
     try {
-      const response = await storeApi.put('/', {
-        storeName: storeData.storeName,
-        businessType: storeData.businessType,
-        address: storeData.address,
-        phoneNumber: storeData.phoneNumber,
-        businessHours: storeData.businessHours || storeData.operatingHours,
-        closedDays: storeData.closedDays,
-        seatCount: storeData.seatCount,
-        snsAccounts: storeData.snsAccounts || `인스타그램: ${storeData.instaAccount || ''}, 네이버블로그: ${storeData.naverBlogAccount || ''}`,
-        description: storeData.description || ''
-      })
+      const response = await storeApi.put('/', storeData)
 
       return formatSuccessResponse(response.data.data, '매장 정보가 수정되었습니다.')
     } catch (error) {
@@ -71,35 +64,48 @@ class StoreService {
   }
 
   /**
-   * 매출 정보 조회 (SAL-005: 매출 조회)
+   * 매출 정보 조회 (STR-020: 대시보드)
+   * ⚠️ 수정: salesApi 사용하고 storeId 매개변수 추가
    * @param {number} storeId - 매장 ID
    * @returns {Promise<Object>} 매출 정보
    */
   async getSales(storeId) {
     try {
+      // storeId가 없으면 먼저 매장 정보를 조회해서 storeId를 가져옴
+      if (!storeId) {
+        const storeResponse = await this.getStore()
+        if (storeResponse.success && storeResponse.data.storeId) {
+          storeId = storeResponse.data.storeId
+        } else {
+          throw new Error('매장 정보를 찾을 수 없습니다.')
+        }
+      }
+
+      // Sales API 호출 (Store 서비스의 /api/sales/{storeId} 엔드포인트)
       const response = await salesApi.get(`/${storeId}`)
 
       return formatSuccessResponse(response.data.data, '매출 정보를 조회했습니다.')
     } catch (error) {
+      console.error('매출 정보 조회 실패:', error)
       return handleApiError(error)
     }
   }
 
   /**
-   * 메뉴 등록 (MNU-010: 메뉴 등록)
+   * 메뉴 등록 (STR-030: 메뉴 등록) 
+   * ⚠️ 수정: 올바른 API 경로 사용
    * @param {Object} menuData - 메뉴 정보
    * @returns {Promise<Object>} 메뉴 등록 결과
    */
   async registerMenu(menuData) {
     try {
-      const response = await menuApi.post('/register', {
+      // Store 서비스의 Menu API 사용
+      const response = await storeApi.post('/menu/register', {
+        storeId: menuData.storeId,
         menuName: menuData.menuName,
-        menuCategory: menuData.menuCategory || menuData.category,
-        menuImage: menuData.menuImage || menuData.image,
+        category: menuData.category,
         price: menuData.price,
         description: menuData.description,
-        isPopular: menuData.isPopular || false,
-        isRecommended: menuData.isRecommended || false,
       })
 
       return formatSuccessResponse(response.data.data, '메뉴가 등록되었습니다.')
@@ -109,13 +115,13 @@ class StoreService {
   }
 
   /**
-   * 메뉴 목록 조회 (MNU-005: 메뉴 조회)
+   * 메뉴 목록 조회 (STR-025: 메뉴 조회)
    * @param {number} storeId - 매장 ID
    * @returns {Promise<Object>} 메뉴 목록
    */
   async getMenus(storeId) {
     try {
-      const response = await menuApi.get(`/${storeId}`)
+      const response = await storeApi.get(`/menu?storeId=${storeId}`)
 
       return formatSuccessResponse(response.data.data, '메뉴 목록을 조회했습니다.')
     } catch (error) {
@@ -124,22 +130,14 @@ class StoreService {
   }
 
   /**
-   * 메뉴 수정 (MNU-015: 메뉴 수정)
+   * 메뉴 수정 (STR-035: 메뉴 수정)
    * @param {number} menuId - 메뉴 ID
    * @param {Object} menuData - 수정할 메뉴 정보
    * @returns {Promise<Object>} 메뉴 수정 결과
    */
   async updateMenu(menuId, menuData) {
     try {
-      const response = await menuApi.put(`/${menuId}`, {
-        menuName: menuData.menuName,
-        menuCategory: menuData.menuCategory || menuData.category,
-        menuImage: menuData.menuImage || menuData.image,
-        price: menuData.price,
-        description: menuData.description,
-        isPopular: menuData.isPopular || false,
-        isRecommended: menuData.isRecommended || false,
-      })
+      const response = await storeApi.put(`/menu/${menuId}`, menuData)
 
       return formatSuccessResponse(response.data.data, '메뉴가 수정되었습니다.')
     } catch (error) {
@@ -148,13 +146,13 @@ class StoreService {
   }
 
   /**
-   * 메뉴 삭제 (MNU-020: 메뉴 삭제)
+   * 메뉴 삭제 (STR-040: 메뉴 삭제)
    * @param {number} menuId - 메뉴 ID
    * @returns {Promise<Object>} 메뉴 삭제 결과
    */
   async deleteMenu(menuId) {
     try {
-      await menuApi.delete(`/${menuId}`)
+      await storeApi.delete(`/menu/${menuId}`)
 
       return formatSuccessResponse(null, '메뉴가 삭제되었습니다.')
     } catch (error) {
@@ -163,16 +161,14 @@ class StoreService {
   }
 
   /**
-   * 다중 메뉴 삭제
-   * @param {number[]} menuIds - 삭제할 메뉴 ID 배열
-   * @returns {Promise<Object>} 삭제 결과
+   * 매장 통계 정보 조회
+   * @returns {Promise<Object>} 매장 통계
    */
-  async deleteMenus(menuIds) {
+  async getStoreStatistics() {
     try {
-      const deletePromises = menuIds.map((menuId) => this.deleteMenu(menuId))
-      await Promise.all(deletePromises)
+      const response = await storeApi.get('/statistics')
 
-      return formatSuccessResponse(null, `${menuIds.length}개의 메뉴가 삭제되었습니다.`)
+      return formatSuccessResponse(response.data.data, '매장 통계를 조회했습니다.')
     } catch (error) {
       return handleApiError(error)
     }
