@@ -8,7 +8,7 @@ const getApiUrls = () => {
     GATEWAY_URL: config.GATEWAY_URL || 'http://20.1.2.3',
     AUTH_URL: 'http://localhost:8081/api/auth',
     MEMBER_URL: 'http://localhost:8081/api/member',
-    STORE_URL: config.STORE_URL || 'http://20.1.2.3/api/store',
+    STORE_URL: config.STORE_URL || 'http://localhost:8082/api/store',
     CONTENT_URL: config.CONTENT_URL || 'http://20.1.2.3/api/content',
     MENU_URL: config.MENU_URL || 'http://20.1.2.3/api/menu',
     SALES_URL: config.SALES_URL || 'http://20.1.2.3/api/sales',

@@ -1,285 +1,153 @@
-//* src/store/index.js
-/**
- * Pinia 스토어 설정
- * 전역 상태 관리
- */
+//* src/store/index.js - Store 스토어 수정 (매장 조회 부분)
 import { defineStore } from 'pinia'
-import authService from '@/services/auth'
-import storeService from '@/services/store'
-
-// 인증 스토어
-export const useAuthStore = defineStore('auth', {
-  state: () => ({
-    user: null,
-    token: localStorage.getItem('token'),
-    refreshToken: localStorage.getItem('refreshToken'),
-    isAuthenticated: false
-  }),
-  
-  getters: {
-    getUserInfo: (state) => state.user,
-    isLoggedIn: (state) => state.isAuthenticated && !!state.token
-  },
-  
-  actions: {
-    async login(credentials) {
-      try {
-        const response = await authService.login(credentials)
-        this.setAuth(response.data)
-        return response
-      } catch (error) {
-        this.clearAuth()
-        throw error
-      }
-    },
-    
-    async register(userData) {
-      try {
-        const response = await authService.register(userData)
-        return response
-      } catch (error) {
-        throw error
-      }
-    },
-    
-    async logout() {
-      try {
-        if (this.token) {
-          await authService.logout()
-        }
-      } catch (error) {
-        console.error('로그아웃 오류:', error)
-      } finally {
-        this.clearAuth()
-      }
-    },
-    
-    async refreshUserInfo() {
-      try {
-        const response = await authService.getUserInfo()
-        this.user = response.data
-        this.isAuthenticated = true
-        return response
-      } catch (error) {
-        this.clearAuth()
-        throw error
-      }
-    },
-    
-    setAuth(authData) {
-      this.user = authData.user
-      this.token = authData.accessToken
-      this.refreshToken = authData.refreshToken
-      this.isAuthenticated = true
-      
-      localStorage.setItem('token', authData.accessToken)
-      localStorage.setItem('refreshToken', authData.refreshToken)
-    },
-    
-    clearAuth() {
-      this.user = null
-      this.token = null
-      this.refreshToken = null
-      this.isAuthenticated = false
-      
-      localStorage.removeItem('token')
-      localStorage.removeItem('refreshToken')
-    }
-  }
-})
-
-// 앱 전역 스토어
-export const useAppStore = defineStore('app', {
-  state: () => ({
-    loading: false,
-    snackbar: {
-      show: false,
-      message: '',
-      color: 'success',
-      timeout: 3000
-    },
-    notifications: [],
-    notificationCount: 0
-  }),
-  
-  actions: {
-    setLoading(status) {
-      this.loading = status
-    },
-    
-    showSnackbar(message, color = 'success', timeout = 3000) {
-      this.snackbar = {
-        show: true,
-        message,
-        color,
-        timeout
-      }
-    },
-    
-    hideSnackbar() {
-      this.snackbar.show = false
-    },
-    
-    addNotification(notification) {
-      this.notifications.unshift({
-        id: Date.now(),
-        timestamp: new Date(),
-        ...notification
-      })
-      this.notificationCount = this.notifications.length
-    },
-    
-    clearNotifications() {
-      this.notifications = []
-      this.notificationCount = 0
-    }
-  }
-})
-
-// 매장 스토어
+// 매장 스토어에 추가할 fetchStoreInfo 메서드
 export const useStoreStore = defineStore('store', {
   state: () => ({
     storeInfo: null,
-    loading: false
-  }),
-  
-  getters: {
-    hasStoreInfo: (state) => !!state.storeInfo
-  },
-  
-  actions: {
-    setStoreInfo(storeInfo) {
-      this.storeInfo = storeInfo
-    },
-
-    async fetchStoreInfo() {
-      try {
-        this.loading = true
-        const response = await storeService.getStore() // getStoreInfo가 아닌 getStore
-        this.storeInfo = response.data
-        return response
-      } catch (error) {
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
-    
-    async registerStore(storeData) {
-      try {
-        this.loading = true
-        const response = await storeService.registerStore(storeData)
-        this.storeInfo = response.data
-        return response
-      } catch (error) {
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
-    
-    async updateStore(storeId, storeData) {
-      try {
-        this.loading = true
-        const response = await storeService.updateStore(storeId, storeData)
-        this.storeInfo = response.data
-        return response
-      } catch (error) {
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
-    
-    async createStoreInfo(storeData) {
-      try {
-        this.loading = true
-        const response = await storeService.createStoreInfo(storeData)
-        this.storeInfo = response.data
-        return response
-      } catch (error) {
-        throw error
-      } finally {
-        this.loading = false
-      }
-    }
-  }
-})
-
-// 메뉴 스토어
-export const useMenuStore = defineStore('menu', {
-  state: () => ({
-    menus: [],
     loading: false,
-    totalCount: 0
+    error: null
   }),
   
   getters: {
-    getMenuById: (state) => (id) => {
-      return state.menus.find(menu => menu.id === id)
-    },
-    
-    getMenusByCategory: (state) => (category) => {
-      return state.menus.filter(menu => menu.category === category)
-    }
+    hasStoreInfo: (state) => !!state.storeInfo,
+    isLoading: (state) => state.loading
   },
   
   actions: {
-    async fetchMenus() {
+    /**
+     * 매장 정보 조회
+     */
+    async fetchStoreInfo() {
+      console.log('=== Store 스토어: 매장 정보 조회 시작 ===')
+      this.loading = true
+      this.error = null
+      
       try {
-        this.loading = true
-        const response = await storeService.getMenus()
-        this.menus = response.data
-        this.totalCount = response.data.length
-        return response
-      } catch (error) {
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
-    
-    async createMenu(menuData) {
-      try {
-        this.loading = true
-        const response = await storeService.createMenu(menuData)
-        this.menus.push(response.data)
-        this.totalCount++
-        return response
-      } catch (error) {
-        throw error
-      } finally {
-        this.loading = false
-      }
-    },
-    
-    async updateMenu(menuId, menuData) {
-      try {
-        this.loading = true
-        const response = await storeService.updateMenu(menuId, menuData)
-        const index = this.menus.findIndex(menu => menu.id === menuId)
-        if (index !== -1) {
-          this.menus[index] = response.data
+        // 스토어 서비스 임포트
+        const { storeService } = await import('@/services/store')
+        
+        console.log('매장 정보 API 호출')
+        const result = await storeService.getStore()
+        
+        console.log('=== Store 스토어: API 응답 분석 ===')
+        console.log('Result:', result)
+        console.log('Result.success:', result.success)
+        console.log('Result.data:', result.data)
+        console.log('Result.message:', result.message)
+        
+        if (result.success && result.data) {
+          // 매장 정보가 있는 경우
+          console.log('✅ 매장 정보 설정:', result.data)
+          this.storeInfo = result.data
+          return { success: true, data: result.data }
+        } else {
+          // 매장이 없거나 조회 실패한 경우
+          console.log('⚠️ 매장 정보 없음 또는 조회 실패')
+          this.storeInfo = null
+          
+          if (result.message === '등록된 매장이 없습니다') {
+            return { success: false, message: '등록된 매장이 없습니다' }
+          } else {
+            return { success: false, message: result.message || '매장 정보 조회에 실패했습니다' }
+          }
         }
-        return response
       } catch (error) {
-        throw error
+        console.error('=== Store 스토어: 매장 정보 조회 실패 ===')
+        console.error('Error:', error)
+        
+        this.error = error.message
+        this.storeInfo = null
+        
+        // HTTP 상태 코드별 처리
+        if (error.response?.status === 404) {
+          return { success: false, message: '등록된 매장이 없습니다' }
+        }
+        
+        if (error.response?.status >= 500) {
+          return { success: false, message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
+        }
+        
+        if (error.response?.status === 401) {
+          return { success: false, message: '로그인이 필요합니다' }
+        }
+        
+        return { success: false, message: error.message || '매장 정보 조회에 실패했습니다' }
       } finally {
         this.loading = false
       }
     },
-    
-    async deleteMenu(menuId) {
+
+    /**
+     * 매장 등록
+     */
+    async registerStore(storeData) {
+      console.log('매장 등록 시작:', storeData)
+      this.loading = true
+      this.error = null
+      
       try {
-        this.loading = true
-        await storeService.deleteMenu(menuId)
-        this.menus = this.menus.filter(menu => menu.id !== menuId)
-        this.totalCount--
+        const { storeService } = await import('@/services/store')
+        
+        const result = await storeService.registerStore(storeData)
+        
+        console.log('매장 등록 결과:', result)
+        
+        if (result.success) {
+          // 등록 성공 후 매장 정보 다시 조회
+          await this.fetchStoreInfo()
+          return result
+        } else {
+          this.error = result.message
+          return result
+        }
       } catch (error) {
-        throw error
+        console.error('매장 등록 실패:', error)
+        this.error = error.message
+        return { success: false, message: error.message || '매장 등록에 실패했습니다' }
       } finally {
         this.loading = false
       }
+    },
+
+    /**
+     * 매장 정보 수정
+     */
+    async updateStore(storeId, storeData) {
+      console.log('매장 정보 수정 시작:', { storeId, storeData })
+      this.loading = true
+      this.error = null
+      
+      try {
+        const { storeService } = await import('@/services/store')
+        
+        const result = await storeService.updateStore(storeId, storeData)
+        
+        console.log('매장 수정 결과:', result)
+        
+        if (result.success) {
+          // 수정 성공 후 매장 정보 다시 조회
+          await this.fetchStoreInfo()
+          return result
+        } else {
+          this.error = result.message
+          return result
+        }
+      } catch (error) {
+        console.error('매장 수정 실패:', error)
+        this.error = error.message
+        return { success: false, message: error.message || '매장 수정에 실패했습니다' }
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /**
+     * 매장 정보 초기화
+     */
+    clearStoreInfo() {
+      this.storeInfo = null
+      this.error = null
+      this.loading = false
     }
   }
 })
