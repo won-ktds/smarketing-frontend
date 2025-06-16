@@ -1301,62 +1301,22 @@ const handleImageUpload = (event) => {
  * 매장 정보 저장
  */
 const saveStoreInfo = async () => {
-  console.log('매장 정보 저장 시작')
+  if (!storeForm.value?.validate()) return
+
+  console.log('매장 정보 저장:', storeFormData.value)
   
-  if (!formValid.value) {
-    showSnackbar('입력 정보를 확인해주세요', 'error')
-    return
-  }
-
-  saving.value = true
-
   try {
-    // 개발 모드에서는 시뮬레이션으로 처리
-    if (import.meta.env.DEV) {
-      console.log('개발 모드: 매장 정보 저장 시뮬레이션')
-      
-      // 1초 대기 (로딩 상태 표시)
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // 폼 데이터를 스토어에 직접 저장
-      const storeData = { ...formData.value, id: Date.now() }
-      storeStore.storeInfo = storeData
-      
-      showSnackbar(
-        editMode.value ? '매장 정보가 수정되었습니다' : '매장 정보가 등록되었습니다', 
-        'success'
-      )
-      closeDialog()
-      return
-    }
-
-    // 프로덕션에서는 실제 API 호출
-    let result
-    if (editMode.value) {
-      // 매장 정보 수정
-      result = await storeStore.updateStore(storeInfo.value.id, formData.value)
-    } else {
-      // 매장 정보 등록
-      result = await storeStore.registerStore(formData.value)
-    }
-
+    const result = await storeStore.saveStoreInfo(storeFormData.value)
+    
     if (result.success) {
-      showSnackbar(
-        editMode.value ? '매장 정보가 수정되었습니다' : '매장 정보가 등록되었습니다', 
-        'success'
-      )
-      closeDialog()
-      
-      // 매장 정보 새로고침
-      await storeStore.fetchStoreInfo()
+      appStore.showSnackbar(result.message || '매장 정보가 저장되었습니다', 'success')
+      showStoreForm.value = false
     } else {
-      showSnackbar(result.message || '저장 중 오류가 발생했습니다', 'error')
+      appStore.showSnackbar(result.error || '저장에 실패했습니다', 'error')
     }
   } catch (error) {
-    console.error('매장 정보 저장 중 오류:', error)
-    showSnackbar('저장 중 오류가 발생했습니다', 'error')
-  } finally {
-    saving.value = false
+    console.error('매장 정보 저장 실패:', error)
+    appStore.showSnackbar('네트워크 오류가 발생했습니다', 'error')
   }
 }
 
@@ -1440,63 +1400,46 @@ const handleMenuImageUpload = (event) => {
  * 메뉴 저장
  */
 const saveMenu = async () => {
-  if (!menuFormValid.value) {
-    showSnackbar('입력 정보를 확인해주세요', 'error')
-    return
-  }
+  if (!menuForm.value?.validate()) return
 
-  savingMenu.value = true
-
+  console.log('메뉴 저장:', menuFormData.value)
+  
   try {
-    // 1초 대기 (시뮬레이션)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    if (editMenuMode.value) {
-      // 메뉴 수정
-      const index = menus.value.findIndex(m => m.id === menuFormData.value.id)
-      if (index !== -1) {
-        menus.value[index] = { ...menuFormData.value }
-      }
-      showSnackbar('메뉴가 수정되었습니다', 'success')
+    let result
+    if (isMenuEdit.value && editingMenuId.value) {
+      result = await storeStore.updateMenu(editingMenuId.value, menuFormData.value)
     } else {
-      // 메뉴 등록
-      const newMenu = {
-        ...menuFormData.value,
-        id: Date.now(),
-        rating: 0
-      }
-      menus.value.push(newMenu)
-      showSnackbar('메뉴가 등록되었습니다', 'success')
+      result = await storeStore.saveMenu(menuFormData.value)
     }
-
-    closeMenuDialog()
+    
+    if (result.success) {
+      appStore.showSnackbar(result.message || '메뉴가 저장되었습니다', 'success')
+      showMenuForm.value = false
+      resetMenuForm()
+    } else {
+      appStore.showSnackbar(result.error || '저장에 실패했습니다', 'error')
+    }
   } catch (error) {
-    console.error('메뉴 저장 중 오류:', error)
-    showSnackbar('저장 중 오류가 발생했습니다', 'error')
-  } finally {
-    savingMenu.value = false
+    console.error('메뉴 저장 실패:', error)
+    appStore.showSnackbar('네트워크 오류가 발생했습니다', 'error')
   }
 }
 
 /**
  * 메뉴 삭제
  */
-const deleteMenu = async () => {
-  deletingMenu.value = true
-
+const deleteMenu = async (menuId) => {
   try {
-    // 1초 대기 (시뮬레이션)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    menus.value = menus.value.filter(m => m.id !== deleteMenuTarget.value.id)
-    showSnackbar('메뉴가 삭제되었습니다', 'success')
-    showDeleteMenuDialog.value = false
-    deleteMenuTarget.value = null
+    const result = await storeStore.deleteMenu(menuId)
+    
+    if (result.success) {
+      appStore.showSnackbar(result.message || '메뉴가 삭제되었습니다', 'success')
+    } else {
+      appStore.showSnackbar(result.error || '삭제에 실패했습니다', 'error')
+    }
   } catch (error) {
-    console.error('메뉴 삭제 중 오류:', error)
-    showSnackbar('삭제 중 오류가 발생했습니다', 'error')
-  } finally {
-    deletingMenu.value = false
+    console.error('메뉴 삭제 실패:', error)
+    appStore.showSnackbar('네트워크 오류가 발생했습니다', 'error')
   }
 }
 
@@ -1572,21 +1515,17 @@ const editFromDetail = () => {
 onMounted(async () => {
   console.log('StoreManagementView 마운트됨')
   
-  // 개발 모드에서는 API 호출을 건너뛰고 바로 UI 표시
-  if (import.meta.env.DEV) {
-    console.log('개발 모드: API 호출 건너뛰기')
-    // 개발 중에는 즉시 UI 표시
-    return
-  }
-  
-  // 프로덕션에서만 실제 API 호출
-  if (!storeStore.hasStoreInfo) {
-    try {
+  try {
+    // 매장 정보 로드
+    if (!storeStore.hasStoreInfo) {
       await storeStore.fetchStoreInfo()
-    } catch (error) {
-      console.warn('매장 정보 로드 실패 (개발 중이므로 무시):', error)
-      // 개발 중에는 에러를 무시하고 계속 진행
     }
+    
+    // 메뉴 목록 로드
+    await storeStore.fetchMenus()
+    
+  } catch (error) {
+    console.warn('매장 관리 데이터 로드 실패 (개발 중이므로 무시):', error)
   }
 })
 </script>

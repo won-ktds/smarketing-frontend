@@ -819,25 +819,23 @@ const confirmLogout = () => {
 // 라이프사이클
 onMounted(async () => {
   console.log('DashboardView 마운트됨')
-
+  
+  // 실제 API 호출 추가
   try {
-    // 지표 애니메이션 시작
-    setTimeout(() => {
-      startMetricsAnimation()
-    }, 500)
-
-    // 차트 그리기
-    setTimeout(() => {
-      drawChart()
-    }, 1000)
-
-    // AI 추천 로드
-    setTimeout(() => {
-      // 자동으로 AI 추천을 로드하지 않고 사용자 액션 대기
-      // refreshAiRecommendation()
-    }, 1500)
+    // 매장 정보 로드
+    if (!storeStore.hasStoreInfo) {
+      await storeStore.fetchStoreInfo()
+    }
+    
+    // 매출 데이터 로드
+    await storeStore.fetchSalesData()
+    
+    // 진행 중인 콘텐츠 로드
+    await contentStore.fetchOngoingContents()
+    
   } catch (error) {
-    console.error('대시보드 초기화 실패:', error)
+    console.warn('대시보드 데이터 로드 실패 (개발 중이므로 무시):', error)
+    // 개발 중에는 에러를 무시하고 계속 진행
   }
 })
 

@@ -1,9 +1,9 @@
-//* src/services/content.js
+//* src/services/content.js - 기존 파일 수정 (API 설계서 기준)
 import { contentApi, handleApiError, formatSuccessResponse } from './api.js'
 
 /**
  * 마케팅 콘텐츠 관련 API 서비스
- * 유저스토리: CON-005, CON-015, CON-020, CON-025, CON-030
+ * API 설계서 기준으로 수정됨
  */
 class ContentService {
   /**
@@ -14,16 +14,22 @@ class ContentService {
   async generateSnsContent(contentData) {
     try {
       const response = await contentApi.post('/sns/generate', {
-        targetType: contentData.targetType, // 메뉴, 매장, 이벤트
-        platform: contentData.platform, // 인스타그램, 네이버블로그
-        images: contentData.images,
+        storeId: contentData.storeId,
+        platform: contentData.platform,
+        title: contentData.title,
+        category: contentData.category,
+        requirement: contentData.requirement || contentData.requirements,
+        toneAndManner: contentData.toneAndManner,
+        emotionalIntensity: contentData.emotionalIntensity || contentData.emotionIntensity,
+        targetAudience: contentData.targetAudience,
+        promotionalType: contentData.promotionalType || contentData.promotionType,
         eventName: contentData.eventName,
-        startDate: contentData.startDate,
-        endDate: contentData.endDate,
-        toneAndManner: contentData.toneAndManner, // 친근함, 전문적, 유머러스, 고급스러운
-        promotionType: contentData.promotionType, // 할인정보, 이벤트정보, 신메뉴알림, 없음
-        emotionIntensity: contentData.emotionIntensity, // 차분함, 보통, 열정적, 과장된
-        requirements: contentData.requirements || '',
+        eventDate: contentData.eventDate,
+        hashtagStyle: contentData.hashtagStyle,
+        hashtagCount: contentData.hashtagCount || 10,
+        includeCallToAction: contentData.includeCallToAction || false,
+        includeEmoji: contentData.includeEmoji || true,
+        contentLength: contentData.contentLength || '보통'
       })
 
       return formatSuccessResponse(response.data.data, 'SNS 게시물이 생성되었습니다.')
@@ -33,7 +39,7 @@ class ContentService {
   }
 
   /**
-   * SNS 게시물 저장
+   * SNS 게시물 저장 (CON-010: SNS 게시물 저장)
    * @param {Object} saveData - 저장할 SNS 콘텐츠 정보
    * @returns {Promise<Object>} 저장 결과
    */
@@ -43,10 +49,14 @@ class ContentService {
         title: saveData.title,
         content: saveData.content,
         hashtags: saveData.hashtags,
-        images: saveData.images,
         platform: saveData.platform,
-        status: saveData.status || 'DRAFT',
-        publishSchedule: saveData.publishSchedule,
+        category: saveData.category,
+        toneAndManner: saveData.toneAndManner,
+        targetAudience: saveData.targetAudience,
+        promotionalType: saveData.promotionalType,
+        eventName: saveData.eventName,
+        eventDate: saveData.eventDate,
+        status: saveData.status || 'DRAFT'
       })
 
       return formatSuccessResponse(response.data.data, 'SNS 게시물이 저장되었습니다.')
@@ -63,15 +73,19 @@ class ContentService {
   async generatePoster(posterData) {
     try {
       const response = await contentApi.post('/poster/generate', {
+        storeId: posterData.storeId,
+        title: posterData.title,
         targetType: posterData.targetType,
-        images: posterData.images,
         eventName: posterData.eventName,
-        startDate: posterData.startDate,
-        endDate: posterData.endDate,
-        photoStyle: posterData.photoStyle, // 모던, 클래식, 감성적
-        promotionType: posterData.promotionType,
-        emotionIntensity: posterData.emotionIntensity,
-        sizes: posterData.sizes || ['1:1', '9:16', '16:9'], // SNS용, 스토리용, 블로그용
+        eventDate: posterData.eventDate,
+        discountInfo: posterData.discountInfo,
+        designStyle: posterData.designStyle,
+        colorScheme: posterData.colorScheme,
+        includeQrCode: posterData.includeQrCode || false,
+        includeContact: posterData.includeContact || true,
+        imageStyle: posterData.imageStyle || posterData.photoStyle,
+        layoutType: posterData.layoutType,
+        sizes: posterData.sizes || ['1:1', '9:16', '16:9']
       })
 
       return formatSuccessResponse(response.data.data, '홍보 포스터가 생성되었습니다.')
@@ -81,7 +95,7 @@ class ContentService {
   }
 
   /**
-   * 홍보 포스터 저장
+   * 홍보 포스터 저장 (CON-016: 홍보 포스터 저장)
    * @param {Object} saveData - 저장할 포스터 정보
    * @returns {Promise<Object>} 저장 결과
    */
@@ -93,7 +107,7 @@ class ContentService {
         posterSizes: saveData.posterSizes,
         targetType: saveData.targetType,
         eventName: saveData.eventName,
-        status: saveData.status || 'DRAFT',
+        status: saveData.status || 'DRAFT'
       })
 
       return formatSuccessResponse(response.data.data, '홍보 포스터가 저장되었습니다.')
@@ -171,7 +185,7 @@ class ContentService {
         hashtags: updateData.hashtags,
         startDate: updateData.startDate,
         endDate: updateData.endDate,
-        status: updateData.status,
+        status: updateData.status
       })
 
       return formatSuccessResponse(response.data.data, '콘텐츠가 수정되었습니다.')
@@ -190,54 +204,6 @@ class ContentService {
       await contentApi.delete(`/${contentId}`)
 
       return formatSuccessResponse(null, '콘텐츠가 삭제되었습니다.')
-    } catch (error) {
-      return handleApiError(error)
-    }
-  }
-
-  /**
-   * 다중 콘텐츠 삭제
-   * @param {number[]} contentIds - 삭제할 콘텐츠 ID 배열
-   * @returns {Promise<Object>} 삭제 결과
-   */
-  async deleteContents(contentIds) {
-    try {
-      const deletePromises = contentIds.map((contentId) => this.deleteContent(contentId))
-      await Promise.all(deletePromises)
-
-      return formatSuccessResponse(null, `${contentIds.length}개의 콘텐츠가 삭제되었습니다.`)
-    } catch (error) {
-      return handleApiError(error)
-    }
-  }
-
-  /**
-   * 콘텐츠 재생성
-   * @param {number} contentId - 원본 콘텐츠 ID
-   * @param {Object} regenerateOptions - 재생성 옵션
-   * @returns {Promise<Object>} 재생성된 콘텐츠
-   */
-  async regenerateContent(contentId, regenerateOptions = {}) {
-    try {
-      const response = await contentApi.post(`/${contentId}/regenerate`, regenerateOptions)
-
-      return formatSuccessResponse(response.data.data, '콘텐츠가 재생성되었습니다.')
-    } catch (error) {
-      return handleApiError(error)
-    }
-  }
-
-  /**
-   * 콘텐츠 발행 상태 변경
-   * @param {number} contentId - 콘텐츠 ID
-   * @param {string} status - 변경할 상태 (DRAFT, PUBLISHED, ARCHIVED)
-   * @returns {Promise<Object>} 상태 변경 결과
-   */
-  async updateContentStatus(contentId, status) {
-    try {
-      const response = await contentApi.patch(`/${contentId}/status`, { status })
-
-      return formatSuccessResponse(response.data.data, '콘텐츠 상태가 변경되었습니다.')
     } catch (error) {
       return handleApiError(error)
     }

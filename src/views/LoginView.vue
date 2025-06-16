@@ -549,14 +549,19 @@ const handleSignup = async () => {
     
     console.log('회원가입 응답:', response.data)
 
-    if (response.data.success) {
+    // 백엔드 응답 구조에 맞게 수정
+    if (response.data.status === 200 || response.data.message?.includes('완료')) {
       signupSuccess.value = '회원가입이 완료되었습니다! 로그인해주세요'
       
-      // 3초 후 다이얼로그 닫기
+      // 즉시 성공 메시지 표시
+      appStore.showSnackbar('회원가입이 완료되었습니다', 'success')
+      
+      // 1초 후 다이얼로그 닫기 (더 빠르게)
       setTimeout(() => {
         closeSignupDialog()
-        appStore.showSnackbar('회원가입이 완료되었습니다', 'success')
-      }, 3000)
+      }, 1000)
+    } else {
+      signupError.value = response.data.message || '회원가입에 실패했습니다'
     }
   } catch (error) {
     console.error('회원가입 실패:', error)
