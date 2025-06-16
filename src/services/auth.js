@@ -6,7 +6,7 @@ import { memberApi, authApi, handleApiError, formatSuccessResponse } from './api
  * 유저스토리: USR-005, USR-010, USR-020, USR-030, USR-035, USR-040
  */
 class AuthService {
-  /**
+   /**
    * 로그인 (USR-005: 정상 로그인)
    * @param {Object} credentials - 로그인 정보
    * @param {string} credentials.userId - 사용자 ID
@@ -16,19 +16,26 @@ class AuthService {
   async login(credentials) {
     try {
       const response = await authApi.post('/login', {
-        userId: credentials.userId,
+        userId: credentials.username || credentials.userId, // 기존 코드 호환성
         password: credentials.password,
       })
 
-      const { accessToken, refreshToken, expiresIn } = response.data.data
+      const { accessToken, refreshToken, expiresIn, userInfo } = response.data.data
 
-      // 토큰 저장
+      // 토큰 및 사용자 정보 저장
       localStorage.setItem('accessToken', accessToken)
       localStorage.setItem('refreshToken', refreshToken)
       localStorage.setItem('tokenExpiresIn', expiresIn.toString())
-      localStorage.setItem('userId', credentials.userId)
+      localStorage.setItem('userInfo', JSON.stringify(userInfo))
 
-      return formatSuccessResponse(response.data.data, '로그인되었습니다.')
+      return formatSuccessResponse({
+        token: accessToken,
+        user: {
+          id: userInfo.userId,
+          nickname: userInfo.name,
+          email: userInfo.email
+        }
+      }, '로그인되었습니다.')
     } catch (error) {
       return handleApiError(error)
     }
@@ -50,7 +57,7 @@ class AuthService {
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
       localStorage.removeItem('tokenExpiresIn')
-      localStorage.removeItem('userId')
+      localStorage.removeItem('userInfo')
 
       return formatSuccessResponse(null, '로그아웃되었습니다.')
     } catch (error) {
@@ -58,14 +65,14 @@ class AuthService {
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
       localStorage.removeItem('tokenExpiresIn')
-      localStorage.removeItem('userId')
+      localStorage.removeItem('userInfo')
 
-      return handleApiError(error)
+      return formatSuccessResponse(null, '로그아웃되었습니다.')
     }
   }
 
   /**
-   * 토큰 갱신
+   * 토큰 갱신 (USR-050: 인증 자동 연장)
    * @returns {Promise<Object>} 토큰 갱신 결과
    */
   async refreshToken() {
@@ -84,7 +91,7 @@ class AuthService {
       localStorage.setItem('refreshToken', newRefreshToken)
       localStorage.setItem('tokenExpiresIn', expiresIn.toString())
 
-      return formatSuccessResponse(response.data.data, '토큰이 갱신되었습니다.')
+      return formatSuccessResponse({ token: accessToken }, '토큰이 갱신되었습니다.')
     } catch (error) {
       return handleApiError(error)
     }
@@ -92,22 +99,17 @@ class AuthService {
 
   /**
    * 회원가입 (USR-030: 회원등록)
-   * @param {Object} memberData - 회원가입 정보
-   * @param {string} memberData.userId - 사용자 ID
-   * @param {string} memberData.password - 비밀번호
-   * @param {string} memberData.name - 이름
-   * @param {string} memberData.businessNumber - 사업자 번호
-   * @param {string} memberData.email - 이메일
+   * @param {Object} userData - 회원 정보
    * @returns {Promise<Object>} 회원가입 결과
    */
-  async register(memberData) {
+  async register(userData) {
     try {
       const response = await memberApi.post('/register', {
-        userId: memberData.userId,
-        password: memberData.password,
-        name: memberData.name,
-        businessNumber: memberData.businessNumber,
-        email: memberData.email,
+        userId: userData.userId,
+        password: userData.password,
+        name: userData.name,
+        businessNumber: userData.businessNumber,
+        email: userData.email
       })
 
       return formatSuccessResponse(response.data.data, '회원가입이 완료되었습니다.')
@@ -123,83 +125,32 @@ class AuthService {
    */
   async checkDuplicate(userId) {
     try {
-      const response = await memberApi.get(`/check-duplicate?userId=${userId}`)
+      const response = await memberApi.get('/check-duplicate', {
+        params: { userId }
+      })
 
-      const { isDuplicate } = response.data.data
-
-      if (isDuplicate) {
-        return {
-          success: false,
-          message: '이미 사용 중인 ID입니다.',
-          data: { isDuplicate: true },
-        }
-      }
-
-      return formatSuccessResponse({ isDuplicate: false }, '사용 가능한 ID입니다.')
+      return formatSuccessResponse(response.data.data, response.data.data.message)
     } catch (error) {
       return handleApiError(error)
     }
   }
 
   /**
-   * 비밀번호 유효성 검증 (USR-040: 암호유효성 검사)
-   * @param {string} password - 검증할 비밀번호
+   * 암호 유효성 검증 (USR-040: 암호유효성 검사)
+   * @param {string} password - 검증할 암호
    * @returns {Promise<Object>} 유효성 검증 결과
    */
   async validatePassword(password) {
     try {
       const response = await memberApi.post('/validate-password', { password })
 
-      const { isValid, errors } = response.data.data
-
-      if (!isValid) {
-        return {
-          success: false,
-          message: '비밀번호가 규칙에 맞지 않습니다.',
-          data: { isValid: false, errors },
-        }
-      }
-
-      return formatSuccessResponse({ isValid: true, errors: [] }, '사용 가능한 비밀번호입니다.')
+      return formatSuccessResponse(response.data.data, response.data.data.message)
     } catch (error) {
       return handleApiError(error)
     }
   }
-
-  /**
-   * 현재 로그인 상태 확인
-   * @returns {boolean} 로그인 여부
-   */
-  isAuthenticated() {
-    const token = localStorage.getItem('accessToken')
-    const expiresIn = localStorage.getItem('tokenExpiresIn')
-
-    if (!token || !expiresIn) {
-      return false
-    }
-
-    // 토큰 만료 시간 확인 (여유를 두고 5분 전에 만료로 처리)
-    const now = Date.now()
-    const expiryTime = parseInt(expiresIn) - 5 * 60 * 1000
-
-    return now < expiryTime
-  }
-
-  /**
-   * 현재 사용자 정보 가져오기
-   * @returns {Object|null} 사용자 정보
-   */
-  getCurrentUser() {
-    const userId = localStorage.getItem('userId')
-    const token = localStorage.getItem('accessToken')
-
-    if (!userId || !token || !this.isAuthenticated()) {
-      return null
-    }
-
-    return { userId }
-  }
 }
+
 
 export const authService = new AuthService()
 export default authService
