@@ -80,51 +80,53 @@ export const useStoreStore = defineStore('store', {
     },
 
     /**
-     * 메뉴 목록 조회 - 추가된 메서드
+     * 메뉴 목록 조회 - 실제 API 연동 (매장 ID 필요)
      */
     async fetchMenus() {
       console.log('=== Store 스토어: 메뉴 목록 조회 시작 ===')
       
       try {
-        // 현재는 목업 데이터 반환 (추후 실제 API 연동 시 수정)
-        const mockMenus = [
-          {
-            id: 1,
-            name: '아메리카노',
-            price: 4000,
-            category: '커피',
-            description: '진한 풍미의 아메리카노',
-            imageUrl: '/images/americano.jpg',
-            isAvailable: true
-          },
-          {
-            id: 2,
-            name: '카페라떼',
-            price: 4500,
-            category: '커피',
-            description: '부드러운 우유가 들어간 라떼',
-            imageUrl: '/images/latte.jpg',
-            isAvailable: true
-          },
-          {
-            id: 3,
-            name: '치즈케이크',
-            price: 6000,
-            category: '디저트',
-            description: '진한 크림치즈로 만든 케이크',
-            imageUrl: '/images/cheesecake.jpg',
-            isAvailable: false
+        // 매장 정보에서 storeId 가져오기
+        const storeId = this.storeInfo?.storeId
+        if (!storeId) {
+          console.warn('매장 ID가 없습니다. 매장 정보를 먼저 조회해주세요.')
+          return { success: false, message: '매장 정보가 필요합니다', data: [] }
+        }
+        
+        // 메뉴 서비스 임포트
+        const { menuService } = await import('@/services/menu')
+        
+        console.log('메뉴 목록 API 호출, 매장 ID:', storeId)
+        const result = await menuService.getMenus(storeId)
+        
+        console.log('=== Store 스토어: 메뉴 API 응답 분석 ===')
+        console.log('Result:', result)
+        console.log('Result.success:', result.success)
+        console.log('Result.data:', result.data)
+        console.log('Result.message:', result.message)
+        
+        if (result.success && result.data) {
+          // 메뉴 목록이 있는 경우
+          console.log('✅ 메뉴 목록 설정:', result.data)
+          this.menus = result.data
+          return { success: true, data: result.data }
+        } else {
+          // 메뉴가 없거나 조회 실패한 경우
+          console.log('⚠️ 메뉴 목록 없음 또는 조회 실패')
+          this.menus = []
+          
+          if (result.message === '등록된 메뉴가 없습니다') {
+            return { success: false, message: '등록된 메뉴가 없습니다', data: [] }
+          } else {
+            return { success: false, message: result.message || '메뉴 목록 조회에 실패했습니다', data: [] }
           }
-        ]
-        
-        this.menus = mockMenus
-        console.log('✅ 메뉴 목록 설정 완료:', mockMenus)
-        
-        return { success: true, data: mockMenus }
+        }
       } catch (error) {
-        console.error('메뉴 목록 조회 실패:', error)
+        console.error('=== Store 스토어: 메뉴 목록 조회 실패 ===')
+        console.error('Error:', error)
+        
         this.menus = []
-        return { success: false, message: '메뉴 목록을 불러오는데 실패했습니다' }
+        return { success: false, message: error.message || '메뉴 목록을 불러오는데 실패했습니다', data: [] }
       }
     },
 
