@@ -229,36 +229,30 @@
               <v-card class="mb-4" elevation="1" v-if="useAI">
                 <v-card-title class="text-h6 py-3">AI 옵션 설정</v-card-title>
                 <v-card-text>
-                  <!-- 톤앤매너 -->
+                  <!-- 타겟 연령층 - 간단하고 확실한 방법으로 수정 -->
                   <v-select
-                    v-model="aiOptions.toneAndManner"
-                    :items="toneOptions"
-                    label="톤앤매너"
+                    v-model="aiOptions.targetAge"
+                    :items="targetAgeOptions"
+                    label="타겟 연령층"
                     variant="outlined"
                     density="compact"
                     class="mb-3"
-                  />
-
-                  <!-- 홍보 유형 -->
-                  <v-select
-                    v-model="aiOptions.promotion"
-                    :items="promotionOptions"
-                    label="홍보 유형"
-                    variant="outlined"
-                    density="compact"
-                    class="mb-3"
-                  />
-
-                  <!-- 감정 강도 -->
-                  <v-select
-                    v-model="aiOptions.emotionIntensity"
-                    :items="emotionOptions"
-                    label="감정 강도"
-                    variant="outlined"
-                    density="compact"
-                    class="mb-3"
-                  />
-
+                    prepend-inner-icon="mdi-account-group"
+                  >
+                    <template #item="{ props, item }">
+                      <v-list-item
+                        v-bind="props"
+                        :prepend-icon="getAgeIcon(item.value)"
+                        :title="item.title"
+                      />
+                    </template>
+                    <template #selection="{ item }">
+                      <v-chip size="small" color="primary" class="ml-1">
+                        <v-icon start size="small">{{ getAgeIcon(item.value) }}</v-icon>
+                        {{ item.title }}
+                      </v-chip>
+                    </template>
+                  </v-select>
                   <!-- 포토 스타일 (포스터인 경우) -->
                   <v-select
                     v-if="selectedType === 'poster'"

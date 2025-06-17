@@ -1,4 +1,4 @@
-//* src/store/index.js - Store 스토어 수정 (fetchMenus 메서드 추가)
+//* src/store/index.js - Store 스토어 (완전한 버전)
 import { defineStore } from 'pinia'
 
 export const useStoreStore = defineStore('store', {
@@ -80,7 +80,7 @@ export const useStoreStore = defineStore('store', {
     },
 
     /**
-     * 메뉴 목록 조회 - 실제 API 연동 (매장 ID 필요)
+     * 메뉴 목록 조회 - 실제 API 연동 (매장 ID 필요) - ✅ ID 필드 보장
      */
     async fetchMenus() {
       console.log('=== Store 스토어: 메뉴 목록 조회 시작 ===')
@@ -106,10 +106,34 @@ export const useStoreStore = defineStore('store', {
         console.log('Result.message:', result.message)
         
         if (result.success && result.data) {
+          // ✅ 메뉴 데이터 ID 필드 보장 처리
+          const menusWithId = (result.data || []).map(menu => {
+            // ID 필드가 확실히 있도록 보장
+            const menuId = menu.menuId || menu.id
+            
+            if (!menuId) {
+              console.warn('⚠️ 메뉴 ID가 없는 항목 발견:', menu)
+            }
+            
+            return {
+              ...menu,
+              id: menuId, // ✅ id 필드 확실히 설정
+              menuId: menuId, // ✅ menuId 필드도 설정
+              // 기타 필드들 보장
+              menuName: menu.menuName || menu.name || '이름 없음',
+              category: menu.category || '기타',
+              price: menu.price || 0,
+              description: menu.description || '',
+              available: menu.available !== undefined ? menu.available : true,
+              recommended: menu.recommended !== undefined ? menu.recommended : false,
+              imageUrl: menu.imageUrl || '/images/menu-placeholder.png'
+            }
+          })
+          
           // 메뉴 목록이 있는 경우
-          console.log('✅ 메뉴 목록 설정:', result.data)
-          this.menus = result.data
-          return { success: true, data: result.data }
+          console.log('✅ 메뉴 목록 설정 (ID 보장됨):', menusWithId)
+          this.menus = menusWithId
+          return { success: true, data: menusWithId }
         } else {
           // 메뉴가 없거나 조회 실패한 경우
           console.log('⚠️ 메뉴 목록 없음 또는 조회 실패')

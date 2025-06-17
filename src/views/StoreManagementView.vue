@@ -1,4 +1,4 @@
-//* src/views/StoreManagementView.vue - 완전한 매장 등록 화면
+//* src/views/StoreManagementView.vue - 완전한 매장 관리 화면 (이미지 업로드 포함)
 
 <template>
   <v-container fluid class="pa-4">
@@ -253,7 +253,7 @@
                   </div>
 
                   <v-img
-                    :src="menu.imageUrl || '/images/menu-placeholder.png'"
+                    :src="menu.imageUrl || menu.image || '/images/menu-placeholder.png'"
                     :alt="menu.menuName"
                     height="200"
                     cover
@@ -266,20 +266,22 @@
                           {{ menu.menuName }}
                         </h4>
                         <div class="d-flex align-center">
+                          <!-- 삭제 버튼 -->
                           <v-btn
                             icon
                             size="small"
                             variant="text"
                             color="error"
-                            @click.stop="confirmDeleteMenu(menu)"
+                            @click="deleteMenuDirect(menu, $event)"
                           >
                             <v-icon size="small">mdi-delete</v-icon>
                           </v-btn>
+                          <!-- 수정 버튼 -->
                           <v-btn
                             icon
                             size="small"
                             variant="text"
-                            @click.stop="editMenu(menu)"
+                            @click="editMenuDirect(menu, $event)"
                           >
                             <v-icon size="small">mdi-pencil</v-icon>
                           </v-btn>
@@ -357,6 +359,9 @@
       />
       <p class="text-body-1">매장 정보를 불러오는 중...</p>
     </div>
+
+    <!-- 매장 등록/수정 다이얼로그 -->
+    <!-- 기존 매장 등록/수정 다이얼로그를 다음 내용으로 교체해주세요 -->
 
     <!-- 매장 등록/수정 다이얼로그 -->
     <v-dialog
@@ -517,6 +522,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <!-- 누락된 다이얼로그들을 매장 등록 다이얼로그 뒤에 추가해주세요 -->
 
     <!-- 메뉴 상세 다이얼로그 -->
     <v-dialog
@@ -648,6 +654,7 @@
             variant="outlined"
             prepend-icon="mdi-pencil"
             @click="editMenuFromDetail"
+            :disabled="!selectedMenu"
           >
             수정
           </v-btn>
@@ -656,6 +663,7 @@
             variant="outlined"
             prepend-icon="mdi-delete"
             @click="deleteMenuFromDetail"
+            :disabled="!selectedMenu"
           >
             삭제
           </v-btn>
@@ -663,10 +671,10 @@
       </v-card>
     </v-dialog>
 
-    <!-- 메뉴 등록/수정 다이얼로그 -->
+    <!-- 메뉴 등록/수정 다이얼로그 (✅ 이미지 업로드 기능 추가) -->
     <v-dialog
       v-model="showMenuDialog"
-      max-width="600"
+      max-width="700"
       persistent
     >
       <v-card>
@@ -682,7 +690,69 @@
         <v-card-text class="pa-4">
           <v-form ref="menuFormRef" v-model="formValid">
             <v-row>
-              <!-- 메뉴명 -->
+              <!-- ✅ 메뉴 이미지 업로드 섹션 추가 -->
+              <v-col cols="12">
+                <div class="image-upload-section">
+                  <h4 class="text-subtitle-1 font-weight-bold mb-3 d-flex align-center">
+                    <v-icon class="mr-2" color="primary">mdi-image</v-icon>
+                    메뉴 이미지
+                  </h4>
+                  
+                  <!-- 이미지 미리보기 -->
+                  <div v-if="menuFormData.imagePreview" class="mb-3">
+                    <v-img
+                      :src="menuFormData.imagePreview"
+                      max-height="200"
+                      max-width="300"
+                      class="rounded mx-auto"
+                    />
+                    <div class="text-center mt-2">
+                      <v-btn
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                        prepend-icon="mdi-delete"
+                        @click="removeImage"
+                      >
+                        이미지 제거
+                      </v-btn>
+                    </div>
+                  </div>
+                  
+                  <!-- 이미지 업로드 영역 -->
+                  <div v-else>
+                    <v-file-input
+                      v-model="menuFormData.imageFile"
+                      label="메뉴 이미지 선택"
+                      variant="outlined"
+                      prepend-icon="mdi-camera"
+                      accept="image/*"
+                      show-size
+                      @change="onImageSelected"
+                      :rules="imageRules"
+                      class="mb-3"
+                    />
+                    
+                    <!-- 드래그앤드롭 영역 -->
+                    <div
+                      class="drop-zone"
+                      @drop="onDrop"
+                      @dragover.prevent
+                      @dragenter.prevent
+                    >
+                      <v-icon size="48" color="grey-lighten-2">mdi-cloud-upload</v-icon>
+                      <p class="text-grey text-center mt-2 mb-1">
+                        이미지를 드래그하여 업로드하거나 위의 버튼을 클릭하세요
+                      </p>
+                      <p class="text-caption text-grey text-center">
+                        JPG, PNG 파일만 업로드 가능 (최대 10MB)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </v-col>
+
+              <!-- 기존 메뉴 정보 필드들 -->
               <v-col cols="12">
                 <v-text-field
                   v-model="menuFormData.menuName"
@@ -693,7 +763,6 @@
                 />
               </v-col>
 
-              <!-- 카테고리 -->
               <v-col cols="12" sm="6">
                 <v-select
                   v-model="menuFormData.category"
@@ -705,7 +774,6 @@
                 />
               </v-col>
 
-              <!-- 가격 -->
               <v-col cols="12" sm="6">
                 <v-text-field
                   v-model.number="menuFormData.price"
@@ -718,7 +786,6 @@
                 />
               </v-col>
 
-              <!-- 메뉴 설명 -->
               <v-col cols="12">
                 <v-textarea
                   v-model="menuFormData.description"
@@ -769,7 +836,7 @@
           </v-btn>
           <v-btn
             color="primary"
-            @click="saveMenu"
+            @click="saveMenuWithImage"
             :loading="saving"
             :disabled="!formValid"
           >
@@ -793,7 +860,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useStoreStore } from '@/store/index'  // 올바른 경로로 수정
+import { useStoreStore } from '@/store/index'
 
 const storeStore = useStoreStore()
 
@@ -803,7 +870,7 @@ const showCreateDialog = ref(false)
 const editMode = ref(false)
 const formValid = ref(false)
 const saving = ref(false)
-const storeFormRef = ref(null) // 폼 참조
+const storeFormRef = ref(null)
 
 // 메뉴 관리 관련 상태
 const menus = ref([])
@@ -813,14 +880,20 @@ const menuCategories = ref(['커피', '음료', '디저트', '베이커리', '�
 const showMenuDialog = ref(false)
 const menuEditMode = ref(false)
 const menuFormRef = ref(null)
+
+// ✅ 이미지 업로드 기능이 포함된 메뉴 폼 데이터
 const menuFormData = ref({
+  menuId: null,
+  id: null,
   menuName: '',
   category: '',
   price: 0,
   description: '',
   available: true,
   recommended: false,
-  imageUrl: ''
+  imageUrl: '',
+  imageFile: null, // ✅ 새 이미지 파일
+  imagePreview: null // ✅ 이미지 미리보기 URL
 })
 
 // 메뉴 상세 관련 상태
@@ -862,6 +935,21 @@ const weekDays = [
   { title: '토요일', value: 'saturday' },
   { title: '일요일', value: 'sunday' }
 ]
+
+// ✅ 이미지 업로드 관련 검증 규칙
+const imageRules = ref([
+  value => {
+    if (!value || !value.length) return true // 이미지는 선택사항
+    const file = Array.isArray(value) ? value[0] : value
+    if (file.size > 10 * 1024 * 1024) {
+      return '이미지 크기는 10MB 이하여야 합니다'
+    }
+    if (!file.type.startsWith('image/')) {
+      return '이미지 파일만 업로드 가능합니다'
+    }
+    return true
+  }
+])
 
 // 컴퓨티드 속성
 const storeInfo = computed(() => storeStore.storeInfo || {})
@@ -918,7 +1006,78 @@ const showSnackbar = (message, color = 'success') => {
   snackbar.value.show = true
 }
 
-// 메서드들
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('ko-KR', {
+    style: 'currency',
+    currency: 'KRW'
+  }).format(amount)
+}
+
+const getCategoryColor = (category) => {
+  const colors = {
+    '커피': 'brown',
+    '음료': 'blue',
+    '디저트': 'pink',
+    '베이커리': 'orange',
+    '샐러드': 'green',
+    '샌드위치': 'purple'
+  }
+  return colors[category] || 'grey'
+}
+
+// ===== 이미지 관련 메서드들 =====
+
+// ✅ 이미지 파일 선택 시 처리
+const onImageSelected = (files) => {
+  console.log('이미지 파일 선택:', files)
+  
+  if (!files || !files.length) {
+    menuFormData.value.imageFile = null
+    menuFormData.value.imagePreview = null
+    return
+  }
+  
+  const file = Array.isArray(files) ? files[0] : files
+  
+  // 파일 크기 및 타입 검증
+  if (file.size > 10 * 1024 * 1024) {
+    showSnackbar('이미지 크기는 10MB 이하여야 합니다', 'error')
+    return
+  }
+  
+  if (!file.type.startsWith('image/')) {
+    showSnackbar('이미지 파일만 업로드 가능합니다', 'error')
+    return
+  }
+  
+  menuFormData.value.imageFile = file
+  
+  // 이미지 미리보기 생성
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    menuFormData.value.imagePreview = e.target.result
+  }
+  reader.readAsDataURL(file)
+}
+
+// ✅ 드래그앤드롭 처리
+const onDrop = (event) => {
+  event.preventDefault()
+  
+  const files = event.dataTransfer.files
+  if (files.length > 0) {
+    onImageSelected([files[0]])
+  }
+}
+
+// ✅ 이미지 제거
+const removeImage = () => {
+  menuFormData.value.imageFile = null
+  menuFormData.value.imagePreview = null
+  menuFormData.value.imageUrl = ''
+}
+
+// ===== 매장 관련 메서드들 =====
 const openCreateDialog = () => {
   console.log('새 매장 등록 다이얼로그 열기')
   editMode.value = false
@@ -949,166 +1108,6 @@ const editBasicInfo = () => {
   showCreateDialog.value = true
 }
 
-const addMenu = () => {
-  console.log('메뉴 추가 (개발 예정)')
-  showSnackbar('메뉴 관리 기능은 곧 업데이트 예정입니다', 'info')
-}
-
-// 메뉴 관련 메서드들
-const openCreateMenuDialog = () => {
-  console.log('메뉴 등록 다이얼로그 열기')
-  menuEditMode.value = false
-  resetMenuForm()
-  showMenuDialog.value = true
-}
-
-const editMenu = (menu) => {
-  console.log('메뉴 수정:', menu)
-  menuEditMode.value = true
-  
-  // 백엔드에서 받은 메뉴 데이터 구조에 맞게 설정
-  menuFormData.value = {
-    id: menu.id || menu.menuId, // 메뉴 ID 추가
-    menuName: menu.menuName || '',
-    category: menu.category || '',
-    price: menu.price || 0,
-    description: menu.description || '',
-    available: menu.available !== undefined ? menu.available : true,
-    recommended: menu.recommended !== undefined ? menu.recommended : false,
-    imageUrl: menu.imageUrl || menu.image || ''
-  }
-  
-  showMenuDialog.value = true
-}
-
-const viewMenuDetail = async (menu) => {
-  console.log('메뉴 상세 보기:', menu)
-  
-  try {
-    // 메뉴 서비스 임포트
-    const { menuService } = await import('@/services/menu')
-    
-    // 메뉴 상세 정보 조회
-    const result = await menuService.getMenuDetail(menu.id)
-    
-    if (result.success) {
-      selectedMenu.value = result.data
-      showMenuDetailDialog.value = true
-      console.log('✅ 메뉴 상세 정보 로드:', result.data)
-    } else {
-      // API 실패 시 현재 메뉴 정보 사용
-      selectedMenu.value = menu
-      showMenuDetailDialog.value = true
-      console.log('⚠️ 상세 정보 로드 실패, 기본 정보 사용:', menu)
-    }
-  } catch (error) {
-    // 오류 발생 시 현재 메뉴 정보 사용
-    console.error('메뉴 상세 정보 로드 실패:', error)
-    selectedMenu.value = menu
-    showMenuDetailDialog.value = true
-  }
-}
-
-const closeMenuDetail = () => {
-  showMenuDetailDialog.value = false
-  selectedMenu.value = null
-}
-
-const confirmDeleteMenu = (menu) => {
-  console.log('메뉴 삭제 확인:', menu)
-  if (confirm(`'${menu.menuName}' 메뉴를 삭제하시겠습니까?`)) {
-    deleteMenu(menu.id)
-  }
-}
-
-const clearFilters = () => {
-  menuSearch.value = ''
-  menuCategoryFilter.value = '전체'
-}
-
-const cancelMenuForm = () => {
-  console.log('메뉴 폼 취소')
-  showMenuDialog.value = false
-  menuEditMode.value = false
-  resetMenuForm()
-}
-
-const resetMenuForm = () => {
-  menuFormData.value = {
-    id: null, // 메뉴 ID 초기화 추가
-    menuName: '',
-    category: '',
-    price: 0,
-    description: '',
-    available: true,
-    recommended: false,
-    imageUrl: ''
-  }
-  
-  // 폼 validation 초기화
-  if (menuFormRef.value) {
-    menuFormRef.value.resetValidation()
-  }
-}
-
-const getCategoryColor = (category) => {
-  const colors = {
-    '커피': 'brown',
-    '음료': 'blue',
-    '디저트': 'pink',
-    '베이커리': 'orange',
-    '샐러드': 'green',
-    '샌드위치': 'purple'
-  }
-  return colors[category] || 'grey'
-}
-
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('ko-KR', {
-    style: 'currency',
-    currency: 'KRW'
-  }).format(amount)
-}
-
-const formatDateTime = (dateTimeString) => {
-  if (!dateTimeString) return '-'
-  
-  try {
-    const date = new Date(dateTimeString)
-    return new Intl.DateTimeFormat('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date)
-  } catch (error) {
-    return dateTimeString
-  }
-}
-
-// 메뉴 상세에서 수정 버튼 클릭
-const editMenuFromDetail = () => {
-  if (selectedMenu.value) {
-    // 상세 다이얼로그 닫기
-    closeMenuDetail()
-    
-    // 수정 다이얼로그 열기
-    editMenu(selectedMenu.value)
-  }
-}
-
-// 메뉴 상세에서 삭제 버튼 클릭
-const deleteMenuFromDetail = () => {
-  if (selectedMenu.value) {
-    // 상세 다이얼로그 닫기
-    closeMenuDetail()
-    
-    // 삭제 확인
-    confirmDeleteMenu(selectedMenu.value)
-  }
-}
-
 const cancelForm = () => {
   console.log('폼 취소')
   showCreateDialog.value = false
@@ -1131,19 +1130,17 @@ const resetForm = () => {
     description: ''
   }
   
-  // 폼 validation 초기화
   if (storeFormRef.value) {
     storeFormRef.value.resetValidation()
   }
 }
 
-// 매장 정보 저장 함수 - 완전히 새로 작성
+// 매장 정보 저장 함수
 const saveStoreInfo = async () => {
   console.log('=== 매장 정보 저장 시작 ===')
   console.log('편집 모드:', editMode.value)
   console.log('폼 데이터:', formData.value)
   
-  // 폼 유효성 검사
   if (!storeFormRef.value) {
     console.error('폼 참조를 찾을 수 없습니다')
     showSnackbar('폼 오류가 발생했습니다', 'error')
@@ -1160,7 +1157,6 @@ const saveStoreInfo = async () => {
   saving.value = true
   
   try {
-    // 백엔드에 보낼 데이터 형식으로 변환
     const storeData = {
       storeName: formData.value.storeName,
       businessType: formData.value.businessType,
@@ -1178,10 +1174,8 @@ const saveStoreInfo = async () => {
     
     let result
     if (editMode.value) {
-      // 매장 정보 수정
       result = await storeStore.updateStore(storeInfo.value.storeId, storeData)
     } else {
-      // 새 매장 등록
       result = await storeStore.registerStore(storeData)
     }
     
@@ -1195,8 +1189,6 @@ const saveStoreInfo = async () => {
       showCreateDialog.value = false
       editMode.value = false
       resetForm()
-      
-      // 매장 정보 다시 조회
       await storeStore.fetchStoreInfo()
     } else {
       showSnackbar(result.message || '저장에 실패했습니다', 'error')
@@ -1209,38 +1201,419 @@ const saveStoreInfo = async () => {
   }
 }
 
-/**
- * 컴포넌트 마운트 시 실행
- */
-onMounted(async () => {
-  console.log('=== StoreManagementView 마운트됨 ===')
+// ===== 메뉴 관련 메서드들 =====
+
+const editMenu = (menu) => {
+  console.log('=== 메뉴 수정 호출 ===')
+  console.log('전달받은 메뉴 객체:', menu)
+  
+  if (!menu || menu === null || menu === undefined) {
+    console.error('❌ 전달받은 메뉴 객체가 null 또는 undefined입니다')
+    showSnackbar('메뉴 정보를 찾을 수 없습니다', 'error')
+    return
+  }
+  
+  const menuId = menu.menuId || menu.id
+  console.log('추출된 메뉴 ID:', menuId, '타입:', typeof menuId)
+  
+  if (!menuId || menuId === 'undefined' || menuId === null || menuId === '') {
+    console.error('❌ 메뉴 ID를 찾을 수 없음:', menu)
+    showSnackbar('메뉴 ID를 찾을 수 없습니다', 'error')
+    return
+  }
+  
+  console.log('✅ 사용할 메뉴 ID:', menuId)
+  menuEditMode.value = true
+  
+  menuFormData.value = {
+    menuId: menuId,
+    id: menuId,
+    menuName: menu.menuName || menu.name || '',
+    category: menu.category || '',
+    price: menu.price || 0,
+    description: menu.description || '',
+    available: menu.available !== undefined ? menu.available : true,
+    recommended: menu.recommended !== undefined ? menu.recommended : false,
+    imageUrl: menu.imageUrl || menu.image || '',
+    imageFile: null, // ✅ 수정 시에는 새 이미지 파일 없음
+    imagePreview: menu.imageUrl || menu.image || null // ✅ 기존 이미지 미리보기
+  }
+  
+  console.log('✅ 수정 폼 데이터 설정 완료:', menuFormData.value)
+  showMenuDialog.value = true
+}
+
+const viewMenuDetail = async (menu) => {
+  console.log('=== 메뉴 상세 보기 호출 ===')
+  console.log('전달받은 메뉴 객체:', menu)
+  
+  if (!menu || menu === null || menu === undefined) {
+    console.error('❌ 전달받은 메뉴 객체가 null 또는 undefined입니다')
+    showSnackbar('메뉴 정보를 찾을 수 없습니다', 'error')
+    return
+  }
+  
+  const menuId = menu.menuId || menu.id
+  
+  if (!menuId || menuId === 'undefined' || menuId === null) {
+    console.error('❌ 메뉴 ID를 찾을 수 없음:', menu)
+    showSnackbar('메뉴 ID를 찾을 수 없습니다', 'error')
+    return
+  }
+  
+  console.log('✅ 사용할 메뉴 ID:', menuId)
   
   try {
-    // 매장 정보 조회
-    const result = await storeStore.fetchStoreInfo()
+    const { menuService } = await import('@/services/menu')
     
-    console.log('매장 정보 조회 결과:', result)
+    console.log('메뉴 상세 API 호출 시작, ID:', menuId)
+    const result = await menuService.getMenuDetail(menuId)
     
-    if (result.success) {
-      console.log('✅ 매장 정보 로드 완료:', result.data)
-      
-      // 매장 정보가 있는 경우 메뉴 정보도 로드
-      await loadMenus()
-      
-    } else {
-      if (result.message === '등록된 매장이 없습니다') {
-        console.log('⚠️ 등록된 매장이 없음 - 등록 화면 표시')
-        // 매장이 없는 경우는 정상적인 상황이므로 에러 메시지 표시하지 않음
-      } else {
-        console.warn('❌ 매장 정보 조회 실패:', result.message)
-        showSnackbar(result.message || '매장 정보를 불러오는데 실패했습니다', 'error')
+    if (result.success && result.data) {
+      selectedMenu.value = {
+        ...result.data,
+        id: result.data.menuId || result.data.id,
+        menuId: result.data.menuId || result.data.id
       }
+      showMenuDetailDialog.value = true
+      console.log('✅ 메뉴 상세 정보 로드 성공:', selectedMenu.value)
+    } else {
+      console.warn('⚠️ 상세 정보 로드 실패, 기본 정보 사용:', result.message)
+      selectedMenu.value = {
+        ...menu,
+        id: menuId,
+        menuId: menuId
+      }
+      showMenuDetailDialog.value = true
+      console.log('기본 메뉴 정보로 설정:', selectedMenu.value)
     }
   } catch (error) {
-    console.error('매장 정보 조회 중 예외 발생:', error)
-    showSnackbar('매장 정보를 불러오는 중 오류가 발생했습니다', 'error')
+    console.error('메뉴 상세 정보 로드 실패:', error)
+    selectedMenu.value = {
+      ...menu,
+      id: menuId,
+      menuId: menuId
+    }
+    showMenuDetailDialog.value = true
+    console.log('오류 발생으로 기본 메뉴 정보 사용:', selectedMenu.value)
   }
-})
+}
+
+const closeMenuDetail = () => {
+  console.log('=== 메뉴 상세 다이얼로그 닫기 ===')
+  showMenuDetailDialog.value = false
+  
+  setTimeout(() => {
+    selectedMenu.value = null
+    console.log('selectedMenu.value가 null로 설정됨')
+  }, 100)
+}
+
+const editMenuFromDetail = () => {
+  console.log('=== 메뉴 상세에서 수정 버튼 클릭 ===')
+  console.log('selectedMenu.value:', selectedMenu.value)
+  
+  if (!selectedMenu.value || selectedMenu.value === null || selectedMenu.value === undefined) {
+    console.error('❌ 선택된 메뉴가 null 또는 undefined입니다')
+    showSnackbar('선택된 메뉴 정보가 없습니다. 다시 시도해주세요.', 'error')
+    showMenuDetailDialog.value = false
+    return
+  }
+  
+  const menuId = selectedMenu.value.menuId || selectedMenu.value.id
+  if (!menuId) {
+    console.error('❌ 선택된 메뉴에 ID가 없습니다:', selectedMenu.value)
+    showSnackbar('메뉴 ID를 찾을 수 없습니다', 'error')
+    return
+  }
+  
+  console.log('✅ 수정할 메뉴 정보:', {
+    id: menuId,
+    name: selectedMenu.value.menuName || selectedMenu.value.name,
+    category: selectedMenu.value.category
+  })
+  
+  closeMenuDetail()
+  editMenu(selectedMenu.value)
+}
+
+const deleteMenuFromDetail = () => {
+  console.log('=== 메뉴 상세에서 삭제 버튼 클릭 ===')
+  console.log('selectedMenu.value:', selectedMenu.value)
+  
+  if (!selectedMenu.value || selectedMenu.value === null || selectedMenu.value === undefined) {
+    console.error('❌ 선택된 메뉴가 null 또는 undefined입니다')
+    showSnackbar('선택된 메뉴 정보가 없습니다. 다시 시도해주세요.', 'error')
+    showMenuDetailDialog.value = false
+    return
+  }
+  
+  const menuId = selectedMenu.value.menuId || selectedMenu.value.id
+  if (!menuId) {
+    console.error('❌ 선택된 메뉴에 ID가 없습니다:', selectedMenu.value)
+    showSnackbar('메뉴 ID를 찾을 수 없습니다', 'error')
+    return
+  }
+  
+  console.log('✅ 삭제할 메뉴 정보:', {
+    id: menuId,
+    name: selectedMenu.value.menuName || selectedMenu.value.name
+  })
+  
+  closeMenuDetail()
+  confirmDeleteMenu(selectedMenu.value)
+}
+
+const editMenuDirect = (menu, event) => {
+  console.log('=== 메뉴 카드에서 직접 수정 ===')
+  
+  if (event) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  
+  console.log('직접 수정할 메뉴:', menu)
+  
+  if (!menu || menu === null || menu === undefined) {
+    console.error('❌ 메뉴 객체가 null 또는 undefined입니다')
+    showSnackbar('메뉴 정보를 찾을 수 없습니다', 'error')
+    return
+  }
+  
+  editMenu(menu)
+}
+
+const deleteMenuDirect = (menu, event) => {
+  console.log('=== 메뉴 카드에서 직접 삭제 ===')
+  
+  if (event) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  
+  console.log('직접 삭제할 메뉴:', menu)
+  
+  if (!menu || menu === null || menu === undefined) {
+    console.error('❌ 메뉴 객체가 null 또는 undefined입니다')
+    showSnackbar('메뉴 정보를 찾을 수 없습니다', 'error')
+    return
+  }
+  
+  confirmDeleteMenu(menu)
+}
+
+const openCreateMenuDialog = () => {
+  console.log('메뉴 등록 다이얼로그 열기')
+  menuEditMode.value = false
+  resetMenuForm()
+  showMenuDialog.value = true
+}
+
+const confirmDeleteMenu = (menu) => {
+  console.log('=== 메뉴 삭제 확인 ===')
+  console.log('전달받은 메뉴 객체:', menu)
+  
+  const menuId = menu.menuId || menu.id
+  
+  if (!menuId || menuId === 'undefined' || menuId === null) {
+    console.error('❌ 메뉴 ID를 찾을 수 없음:', menu)
+    showSnackbar('메뉴 ID를 찾을 수 없습니다', 'error')
+    return
+  }
+  
+  console.log('✅ 삭제할 메뉴 ID:', menuId)
+  
+  if (confirm(`'${menu.menuName || menu.name}' 메뉴를 삭제하시겠습니까?`)) {
+    deleteMenu(menuId)
+  }
+}
+
+const clearFilters = () => {
+  menuSearch.value = ''
+  menuCategoryFilter.value = '전체'
+}
+
+const cancelMenuForm = () => {
+  console.log('메뉴 폼 취소')
+  showMenuDialog.value = false
+  menuEditMode.value = false
+  resetMenuForm()
+}
+
+// ✅ 메뉴 폼 초기화 (이미지 관련 필드 포함)
+const resetMenuForm = () => {
+  menuFormData.value = {
+    menuId: null,
+    id: null,
+    menuName: '',
+    category: '',
+    price: 0,
+    description: '',
+    available: true,
+    recommended: false,
+    imageUrl: '',
+    imageFile: null, // ✅ 이미지 파일 초기화
+    imagePreview: null // ✅ 미리보기 초기화
+  }
+  
+  if (menuFormRef.value) {
+    menuFormRef.value.resetValidation()
+  }
+}
+
+// ✅ 메뉴 저장 + 이미지 업로드 (2단계 처리)
+const saveMenuWithImage = async () => {
+  console.log('=== 메뉴 저장 + 이미지 업로드 시작 ===')
+  
+  if (!menuFormRef.value) {
+    console.error('❌ 폼 참조를 찾을 수 없음')
+    showSnackbar('폼 오류가 발생했습니다', 'error')
+    return
+  }
+  
+  const { valid } = await menuFormRef.value.validate()
+  if (!valid) {
+    console.log('❌ 폼 유효성 검사 실패')
+    showSnackbar('필수 정보를 모두 입력해주세요', 'error')
+    return
+  }
+  
+  saving.value = true
+  
+  try {
+    const { menuService } = await import('@/services/menu')
+    
+    let menuResult
+    let savedMenuId
+    
+    if (menuEditMode.value) {
+  // 메뉴 수정 - PUT /api/menu/{menuId}
+  const menuId = menuFormData.value.id || menuFormData.value.menuId
+  if (!menuId) {
+    showSnackbar('메뉴 ID가 없습니다', 'error')
+    return
+  }
+  
+  console.log('=== 메뉴 수정 데이터 준비 ===')
+  console.log('폼 데이터:', menuFormData.value)
+  console.log('메뉴 ID:', menuId)
+  
+  // 메뉴 데이터 검증 및 준비
+  const menuName = menuFormData.value.menuName || menuFormData.value.name
+  const category = menuFormData.value.category
+  const price = menuFormData.value.price
+  const description = menuFormData.value.description
+  
+  // 프론트엔드에서 기본 검증
+  if (!menuName || !category || price === undefined || price === null) {
+    console.error('❌ 필수 필드 누락:', { menuName, category, price, description })
+    showSnackbar('메뉴명, 카테고리, 가격을 모두 입력해주세요', 'error')
+    return
+  }
+  
+  if (isNaN(parseInt(price)) || parseInt(price) < 0) {
+    showSnackbar('올바른 가격을 입력해주세요', 'error')
+    return
+  }
+  
+  const menuData = {
+    menuName: menuName,
+    category: category,
+    price: parseInt(price),
+    description: description || ''
+  }
+  
+  console.log('✅ 최종 메뉴 수정 데이터:', menuData)
+  
+  menuResult = await menuService.updateMenu(menuId, menuData)
+}else {
+      // ✅ 메뉴 등록
+      const storeId = storeInfo.value?.storeId
+      
+      if (!storeId) {
+        showSnackbar('매장 정보를 찾을 수 없습니다', 'error')
+        return
+      }
+      
+      const menuData = {
+        storeId: storeId,
+        menuName: menuFormData.value.menuName?.trim(),
+        category: menuFormData.value.category,
+        price: parseInt(menuFormData.value.price) || 0,
+        description: menuFormData.value.description?.trim() || ''
+      }
+      
+      menuResult = await menuService.registerMenu(menuData)
+      savedMenuId = menuResult.data?.menuId
+    }
+    
+    console.log('✅ 메뉴 저장 완료:', menuResult)
+    
+    if (!menuResult.success) {
+      showSnackbar(menuResult.message || '메뉴 저장에 실패했습니다', 'error')
+      return
+    }
+    
+    // ✅ 2단계: 이미지 업로드 (이미지가 있는 경우만)
+    if (menuFormData.value.imageFile && savedMenuId) {
+      console.log('=== 이미지 업로드 시작 ===')
+      console.log('메뉴 ID:', savedMenuId)
+      console.log('이미지 파일:', menuFormData.value.imageFile)
+      
+      const imageResult = await menuService.uploadMenuImage(savedMenuId, menuFormData.value.imageFile)
+      
+      if (imageResult.success) {
+        console.log('✅ 이미지 업로드 완료:', imageResult)
+        showSnackbar(`메뉴가 ${menuEditMode.value ? '수정' : '등록'}되었고 이미지도 업로드되었습니다`, 'success')
+      } else {
+        console.warn('⚠️ 이미지 업로드 실패:', imageResult.message)
+        showSnackbar(`메뉴는 ${menuEditMode.value ? '수정' : '등록'}되었지만 이미지 업로드에 실패했습니다`, 'warning')
+      }
+    } else {
+      showSnackbar(`메뉴가 ${menuEditMode.value ? '수정' : '등록'}되었습니다`, 'success')
+    }
+    
+    // 다이얼로그 닫기 및 목록 새로고침
+    showMenuDialog.value = false
+    menuEditMode.value = false
+    resetMenuForm()
+    await loadMenus()
+    
+  } catch (error) {
+    console.error('❌ 메뉴 저장 중 예외 발생:', error)
+    showSnackbar('저장 중 오류가 발생했습니다', 'error')
+  } finally {
+    saving.value = false
+  }
+}
+
+const deleteMenu = async (menuId) => {
+  console.log('=== 메뉴 삭제 시작 ===')
+  console.log('삭제할 메뉴 ID:', menuId, '타입:', typeof menuId)
+  
+  if (!menuId || menuId === 'undefined' || menuId === null) {
+    console.error('❌ 유효하지 않은 메뉴 ID:', menuId)
+    showSnackbar('올바른 메뉴 ID가 필요합니다', 'error')
+    return
+  }
+  
+  try {
+    const { menuService } = await import('@/services/menu')
+    
+    console.log('✅ 메뉴 삭제 API 호출, ID:', menuId)
+    const result = await menuService.deleteMenu(menuId)
+    
+    if (result.success) {
+      showSnackbar('메뉴가 삭제되었습니다', 'success')
+      await loadMenus()
+    } else {
+      showSnackbar(result.message || '메뉴 삭제에 실패했습니다', 'error')
+    }
+  } catch (error) {
+    console.error('메뉴 삭제 실패:', error)
+    showSnackbar(`메뉴 삭제 중 오류가 발생했습니다: ${error.message}`, 'error')
+  }
+}
 
 // 메뉴 데이터 로드 함수 - 실제 API 연동
 const loadMenus = async () => {
@@ -1253,108 +1626,41 @@ const loadMenus = async () => {
       console.log('✅ 메뉴 데이터 로드 완료:', result.data)
     } else {
       console.log('메뉴 데이터 없음 또는 로드 실패:', result.message)
-      menus.value = [] // 빈 배열로 설정 (빈 상태 UI 표시)
+      menus.value = []
     }
   } catch (error) {
     console.error('메뉴 데이터 로드 실패:', error)
-    menus.value = [] // 빈 배열로 초기화
+    menus.value = []
   }
 }
 
-// 실제 메뉴 등록/수정 함수
-const saveMenu = async () => {
-  if (!menuFormRef.value) {
-    showSnackbar('폼 오류가 발생했습니다', 'error')
-    return
-  }
-  
-  const { valid } = await menuFormRef.value.validate()
-  if (!valid) {
-    showSnackbar('필수 정보를 모두 입력해주세요', 'error')
-    return
-  }
-  
-  saving.value = true
+/**
+ * 컴포넌트 마운트 시 실행
+ */
+onMounted(async () => {
+  console.log('=== StoreManagementView 마운트됨 ===')
   
   try {
-    // 메뉴 서비스 임포트
-    const { menuService } = await import('@/services/menu')
+    const result = await storeStore.fetchStoreInfo()
     
-    let result
-    
-    if (menuEditMode.value) {
-      // 메뉴 수정 - PUT /api/menu/{menuId}
-      const menuId = menuFormData.value.id
-      if (!menuId) {
-        showSnackbar('메뉴 ID가 없습니다', 'error')
-        return
-      }
-      
-      console.log('메뉴 수정 API 호출, 메뉴 ID:', menuId)
-      result = await menuService.updateMenu(menuId, menuFormData.value)
-    } else {
-      // 새 메뉴 등록 - POST /api/menu/register
-      const storeId = storeInfo.value.storeId
-      if (!storeId) {
-        showSnackbar('매장 정보를 찾을 수 없습니다', 'error')
-        return
-      }
-      
-      // 메뉴 데이터 준비 (매장 ID 포함)
-      const menuData = {
-        ...menuFormData.value,
-        storeId: storeId
-      }
-      
-      console.log('메뉴 등록 API 호출, 매장 ID:', storeId)
-      result = await menuService.registerMenu(menuData)
-    }
-    
-    console.log('메뉴 저장 결과:', result)
+    console.log('매장 정보 조회 결과:', result)
     
     if (result.success) {
-      showSnackbar(
-        menuEditMode.value ? '메뉴가 수정되었습니다' : '메뉴가 등록되었습니다',
-        'success'
-      )
-      showMenuDialog.value = false
-      menuEditMode.value = false
-      resetMenuForm()
-      
-      // 메뉴 목록 새로고침
+      console.log('✅ 매장 정보 로드 완료:', result.data)
       await loadMenus()
     } else {
-      showSnackbar(result.message || '저장에 실패했습니다', 'error')
+      if (result.message === '등록된 매장이 없습니다') {
+        console.log('⚠️ 등록된 매장이 없음 - 등록 화면 표시')
+      } else {
+        console.warn('❌ 매장 정보 조회 실패:', result.message)
+        showSnackbar(result.message || '매장 정보를 불러오는데 실패했습니다', 'error')
+      }
     }
   } catch (error) {
-    console.error('메뉴 저장 중 오류:', error)
-    showSnackbar('저장 중 오류가 발생했습니다', 'error')
-  } finally {
-    saving.value = false
+    console.error('매장 정보 조회 중 예외 발생:', error)
+    showSnackbar('매장 정보를 불러오는 중 오류가 발생했습니다', 'error')
   }
-}
-
-// 실제 메뉴 삭제 함수
-const deleteMenu = async (menuId) => {
-  try {
-    // 메뉴 서비스 임포트
-    const { menuService } = await import('@/services/menu')
-    
-    console.log('메뉴 삭제:', menuId)
-    const result = await menuService.deleteMenu(menuId)
-    
-    if (result.success) {
-      showSnackbar('메뉴가 삭제되었습니다', 'success')
-      // 메뉴 목록 새로고침
-      await loadMenus()
-    } else {
-      showSnackbar(result.message || '메뉴 삭제에 실패했습니다', 'error')
-    }
-  } catch (error) {
-    console.error('메뉴 삭제 실패:', error)
-    showSnackbar('메뉴 삭제 중 오류가 발생했습니다', 'error')
-  }
-}
+})
 </script>
 
 <style scoped>
@@ -1420,6 +1726,29 @@ const deleteMenu = async (menuId) => {
   height: 100%;
 }
 
+/* ✅ 이미지 업로드 관련 스타일 */
+.image-upload-section {
+  border: 1px dashed #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #fafafa;
+}
+
+.drop-zone {
+  border: 2px dashed #e0e0e0;
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+  margin-top: 12px;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+  cursor: pointer;
+}
+
+.drop-zone:hover {
+  border-color: #1976d2;
+  background-color: #f5f5f5;
+}
+
 @media (max-width: 600px) {
   .info-item {
     margin-bottom: 12px;
@@ -1431,6 +1760,14 @@ const deleteMenu = async (menuId) => {
   
   .empty-state {
     padding: 2rem 1rem;
+  }
+  
+  .image-upload-section {
+    padding: 12px;
+  }
+  
+  .drop-zone {
+    padding: 16px;
   }
 }
 </style>

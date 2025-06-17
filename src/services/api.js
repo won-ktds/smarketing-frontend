@@ -6,7 +6,6 @@ const getApiUrls = () => {
   const config = window.__runtime_config__ || {}
   return {
     GATEWAY_URL: config.GATEWAY_URL || 'http://20.1.2.3',
-<<<<<<< HEAD
     AUTH_URL: config.AUTH_URL || 'http://localhost:8081/api/auth',
     MEMBER_URL: config.MEMBER_URL || 'http://localhost:8081/api/member',
     STORE_URL: config.STORE_URL || 'http://localhost:8082/api/store',
@@ -16,7 +15,6 @@ const getApiUrls = () => {
     SALES_URL: config.SALES_URL || 'http://localhost:8082/api/sales',
     // ⚠️ 수정: 추천 API는 ai-recommend 서비스 (포트 8084)
     RECOMMEND_URL: config.RECOMMEND_URL || 'http://localhost:8084/api/recommendations',
-=======
     AUTH_URL: 'http://localhost:8081/api/auth',
     MEMBER_URL: 'http://localhost:8081/api/member',
     STORE_URL: config.STORE_URL || 'http://localhost:8082/api/store',
@@ -24,7 +22,6 @@ const getApiUrls = () => {
     MENU_URL: config.MENU_URL || 'http://localhost:8082/api/menu',
     SALES_URL: config.SALES_URL || 'http://localhost:8082/api/sales',
     RECOMMEND_URL: config.RECOMMEND_URL || 'http://20.1.2.3/api/recommendation',
->>>>>>> 87871709f2bbcdab5df004a3954d6ba0af3cadce
   }
 }
 
