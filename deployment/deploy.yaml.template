@@ -1,4 +1,3 @@
-# ConfigMap
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,9 +6,11 @@ metadata:
 data:
   runtime-env.js: |
     window.__runtime_config__ = {
-        AUTH_URL: 'http://${ingress_host}/auth',
-        CONTENT_URL: 'http://${ingress_host}/content',
-        AI_URL: 'http://${ingress_host}/ai'
+        AUTH_URL: 'http://${ingress_host}/api/auth',
+        MEMBER_URL: 'http://${ingress_host}/api/member',
+        STORE_URL: 'http://${ingress_host}/api/store',
+        CONTENT_URL: 'http://${ingress_host}/api/content',
+        RECOMMEND_URL: 'http://${ingress_host}/api/recommend'
     };
 
 ---
@@ -52,16 +53,20 @@ spec:
           subPath: runtime-env.js
         livenessProbe:
           httpGet:
-            path: /health
+            path: /
             port: ${export_port}
           initialDelaySeconds: 30
           periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /health
+            path: /
             port: ${export_port}
           initialDelaySeconds: 5
           periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
       volumes:
       - name: runtime-config
         configMap:
@@ -77,10 +82,11 @@ metadata:
   labels:
     app: smarketing-frontend
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   ports:
   - port: 80
     targetPort: ${export_port}
     protocol: TCP
+    name: http
   selector:
     app: smarketing-frontend
