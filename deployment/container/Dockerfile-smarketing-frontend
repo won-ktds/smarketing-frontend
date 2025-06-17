@@ -10,7 +10,7 @@ ARG VUE_APP_SALES_URL
 ARG VUE_APP_CONTENT_URL
 ARG VUE_APP_RECOMMEND_URL
 
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 ENV VUE_APP_AUTH_URL=${VUE_APP_AUTH_URL}
 ENV VUE_APP_MEMBER_URL=${VUE_APP_MEMBER_URL}
 ENV VUE_APP_STORE_URL=${VUE_APP_STORE_URL}
@@ -24,14 +24,14 @@ WORKDIR /app
 # Copy package files
 COPY ${PROJECT_FOLDER}/package*.json ./
 
-# Install all dependencies (including devDependencies for build)
-RUN npm ci
+# Install all dependencies (use npm install instead of npm ci)
+RUN npm install
 
 # Copy source code
 COPY ${PROJECT_FOLDER} .
 
 # Build the application
-RUN npm run build
+RUN NODE_ENV=production npm run build
 
 # Production stage
 FROM nginx:alpine AS production
