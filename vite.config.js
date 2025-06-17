@@ -18,7 +18,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    minify: 'terser'
+    minify: 'esbuild'  // terser 대신 esbuild 사용 (더 빠르고 별도 설치 불필요)
   },
   server: {
     port: 3000,
