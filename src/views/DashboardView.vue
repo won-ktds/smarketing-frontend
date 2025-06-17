@@ -1,4 +1,4 @@
-//* src/views/DashboardView.vue - 완전 수정버전
+//* src/views/DashboardView.vue - 차트 연동 수정버전
 <template>
   <div>
     <!-- 메인 컨텐츠 -->
@@ -415,7 +415,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import { useAppStore } from '@/store/app'
@@ -449,6 +449,13 @@ const aiError = ref('')
 // ⚠️ 매장 정보 상태 추가
 const storeInfo = ref(null)
 const currentStoreId = ref(null)
+
+// ⚠️ 실제 원본 차트 데이터 저장 (원화 단위)
+const originalChartData = ref({
+  '7d': [],
+  '30d': [],
+  '90d': []
+})
 
 // 툴팁 관련
 const tooltip = ref({
@@ -517,10 +524,45 @@ const chartData = ref({
   ],
 })
 
-const yAxisLabels = ref(['0', '25', '50', '75', '100'])
+// Y축 라벨 동적 계산
+const yAxisLabels = computed(() => {
+  const data = currentChartData.value
+  if (!data || data.length === 0) return ['0', '25', '50', '75', '100']
+  
+  const maxValue = Math.max(...data.map(d => Math.max(d.sales, d.target)))
+  const step = Math.ceil(maxValue / 5)
+  
+  return Array.from({ length: 6 }, (_, i) => (i * step).toString())
+})
 
 // AI 추천 데이터 (초기값 - API에서 업데이트됨)
 const aiRecommendation = ref(null)
+
+
+
+// 성공 리포트 생성 함수 추가
+const generateSuccessReport = (detectionResults) => {
+  if (!detectionResults) return
+  
+  console.log('📋 [SUCCESS_REPORT] 데이터 로드 성공 리포트:')
+  console.log('  - 매출 탐지 방법:', detectionResults.method)
+  console.log('  - 발견된 Store ID:', detectionResults.foundStoreId)
+  console.log('  - 데이터 품질 점수:', detectionResults.quality?.score)
+  console.log('  - 총 발견 건수:', detectionResults.totalFound)
+}
+
+// 추정 매장 정보 생성 함수 추가
+const createEstimatedStoreInfo = (detectionResults) => {
+  storeInfo.value = {
+    storeId: currentStoreId.value,
+    storeName: `Store ${currentStoreId.value}`,
+    storeType: 'UNKNOWN',
+    location: '위치 정보 없음',
+    createdDate: new Date().toISOString(),
+    isEstimated: true
+  }
+  console.log('🔄 [ESTIMATED] 추정 매장 정보 생성:', storeInfo.value)
+}
 
 // ⚠️ API 연동 함수들 수정
 
@@ -612,9 +654,7 @@ const loadStoreAndSalesData = async () => {
         appStore.showSnackbar('매출 데이터 로드에 실패해 테스트 데이터를 표시합니다', 'warning')
       }
       
-      // Mock 데이터 사용
-      useMockSalesData()
-      salesDataLoaded = false
+
     }
     
     // 🏪 2. 매장 정보 로드 (매출 성공 여부와 무관하게 시도)
@@ -648,10 +688,7 @@ const loadStoreAndSalesData = async () => {
         createEstimatedStoreInfo(detectionResults)
         storeDataLoaded = true
         console.log('🔄 [STORE] 매출 기반 추정 매장 정보 생성 완료')
-      } else {
-        useMockStoreData()
-        storeDataLoaded = false
-      }
+      } 
     }
     
     // 🎉 3. 최종 결과 처리 및 상세 리포트
@@ -691,10 +728,7 @@ const loadStoreAndSalesData = async () => {
   } catch (unexpectedError) {
     console.error('🚨 [UNEXPECTED] 예상치 못한 에러:', unexpectedError)
     
-    // 최후의 수단
-    useMockStoreData()
-    useMockSalesData()
-    appStore.showSnackbar('시스템 오류로 인해 테스트 데이터를 표시합니다.', 'error')
+
     
   } finally {
     loading.value = false
@@ -702,20 +736,6 @@ const loadStoreAndSalesData = async () => {
   }
 }
 
-/**
- * Mock 매장 데이터 사용 (개발/테스트용)
- */
-const useMockStoreData = () => {
-  console.log('Mock 매장 데이터 사용')
-  storeInfo.value = {
-    storeId: 1,
-    storeName: '테스트 카페',
-    businessType: '카페',
-    address: '서울시 강남구',
-    phoneNumber: '02-1234-5678'
-  }
-  currentStoreId.value = 1
-}
 
 /**
  * 대시보드 지표 업데이트 (수정)
@@ -772,16 +792,16 @@ const updateDashboardMetrics = (salesData) => {
     startMetricsAnimation()
   } catch (error) {
     console.error('대시보드 지표 업데이트 실패:', error)
-    // 에러 발생 시 기본값 사용
-    useMockSalesData()
   }
 }
 
 /**
- * 차트 데이터 업데이트 (개선)
+ * 차트 데이터 업데이트 (수정 - 핵심 차트 연동 로직)
  */
 const updateChartData = (salesData) => {
   try {
+    console.log('📊 [CHART] 차트 데이터 업데이트 시작:', salesData)
+    
     // yearSales 데이터가 있으면 차트 데이터 업데이트
     if (salesData.yearSales && salesData.yearSales.length > 0) {
       // Sales 엔티티 배열을 차트 형식으로 변환
@@ -789,22 +809,104 @@ const updateChartData = (salesData) => {
         const date = new Date(sale.salesDate)
         const label = `${date.getMonth() + 1}/${date.getDate()}`
         const amount = Number(sale.salesAmount) / 10000 // 만원 단위로 변환
+        const originalAmount = Number(sale.salesAmount) // 원화 단위 원본 저장
         
         return {
           label: index === salesData.yearSales.length - 1 ? '오늘' : label,
           sales: Math.round(amount),
           target: Math.round(amount * 1.1), // 목표는 실제 매출의 110%로 설정
-          date: sale.salesDate
+          date: sale.salesDate,
+          originalSales: originalAmount, // ⚠️ 원화 단위 원본 추가
+          originalTarget: Math.round(originalAmount * 1.1) // ⚠️ 원화 단위 목표 추가
         }
       })
       
+      console.log('📊 [CHART] 변환된 7일 데이터:', salesDataPoints)
+      
       // 7일 차트 데이터 업데이트
       chartData.value['7d'] = salesDataPoints
+      originalChartData.value['7d'] = salesDataPoints // ⚠️ 원본 데이터 저장
+
+      // 30일/90일 데이터 생성 (실제 데이터 기반)
+      if (salesData.yearSales.length >= 30) {
+        // 30일 데이터를 주간으로 그룹화
+        const weeklyData = []
+        for (let i = 0; i < 5; i++) {
+          const weekStart = Math.max(0, salesData.yearSales.length - 35 + (i * 7))
+          const weekEnd = Math.min(salesData.yearSales.length, weekStart + 7)
+          const weekSales = salesData.yearSales.slice(weekStart, weekEnd)
+          
+          if (weekSales.length > 0) {
+            const totalAmount = weekSales.reduce((sum, sale) => sum + Number(sale.salesAmount), 0)
+            const avgAmount = totalAmount / weekSales.length / 10000 // 만원 단위
+            const originalAvgAmount = totalAmount / weekSales.length // 원화 단위
+            
+            weeklyData.push({
+              label: i === 4 ? '이번주' : `${i + 1}주차`,
+              sales: Math.round(avgAmount),
+              target: Math.round(avgAmount * 1.1),
+              date: `Week ${i + 1}`,
+              originalSales: Math.round(originalAvgAmount), // ⚠️ 원화 단위 원본
+              originalTarget: Math.round(originalAvgAmount * 1.1) // ⚠️ 원화 단위 목표
+            })
+          }
+        }
+        
+        if (weeklyData.length > 0) {
+          chartData.value['30d'] = weeklyData
+          originalChartData.value['30d'] = weeklyData // ⚠️ 원본 데이터 저장
+          console.log('📊 [CHART] 30일(주간) 데이터 생성:', weeklyData)
+        }
+      }
+
+      if (salesData.yearSales.length >= 90) {
+        // 90일 데이터를 월간으로 그룹화
+        const monthlyData = []
+        const monthNames = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
+        
+        // 최근 4개월 데이터 생성
+        for (let i = 0; i < 4; i++) {
+          const monthStart = Math.max(0, salesData.yearSales.length - 120 + (i * 30))
+          const monthEnd = Math.min(salesData.yearSales.length, monthStart + 30)
+          const monthSales = salesData.yearSales.slice(monthStart, monthEnd)
+          
+          if (monthSales.length > 0) {
+            const totalAmount = monthSales.reduce((sum, sale) => sum + Number(sale.salesAmount), 0)
+            const avgAmount = totalAmount / monthSales.length / 10000 // 만원 단위
+            const originalAvgAmount = totalAmount / monthSales.length // 원화 단위
+            
+            const currentMonth = new Date().getMonth()
+            const monthIndex = (currentMonth - 3 + i + 12) % 12
+            
+            monthlyData.push({
+              label: i === 3 ? '이번달' : monthNames[monthIndex],
+              sales: Math.round(avgAmount * 10), // 월간은 10배 스케일
+              target: Math.round(avgAmount * 11),
+              date: `Month ${i + 1}`,
+              originalSales: Math.round(originalAvgAmount * 10), // ⚠️ 원화 단위 원본
+              originalTarget: Math.round(originalAvgAmount * 11) // ⚠️ 원화 단위 목표
+            })
+          }
+        }
+        
+        if (monthlyData.length > 0) {
+          chartData.value['90d'] = monthlyData
+          originalChartData.value['90d'] = monthlyData // ⚠️ 원본 데이터 저장
+          console.log('📊 [CHART] 90일(월간) 데이터 생성:', monthlyData)
+        }
+      }
       
-      console.log('차트 데이터 업데이트 완료:', salesDataPoints)
+      // 차트 다시 그리기
+      nextTick(() => {
+        drawChart()
+      })
+      
+      console.log('📊 [CHART] 차트 데이터 업데이트 완료')
+    } else {
+      console.warn('⚠️ [CHART] yearSales 데이터가 없음, 기본 차트 유지')
     }
   } catch (error) {
-    console.error('차트 데이터 업데이트 실패:', error)
+    console.error('❌ [CHART] 차트 데이터 업데이트 실패:', error)
     // 실패 시 기본 차트 데이터 유지
   }
 }
@@ -873,13 +975,8 @@ const updateAiRecommendation = (aiData) => {
       title: aiData.tipContent ? aiData.tipContent.substring(0, 50) + '...' : 'AI 마케팅 추천',
       sections: {
         ideas: {
-          title: '1. 추천 아이디어',
+          title: '추천 아이디어',
           items: [aiData.tipContent || '맞춤형 마케팅 전략을 제안드립니다.']
-        },
-        costs: {
-          title: '2. 예상 효과',
-          items: ['고객 관심 유도 및 매출 상승', 'SNS를 통한 브랜드 인지도 상승'],
-          effects: ['재방문율 및 공유 유도', '지역 내 인지도 향상']
         }
       }
     }
@@ -890,37 +987,14 @@ const updateAiRecommendation = (aiData) => {
 }
 
 
-/**
- * Fallback AI 추천 사용
- */
-const useFallbackAiRecommendation = () => {
-  console.log('Fallback AI 추천 사용')
-  aiRecommendation.value = {
-    emoji: '☀️',
-    title: '여름 시즌 마케팅 전략',
-    sections: {
-      ideas: {
-        title: '1. 기본 추천사항',
-        items: [
-          '계절 메뉴 개발 및 프로모션',
-          'SNS 마케팅 활용',
-          '지역 고객 대상 이벤트 기획'
-        ]
-      },
-      costs: {
-        title: '2. 기대 효과',
-        items: ['매출 향상', '고객 만족도 증가'],
-        effects: ['브랜드 인지도 상승', '재방문 고객 증가']
-      }
-    }
-  }
-}
 
 // 계산된 속성들 (기존과 동일)
 const currentChartData = computed(() => chartData.value[chartPeriod.value])
 
 const chartDataPoints = computed(() => {
   const data = currentChartData.value
+  if (!data || data.length === 0) return []
+  
   const maxSales = Math.max(...data.map(d => Math.max(d.sales, d.target)))
   
   return data.map((item, index) => {
@@ -941,6 +1015,8 @@ const chartDataPoints = computed(() => {
 
 const avgSales = computed(() => {
   const data = currentChartData.value
+  if (!data || data.length === 0) return '₩0'
+  
   const avg = data.reduce((sum, item) => sum + item.sales, 0) / data.length
   const unit = chartPeriod.value === '90d' ? 100 : chartPeriod.value === '30d' ? 10 : 1
   return formatCurrency(avg * unit * 10000)
@@ -948,6 +1024,8 @@ const avgSales = computed(() => {
 
 const maxSales = computed(() => {
   const data = currentChartData.value
+  if (!data || data.length === 0) return '₩0'
+  
   const max = Math.max(...data.map(d => d.sales))
   const unit = chartPeriod.value === '90d' ? 100 : chartPeriod.value === '30d' ? 10 : 1
   return formatCurrency(max * unit * 10000)
@@ -955,6 +1033,8 @@ const maxSales = computed(() => {
 
 const achievementRate = computed(() => {
   const data = currentChartData.value
+  if (!data || data.length === 0) return 0
+  
   const totalSales = data.reduce((sum, item) => sum + item.sales, 0)
   const totalTarget = data.reduce((sum, item) => sum + item.target, 0)
   return Math.round((totalSales / totalTarget) * 100)
@@ -1005,14 +1085,32 @@ const startMetricsAnimation = () => {
   })
 }
 
+/**
+ * 차트 그리기 (수정 - 안전성 강화)
+ */
 const drawChart = async () => {
   await nextTick()
   
-  if (!chartCanvas.value) return
+  if (!chartCanvas.value) {
+    console.warn('⚠️ [CHART] Canvas 요소를 찾을 수 없음')
+    return
+  }
   
   const canvas = chartCanvas.value
   const ctx = canvas.getContext('2d')
   const data = currentChartData.value
+  
+  if (!data || data.length === 0) {
+    console.warn('⚠️ [CHART] 차트 데이터가 없음')
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    return
+  }
+  
+  console.log('📊 [DRAW] 차트 그리기 시작:', {
+    period: chartPeriod.value,
+    dataLength: data.length,
+    canvasSize: `${canvas.width}x${canvas.height}`
+  })
   
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   
@@ -1021,6 +1119,11 @@ const drawChart = async () => {
   const chartHeight = canvas.height - padding * 2
   
   const maxValue = Math.max(...data.map(d => Math.max(d.sales, d.target)))
+  
+  if (maxValue === 0) {
+    console.warn('⚠️ [CHART] 최대값이 0이므로 차트를 그릴 수 없음')
+    return
+  }
   
   // 매출 라인 그리기
   ctx.beginPath()
@@ -1061,26 +1164,65 @@ const drawChart = async () => {
   
   ctx.stroke()
   ctx.setLineDash([])
+  
+  console.log('✅ [DRAW] 차트 그리기 완료')
 }
 
+/**
+ * 차트 업데이트 (수정 - 차트 재그리기 강화)
+ */
 const updateChart = async (period) => {
-  console.log('차트 기간 변경:', period)
+  console.log('📊 [UPDATE] 차트 기간 변경:', period)
+  chartPeriod.value = period
+  
+  // nextTick을 사용하여 DOM 업데이트 후 차트 그리기
   await nextTick()
-  drawChart()
+  
+  // 약간의 지연 후 차트 다시 그리기 (UI 업데이트 완료 대기)
+  setTimeout(() => {
+    drawChart()
+  }, 100)
 }
 
+/**
+ * ⚠️ 툴팁 표시 - 실제 API 데이터 반영 수정
+ */
 const showDataTooltip = (index, event) => {
   const data = currentChartData.value[index]
-  const unit = chartPeriod.value === '90d' ? 100 : chartPeriod.value === '30d' ? 10 : 1
+  const originalData = originalChartData.value[chartPeriod.value]?.[index]
+  
+  if (!data) return
+  
+  // 차트 영역의 위치 계산
+  const chartArea = event.target.closest('.chart-area')
+  const rect = chartArea.getBoundingClientRect()
+  
+  // ⚠️ 원본 데이터가 있으면 사용, 없으면 기본 변환 로직 사용
+  let actualSales, actualTarget
+  
+  if (originalData && originalData.originalSales && originalData.originalTarget) {
+    // 실제 API 데이터의 원화 단위 사용
+    actualSales = originalData.originalSales
+    actualTarget = originalData.originalTarget
+    console.log('🔍 [TOOLTIP] 원본 API 데이터 사용:', { actualSales, actualTarget })
+  } else {
+    // Fallback: 기존 변환 로직 사용
+    const unit = chartPeriod.value === '90d' ? 100 : chartPeriod.value === '30d' ? 10 : 1
+    actualSales = data.sales * unit * 10000
+    actualTarget = data.target * unit * 10000
+    console.log('🔍 [TOOLTIP] 변환된 데이터 사용:', { actualSales, actualTarget, unit })
+  }
   
   tooltip.value = {
     show: true,
-    x: event.clientX,
-    y: event.clientY - 80,
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top - 80,
     title: data.label,
-    sales: data.sales * unit * 10000,
-    target: data.target * unit * 10000
+    sales: actualSales,
+    target: actualTarget
   }
+  
+  console.log('📊 [TOOLTIP] 툴팁 표시:', tooltip.value)
 }
 
 const hideDataTooltip = () => {
@@ -1151,6 +1293,24 @@ const confirmLogout = () => {
   }
 }
 
+// ⚠️ 차트 기간 변경 감지 (새로 추가)
+watch(chartPeriod, (newPeriod) => {
+  console.log('📊 [WATCH] 차트 기간 변경 감지:', newPeriod)
+  nextTick(() => {
+    drawChart()
+  })
+})
+
+// ⚠️ 차트 데이터 변경 감지 (새로 추가)
+watch(currentChartData, (newData) => {
+  console.log('📊 [WATCH] 차트 데이터 변경 감지:', newData?.length, '개 항목')
+  if (newData && newData.length > 0) {
+    nextTick(() => {
+      drawChart()
+    })
+  }
+}, { deep: true })
+
 // ⚠️ onMounted 수정 - 함수명 변경
 onMounted(async () => {
   console.log('DashboardView 마운트됨')
@@ -1165,14 +1325,14 @@ onMounted(async () => {
   // 매장 정보 및 매출 데이터 로드
   await loadStoreAndSalesData()  // ← 함수명 변경
   
-  // 차트 그리기
+  // 차트 그리기 (데이터 로드 후)
   await nextTick()
   drawChart()
+  
+  // AI 추천 초기 로드
+  refreshAiRecommendation()
 })
 
-onBeforeUnmount(() => {
-  animatedValues.value = {}
-})
 </script>
 
 <style scoped>
@@ -1294,6 +1454,7 @@ onBeforeUnmount(() => {
   top: 0;
   bottom: 0;
   width: 40px;
+  z-index: 0;
 }
 
 .y-label {
@@ -1309,6 +1470,7 @@ onBeforeUnmount(() => {
   right: 0;
   top: 0;
   bottom: 0;
+  z-index: 0;
 }
 
 .grid-line {
@@ -1325,6 +1487,7 @@ onBeforeUnmount(() => {
   top: 0;
   width: 100%;
   height: 100%;
+  z-index: 1;
 }
 
 .data-points {
@@ -1333,6 +1496,7 @@ onBeforeUnmount(() => {
   right: 0;
   top: 0;
   bottom: 0;
+  z-index: 2;
 }
 
 .data-point {
@@ -1383,8 +1547,8 @@ onBeforeUnmount(() => {
 }
 
 .chart-tooltip {
-  position: fixed;
-  z-index: 1000;
+  position: absolute;
+  z-index: 99999;
   pointer-events: none;
 }
 
@@ -1402,10 +1566,6 @@ onBeforeUnmount(() => {
   margin-bottom: 4px;
 }
 
-.tooltip-sales,
-.tooltip-target {
-  margin: 2px 0;
-}
 
 /* AI 추천 카드 새로운 스타일 */
 .ai-recommend-card {
