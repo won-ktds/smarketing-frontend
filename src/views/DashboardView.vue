@@ -122,7 +122,7 @@
                     <div class="y-axis-labels">
                       <div v-for="(label, i) in yAxisLabels" :key="i" 
                            class="y-label" 
-                           :style="{ bottom: `${i * 20}%` }">
+                           :style="{ bottom: `${i * 18}%` }">
                         {{ label }}
                       </div>
                     </div>
@@ -139,7 +139,7 @@
                       ref="chartCanvas" 
                       class="chart-canvas"
                       width="800" 
-                      height="300"
+                      height="600"
                       @mousemove="handleMouseMove"
                       @mouseleave="hideTooltip">
                     </canvas>
@@ -176,7 +176,7 @@
 
                   <!-- X축 라벨 - 데이터 포인트와 동일한 위치에 배치 -->
                   <div class="x-axis-labels mt-3" style="position: relative; height: 20px;">
-                    <div class="x-axis-container" style="position: relative; padding-left: 60px; padding-right: 20px;">
+                    <div class="x-axis-container" style="position: relative; padding-left: 60px; padding-right: 60px;">
                       <span 
                         v-for="(point, index) in chartDataPoints" 
                         :key="index" 
@@ -975,13 +975,8 @@ const updateAiRecommendation = (aiData) => {
       title: aiData.tipContent ? aiData.tipContent.substring(0, 50) + '...' : 'AI 마케팅 추천',
       sections: {
         ideas: {
-          title: '1. 추천 아이디어',
+          title: '추천 아이디어',
           items: [aiData.tipContent || '맞춤형 마케팅 전략을 제안드립니다.']
-        },
-        costs: {
-          title: '2. 예상 효과',
-          items: ['고객 관심 유도 및 매출 상승', 'SNS를 통한 브랜드 인지도 상승'],
-          effects: ['재방문율 및 공유 유도', '지역 내 인지도 향상']
         }
       }
     }
@@ -1025,17 +1020,30 @@ const chartDataPoints = computed(() => {
   const data = currentChartData.value
   if (!data || data.length === 0) return []
   
-  const maxSales = Math.max(...data.map(d => Math.max(d.sales, d.target)))
+  const maxValue = Math.max(...data.map(d => Math.max(d.sales, d.target)))
+  
+  // Canvas의 실제 padding과 일치하는 좌표 계산
+  const padding = 60 // drawChart에서 사용하는 padding과 동일
+  const canvasWidth = 800 // Canvas width와 동일
+  const canvasHeight = 300 // Canvas height와 동일
+  const chartWidth = canvasWidth - padding * 2
+  const chartHeight = canvasHeight - padding * 2
   
   return data.map((item, index) => {
-    const chartStartPercent = 8
-    const chartEndPercent = 92
-    const chartWidth = chartEndPercent - chartStartPercent
+    // Canvas에서 그려지는 실제 좌표 계산
+    const canvasX = padding + (index * chartWidth / (data.length - 1))
+    const canvasY = padding + chartHeight - ((item.sales / maxValue) * chartHeight)
+    const targetCanvasY = padding + chartHeight - ((item.target / maxValue) * chartHeight)
+    
+    // 백분율로 변환하되, data-points의 padding을 고려
+    const xPercent = (canvasX / canvasWidth) * 100
+    const yPercent = ((canvasHeight - canvasY + padding) / canvasHeight) * 100 - 15
+    const targetYPercent = ((canvasHeight - targetCanvasY + padding) / canvasHeight) * 100 - 15
     
     return {
-      x: chartStartPercent + (index * chartWidth / (data.length - 1)),
-      y: 10 + ((item.sales / maxSales) * 80),
-      targetY: 10 + ((item.target / maxSales) * 80),
+      x: xPercent,
+      y: yPercent,
+      targetY: targetYPercent,
       sales: item.sales,
       target: item.target,
       label: item.label
@@ -1479,7 +1487,7 @@ onMounted(async () => {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 40px;
+  width: 50px;
 }
 
 .y-label {
@@ -1491,8 +1499,8 @@ onMounted(async () => {
 
 .chart-grid {
   position: absolute;
-  left: 40px;
-  right: 0;
+  left: 60px;
+  right: 60px;
   top: 0;
   bottom: 0;
 }
@@ -1515,7 +1523,7 @@ onMounted(async () => {
 
 .data-points {
   position: absolute;
-  left: 40px;
+  left: 0;
   right: 0;
   top: 0;
   bottom: 0;

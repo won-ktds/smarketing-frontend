@@ -1,157 +1,172 @@
-//* src/services/content.js - 기존 파일 수정 (API 설계서 기준)
+//* src/services/content.js
 import { contentApi, handleApiError, formatSuccessResponse } from './api.js'
 
 /**
  * 마케팅 콘텐츠 관련 API 서비스
- * API 설계서 기준으로 수정됨
+ * 백엔드 SnsContentCreateRequest DTO에 맞게 수정
  */
 class ContentService {
   /**
-   * SNS 게시물 생성 (CON-005: SNS 게시물 생성)
+   * SNS 게시물 생성
    * @param {Object} contentData - SNS 콘텐츠 생성 정보
    * @returns {Promise<Object>} 생성된 SNS 콘텐츠
    */
   async generateSnsContent(contentData) {
     try {
-      const response = await contentApi.post('/sns/generate', {
-        storeId: contentData.storeId,
-        platform: contentData.platform,
+      console.log('🚀 SNS 콘텐츠 생성 요청:', contentData)
+      
+      // 백엔드 SnsContentCreateRequest DTO에 맞는 데이터 구조
+      const requestData = {
+        // === 기본 정보 ===
+        storeId: contentData.storeId || 1,
+        storeName: contentData.storeName || '테스트 매장',
+        storeType: contentData.storeType || '음식점',
+        platform: this.mapPlatform(contentData.platform),
         title: contentData.title,
-        category: contentData.category,
-        requirement: contentData.requirement || contentData.requirements,
-        toneAndManner: contentData.toneAndManner,
-        emotionalIntensity: contentData.emotionalIntensity || contentData.emotionIntensity,
-        targetAudience: contentData.targetAudience,
-        promotionalType: contentData.promotionalType || contentData.promotionType,
-        eventName: contentData.eventName,
-        eventDate: contentData.eventDate,
-        hashtagStyle: contentData.hashtagStyle,
-        hashtagCount: contentData.hashtagCount || 10,
-        includeCallToAction: contentData.includeCallToAction || false,
-        includeEmoji: contentData.includeEmoji || true,
-        contentLength: contentData.contentLength || '보통'
-      })
+        
+        // === 콘텐츠 생성 조건 ===
+        category: contentData.category || this.mapTargetToCategory(contentData.targetType),
+        requirement: contentData.requirements || contentData.content || '',
+        target: contentData.targetType || '일반 고객',
+        contentType: 'SNS 게시물',
+        
+        // === 이벤트 정보 ===
+        eventName: contentData.eventName || null,
+        startDate: contentData.startDate ? this.formatDate(contentData.startDate) : null,
+        endDate: contentData.endDate ? this.formatDate(contentData.endDate) : null,
+        
+        // === 미디어 정보 ===
+        images: contentData.images || [],
+        photoStyle: this.mapPhotoStyle(contentData.aiOptions?.photoStyle),
+        
+        // === 추가 옵션 ===
+        includeHashtags: true,
+        includeEmojis: true,
+        includeCallToAction: true,
+        includeLocationInfo: false
+      }
 
-      return formatSuccessResponse(response.data.data, 'SNS 게시물이 생성되었습니다.')
+      console.log('📤 백엔드 DTO 맞춤 데이터:', requestData)
+      
+      const response = await contentApi.post('/sns/generate', requestData)
+      
+      console.log('📥 API 응답:', response.data)
+      
+      // 응답 데이터 구조에 맞게 처리
+      const responseData = response.data.data || response.data
+      
+      return formatSuccessResponse({
+        content: responseData.content || responseData,
+        hashtags: responseData.hashtags || [],
+        ...responseData
+      }, 'SNS 게시물이 생성되었습니다.')
     } catch (error) {
+      console.error('❌ SNS 콘텐츠 생성 실패:', error)
       return handleApiError(error)
     }
   }
 
   /**
-   * SNS 게시물 저장 (CON-010: SNS 게시물 저장)
+   * 플랫폼 매핑 (프론트엔드 -> 백엔드)
+   */
+  mapPlatform(platform) {
+    const mapping = {
+      'instagram': 'INSTAGRAM',
+      'naver_blog': 'NAVER_BLOG', 
+      'facebook': 'FACEBOOK',
+      'kakao_story': 'KAKAO_STORY'
+    }
+    return mapping[platform] || 'INSTAGRAM'
+  }
+
+  /**
+   * 타겟 타입을 카테고리로 매핑
+   */
+  mapTargetToCategory(targetType) {
+    const mapping = {
+      'new_menu': '메뉴소개',
+      'discount': '이벤트',
+      'store': '인테리어', 
+      'event': '이벤트'
+    }
+    return mapping[targetType] || '메뉴소개'
+  }
+
+  /**
+   * 날짜 형식 변환 (YYYY-MM-DD -> LocalDate)
+   */
+  formatDate(dateString) {
+    if (!dateString) return null
+    // YYYY-MM-DD 형식이 LocalDate와 호환됨
+    return dateString
+  }
+
+  /**
+   * 사진 스타일 매핑
+   */
+  mapPhotoStyle(style) {
+    const mapping = {
+      'bright': '밝고 화사한',
+      'calm': '차분하고 세련된',
+      'vintage': '빈티지한',
+      'modern': '모던한',
+      'natural': '자연스러운'
+    }
+    return mapping[style] || '밝고 화사한'
+  }
+
+  /**
+   * SNS 게시물 저장
    * @param {Object} saveData - 저장할 SNS 콘텐츠 정보
    * @returns {Promise<Object>} 저장 결과
    */
   async saveSnsContent(saveData) {
     try {
-      const response = await contentApi.post('/sns/save', {
+      console.log('💾 SNS 콘텐츠 저장 요청:', saveData)
+      
+      // 백엔드 SnsContentSaveRequest DTO에 맞는 구조로 변환
+      const requestData = {
         title: saveData.title,
         content: saveData.content,
-        hashtags: saveData.hashtags,
-        platform: saveData.platform,
-        category: saveData.category,
-        toneAndManner: saveData.toneAndManner,
-        targetAudience: saveData.targetAudience,
-        promotionalType: saveData.promotionalType,
+        hashtags: saveData.hashtags || [],
+        platform: this.mapPlatform(saveData.platform),
+        category: saveData.category || '메뉴소개',
+        // 백엔드 DTO에서 지원하는 필드들만 포함
         eventName: saveData.eventName,
         eventDate: saveData.eventDate,
         status: saveData.status || 'DRAFT'
-      })
+      }
+
+      console.log('📤 저장 요청 데이터:', requestData)
+
+      const response = await contentApi.post('/sns/save', requestData)
 
       return formatSuccessResponse(response.data.data, 'SNS 게시물이 저장되었습니다.')
     } catch (error) {
+      console.error('❌ SNS 콘텐츠 저장 실패:', error)
       return handleApiError(error)
     }
   }
 
   /**
-   * 홍보 포스터 생성 (CON-015: 홍보 포스터 생성)
-   * @param {Object} posterData - 포스터 생성 정보
-   * @returns {Promise<Object>} 생성된 포스터
-   */
-  async generatePoster(posterData) {
-    try {
-      const response = await contentApi.post('/poster/generate', {
-        storeId: posterData.storeId,
-        title: posterData.title,
-        targetType: posterData.targetType,
-        eventName: posterData.eventName,
-        eventDate: posterData.eventDate,
-        discountInfo: posterData.discountInfo,
-        designStyle: posterData.designStyle,
-        colorScheme: posterData.colorScheme,
-        includeQrCode: posterData.includeQrCode || false,
-        includeContact: posterData.includeContact || true,
-        imageStyle: posterData.imageStyle || posterData.photoStyle,
-        layoutType: posterData.layoutType,
-        sizes: posterData.sizes || ['1:1', '9:16', '16:9']
-      })
-
-      return formatSuccessResponse(response.data.data, '홍보 포스터가 생성되었습니다.')
-    } catch (error) {
-      return handleApiError(error)
-    }
-  }
-
-  /**
-   * 홍보 포스터 저장 (CON-016: 홍보 포스터 저장)
-   * @param {Object} saveData - 저장할 포스터 정보
-   * @returns {Promise<Object>} 저장 결과
-   */
-  async savePoster(saveData) {
-    try {
-      const response = await contentApi.post('/poster/save', {
-        title: saveData.title,
-        images: saveData.images,
-        posterSizes: saveData.posterSizes,
-        targetType: saveData.targetType,
-        eventName: saveData.eventName,
-        status: saveData.status || 'DRAFT'
-      })
-
-      return formatSuccessResponse(response.data.data, '홍보 포스터가 저장되었습니다.')
-    } catch (error) {
-      return handleApiError(error)
-    }
-  }
-
-  /**
-   * 콘텐츠 목록 조회 (CON-020: 마케팅 콘텐츠 이력)
-   * @param {Object} filters - 필터링 옵션
+   * 콘텐츠 목록 조회
+   * @param {Object} filters - 필터 조건
    * @returns {Promise<Object>} 콘텐츠 목록
    */
-  async getContents(filters = {}) {
+  async getContentList(filters = {}) {
     try {
-      const queryParams = new URLSearchParams()
-
-      if (filters.contentType) queryParams.append('contentType', filters.contentType)
-      if (filters.platform) queryParams.append('platform', filters.platform)
-      if (filters.period) queryParams.append('period', filters.period)
-      if (filters.sortBy) queryParams.append('sortBy', filters.sortBy || 'latest')
-      if (filters.page) queryParams.append('page', filters.page)
-      if (filters.size) queryParams.append('size', filters.size || 20)
-      if (filters.search) queryParams.append('search', filters.search)
-
-      const response = await contentApi.get(`/?${queryParams.toString()}`)
-
+      const params = new URLSearchParams()
+      
+      if (filters.contentType) params.append('contentType', filters.contentType)
+      if (filters.platform) params.append('platform', filters.platform)
+      if (filters.period) params.append('period', filters.period)
+      if (filters.sortBy) params.append('sortBy', filters.sortBy)
+      
+      const response = await contentApi.get(`/list?${params.toString()}`)
+      
       return formatSuccessResponse(response.data.data, '콘텐츠 목록을 조회했습니다.')
     } catch (error) {
-      return handleApiError(error)
-    }
-  }
-
-  /**
-   * 진행 중인 콘텐츠 조회
-   * @param {string} period - 조회 기간
-   * @returns {Promise<Object>} 진행 중인 콘텐츠 목록
-   */
-  async getOngoingContents(period = 'month') {
-    try {
-      const response = await contentApi.get(`/ongoing?period=${period}`)
-
-      return formatSuccessResponse(response.data.data, '진행 중인 콘텐츠를 조회했습니다.')
-    } catch (error) {
+      console.error('❌ 콘텐츠 목록 조회 실패:', error)
       return handleApiError(error)
     }
   }
@@ -164,51 +179,29 @@ class ContentService {
   async getContentDetail(contentId) {
     try {
       const response = await contentApi.get(`/${contentId}`)
-
+      
       return formatSuccessResponse(response.data.data, '콘텐츠 상세 정보를 조회했습니다.')
     } catch (error) {
+      console.error('❌ 콘텐츠 상세 조회 실패:', error)
       return handleApiError(error)
     }
   }
 
   /**
-   * 콘텐츠 수정
-   * @param {number} contentId - 콘텐츠 ID
-   * @param {Object} updateData - 수정할 콘텐츠 정보
-   * @returns {Promise<Object>} 수정 결과
-   */
-  async updateContent(contentId, updateData) {
-    try {
-      const response = await contentApi.put(`/${contentId}`, {
-        title: updateData.title,
-        content: updateData.content,
-        hashtags: updateData.hashtags,
-        startDate: updateData.startDate,
-        endDate: updateData.endDate,
-        status: updateData.status
-      })
-
-      return formatSuccessResponse(response.data.data, '콘텐츠가 수정되었습니다.')
-    } catch (error) {
-      return handleApiError(error)
-    }
-  }
-
-  /**
-   * 콘텐츠 삭제 (CON-025: 콘텐츠 삭제)
+   * 콘텐츠 삭제
    * @param {number} contentId - 콘텐츠 ID
    * @returns {Promise<Object>} 삭제 결과
    */
   async deleteContent(contentId) {
     try {
-      await contentApi.delete(`/${contentId}`)
-
+      const response = await contentApi.delete(`/${contentId}`)
+      
       return formatSuccessResponse(null, '콘텐츠가 삭제되었습니다.')
     } catch (error) {
+      console.error('❌ 콘텐츠 삭제 실패:', error)
       return handleApiError(error)
     }
   }
 }
 
-export const contentService = new ContentService()
-export default contentService
+export default new ContentService()
