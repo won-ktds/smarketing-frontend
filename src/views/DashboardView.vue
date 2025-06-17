@@ -975,8 +975,13 @@ const updateAiRecommendation = (aiData) => {
       title: aiData.tipContent ? aiData.tipContent.substring(0, 50) + '...' : 'AI 마케팅 추천',
       sections: {
         ideas: {
-          title: '추천 아이디어',
+          title: '1. 추천 아이디어',
           items: [aiData.tipContent || '맞춤형 마케팅 전략을 제안드립니다.']
+        },
+        costs: {
+          title: '2. 예상 효과',
+          items: ['고객 관심 유도 및 매출 상승', 'SNS를 통한 브랜드 인지도 상승'],
+          effects: ['재방문율 및 공유 유도', '지역 내 인지도 향상']
         }
       }
     }
@@ -987,6 +992,31 @@ const updateAiRecommendation = (aiData) => {
 }
 
 
+/**
+ * Fallback AI 추천 사용
+ */
+const useFallbackAiRecommendation = () => {
+  console.log('Fallback AI 추천 사용')
+  aiRecommendation.value = {
+    emoji: '☀️',
+    title: '여름 시즌 마케팅 전략',
+    sections: {
+      ideas: {
+        title: '1. 기본 추천사항',
+        items: [
+          '계절 메뉴 개발 및 프로모션',
+          'SNS 마케팅 활용',
+          '지역 고객 대상 이벤트 기획'
+        ]
+      },
+      costs: {
+        title: '2. 기대 효과',
+        items: ['매출 향상', '고객 만족도 증가'],
+        effects: ['브랜드 인지도 상승', '재방문 고객 증가']
+      }
+    }
+  }
+}
 
 // 계산된 속성들 (기존과 동일)
 const currentChartData = computed(() => chartData.value[chartPeriod.value])
@@ -1193,10 +1223,6 @@ const showDataTooltip = (index, event) => {
   
   if (!data) return
   
-  // 차트 영역의 위치 계산
-  const chartArea = event.target.closest('.chart-area')
-  const rect = chartArea.getBoundingClientRect()
-  
   // ⚠️ 원본 데이터가 있으면 사용, 없으면 기본 변환 로직 사용
   let actualSales, actualTarget
   
@@ -1215,8 +1241,8 @@ const showDataTooltip = (index, event) => {
   
   tooltip.value = {
     show: true,
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top - 80,
+    x: event.clientX,
+    y: event.clientY - 80,
     title: data.label,
     sales: actualSales,
     target: actualTarget
@@ -1454,7 +1480,6 @@ onMounted(async () => {
   top: 0;
   bottom: 0;
   width: 40px;
-  z-index: 0;
 }
 
 .y-label {
@@ -1470,7 +1495,6 @@ onMounted(async () => {
   right: 0;
   top: 0;
   bottom: 0;
-  z-index: 0;
 }
 
 .grid-line {
@@ -1487,7 +1511,6 @@ onMounted(async () => {
   top: 0;
   width: 100%;
   height: 100%;
-  z-index: 1;
 }
 
 .data-points {
@@ -1496,7 +1519,6 @@ onMounted(async () => {
   right: 0;
   top: 0;
   bottom: 0;
-  z-index: 2;
 }
 
 .data-point {
@@ -1547,8 +1569,8 @@ onMounted(async () => {
 }
 
 .chart-tooltip {
-  position: absolute;
-  z-index: 99999;
+  position: fixed;
+  z-index: 1000;
   pointer-events: none;
 }
 
@@ -1566,6 +1588,10 @@ onMounted(async () => {
   margin-bottom: 4px;
 }
 
+.tooltip-sales,
+.tooltip-target {
+  margin: 2px 0;
+}
 
 /* AI 추천 카드 새로운 스타일 */
 .ai-recommend-card {
