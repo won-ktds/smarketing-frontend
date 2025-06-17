@@ -65,8 +65,8 @@ spec:
         }
         
         stage('Build & Push Image') {
-            steps {
-                container('podman') {
+            container('podman') {
+                steps {
                     script {
                         sh """
                             podman build \\
@@ -89,8 +89,8 @@ spec:
         }
 
         stage('Generate & Apply Manifest') {
-            steps {
-                container('envsubst') {
+            container('envsubst') {
+                steps {
                     sh """
                         export namespace=${env.NAMESPACE}
                         export smarketing_frontend_image_path=${env.imagePath}
@@ -107,8 +107,10 @@ spec:
                         cat deployment/${manifest}
                     """
                 }
-                
-                container('azure-cli') {
+            }
+
+            container('azure-cli') {
+                steps {
                     sh """
                         kubectl apply -f deployment/${manifest}
                         
@@ -132,7 +134,7 @@ spec:
             echo "✅ smarketing-frontend 배포가 성공적으로 완료되었습니다!"
         }
         failure {
-            echo "❌ smarketing-frontend 배포 중 오류가 발생했습니다.."
+            echo "❌ smarketing-frontend 배포 중 오류가 발생했습니다."
         }
     }
 }
