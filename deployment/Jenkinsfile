@@ -85,13 +85,13 @@ podTemplate(
                         # Docker 이미지 빌드
                         podman build \\
                             --build-arg PROJECT_FOLDER="." \\
-                            --build-arg REACT_APP_AUTH_URL="${props.auth_url}" \\
-                            --build-arg REACT_APP_MEMBER_URL="${props.member_url}" \\
-                            --build-arg REACT_APP_STORE_URL="${props.store_url}" \\
-                            --build-arg REACT_APP_MENU_URL="${props.menu_url}" \\
-                            --build-arg REACT_APP_SALES_URL="${props.sales_url}" \\
-                            --build-arg REACT_APP_CONTENT_URL="${props.content_url}" \\
-                            --build-arg REACT_APP_RECOMMEND_URL="${props.recommend_url}" \\
+                            --build-arg VUE_APP_AUTH_URL="${props.auth_url}" \\
+                            --build-arg VUE_APP_MEMBER_URL="${props.member_url}" \\
+                            --build-arg VUE_APP_STORE_URL="${props.store_url}" \\
+                            --build-arg VUE_APP_MENU_URL="${props.menu_url}" \\
+                            --build-arg VUE_APP_SALES_URL="${props.sales_url}" \\
+                            --build-arg VUE_APP_CONTENT_URL="${props.content_url}" \\
+                            --build-arg VUE_APP_RECOMMEND_URL="${props.recommend_url}" \\
                             --build-arg BUILD_FOLDER="deployment/container" \\
                             --build-arg EXPORT_PORT="${props.export_port}" \\
                             -f deployment/container/Dockerfile-smarketing-frontend \\
