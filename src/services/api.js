@@ -14,14 +14,7 @@ const getApiUrls = () => {
     // ⚠️ 수정: 매출 API는 store 서비스 (포트 8082)
     SALES_URL: config.SALES_URL || 'http://localhost:8082/api/sales',
     // ⚠️ 수정: 추천 API는 ai-recommend 서비스 (포트 8084)
-    RECOMMEND_URL: config.RECOMMEND_URL || 'http://localhost:8084/api/recommendations',
-    AUTH_URL: 'http://localhost:8081/api/auth',
-    MEMBER_URL: 'http://localhost:8081/api/member',
-    STORE_URL: config.STORE_URL || 'http://localhost:8082/api/store',
-    CONTENT_URL: config.CONTENT_URL || 'http://20.1.2.3/api/content',
-    MENU_URL: config.MENU_URL || 'http://localhost:8082/api/menu',
-    SALES_URL: config.SALES_URL || 'http://localhost:8082/api/sales',
-    RECOMMEND_URL: config.RECOMMEND_URL || 'http://20.1.2.3/api/recommendation',
+    RECOMMEND_URL: config.RECOMMEND_URL || 'http://localhost:8084/api/recommendations'
   }
 }
 
