@@ -7,7 +7,6 @@ def getImageTag() {
     return dateFormat.format(currentDate)
 }
 
-
 podTemplate(
     label: "${PIPELINE_ID}",
     serviceAccount: 'jenkins',
@@ -30,11 +29,23 @@ podTemplate(
 
         stage("Get Source") {
             checkout scm
+            
+            // 환경변수 파일 확인 및 읽기
+            if (!fileExists('deployment/deploy_env_vars')) {
+                error "deployment/deploy_env_vars 파일이 없습니다!"
+            }
+            
             props = readProperties file: "deployment/deploy_env_vars"
             namespace = "${props.namespace}"
             
+            // 필수 환경변수 검증
+            if (!props.registry || !props.image_org || !props.namespace) {
+                error "필수 환경변수가 누락되었습니다. registry, image_org, namespace를 확인하세요."
+            }
+            
             echo "Registry: ${props.registry}"
             echo "Image Org: ${props.image_org}"
+            echo "Namespace: ${namespace}"
             echo "Image Tag: ${imageTag}"
         }
 
@@ -77,6 +88,8 @@ podTemplate(
                             --build-arg REACT_APP_AUTH_URL="${props.auth_url}" \\
                             --build-arg REACT_APP_MEMBER_URL="${props.member_url}" \\
                             --build-arg REACT_APP_STORE_URL="${props.store_url}" \\
+                            --build-arg REACT_APP_MENU_URL="${props.menu_url}" \\
+                            --build-arg REACT_APP_SALES_URL="${props.sales_url}" \\
                             --build-arg REACT_APP_CONTENT_URL="${props.content_url}" \\
                             --build-arg REACT_APP_RECOMMEND_URL="${props.recommend_url}" \\
                             --build-arg BUILD_FOLDER="deployment/container" \\

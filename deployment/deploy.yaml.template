@@ -1,3 +1,4 @@
+# ConfigMap
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -6,11 +7,13 @@ metadata:
 data:
   runtime-env.js: |
     window.__runtime_config__ = {
-        AUTH_URL: 'http://${ingress_host}/api/auth',
-        MEMBER_URL: 'http://${ingress_host}/api/member',
-        STORE_URL: 'http://${ingress_host}/api/store',
-        CONTENT_URL: 'http://${ingress_host}/api/content',
-        RECOMMEND_URL: 'http://${ingress_host}/api/recommend'
+        AUTH_URL: '${auth_url}',
+        MEMBER_URL: '${member_url}',
+        STORE_URL: '${store_url}',
+        MENU_URL: '${menu_url}',
+        SALES_URL: '${sales_url}',
+        CONTENT_URL: '${content_url}',
+        RECOMMEND_URL: '${recommend_url}'
     };
 
 ---
