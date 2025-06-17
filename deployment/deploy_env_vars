@@ -29,6 +29,6 @@ SALES_URL=http://smarketing.20.249.184.228.nip.io/api/sales
 CONTENT_URL=http://smarketing.20.249.184.228.nip.io/api/content
 RECOMMEND_URL=http://smarketing.20.249.184.228.nip.io/api/recommend
 
-# GitHub 설정 (실제 팀 설정으로 변경)
+# GitHub 설정
 GITHUB_ORG=won-ktds
 TEAMID=smarketing
