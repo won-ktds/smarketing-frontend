@@ -58,8 +58,8 @@ spec:
         }
         
         stage('Build & Push Image') {
-            container('podman') {
-                steps {
+            steps {
+                container('podman') {
                     script {
                         sh """
                             podman build \\
@@ -82,13 +82,13 @@ spec:
         }
 
         stage('Update Manifest Repository') {
-            container('git') {
-                withCredentials([usernamePassword(
-                    credentialsId: 'github-credentials-${env.TEAMID}',
-                    usernameVariable: 'GIT_USERNAME',
-                    passwordVariable: 'GIT_PASSWORD'
-                )]) {
-                    steps {
+            steps {
+                container('git') {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'github-credentials-${env.TEAMID}',
+                        usernameVariable: 'GIT_USERNAME',
+                        passwordVariable: 'GIT_PASSWORD'
+                    )]) {
                         sh """
                             # Git 설정
                             git config --global user.name "Jenkins"
