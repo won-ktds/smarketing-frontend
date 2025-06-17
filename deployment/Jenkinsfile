@@ -44,7 +44,7 @@ spec:
             steps {
                 script {
                     // deploy_env_vars 파일에서 환경변수 로드
-                    if (fileExists('deployment/deploy_env_vars')) {
+                    if (fileExists('deploy_env_vars')) {
                         def envVars = readFile('deploy_env_vars').trim()
                         envVars.split('\n').each { line ->
                             if (line.contains('=')) {
@@ -65,8 +65,8 @@ spec:
         }
         
         stage('Build & Push Image') {
-            container('podman') {
-                steps {
+            steps {
+                container('podman') {
                     script {
                         sh """
                             podman build \\
@@ -89,8 +89,8 @@ spec:
         }
 
         stage('Generate & Apply Manifest') {
-            container('envsubst') {
-                steps {
+            steps {
+                container('envsubst') {
                     sh """
                         export namespace=${env.NAMESPACE}
                         export smarketing_frontend_image_path=${env.imagePath}
@@ -107,10 +107,8 @@ spec:
                         cat deployment/${manifest}
                     """
                 }
-            }
-
-            container('azure-cli') {
-                steps {
+                
+                container('azure-cli') {
                     sh """
                         kubectl apply -f deployment/${manifest}
                         
