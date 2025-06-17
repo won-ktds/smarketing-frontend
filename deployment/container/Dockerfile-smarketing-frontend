@@ -1,0 +1,82 @@
+# Build stage
+FROM node:20-slim AS builder
+ARG PROJECT_FOLDER
+
+ENV NODE_ENV=production
+
+WORKDIR /app
+
+# Install dependencies
+COPY ${PROJECT_FOLDER}/package*.json ./
+RUN npm ci --only=production
+
+# Build application
+COPY ${PROJECT_FOLDER} .
+RUN npm run build
+
+# Run stage
+FROM nginx:stable-alpine
+
+ARG BUILD_FOLDER
+ARG EXPORT_PORT
+ARG REACT_APP_AUTH_URL
+ARG REACT_APP_MEMBER_URL
+ARG REACT_APP_STORE_URL
+ARG REACT_APP_CONTENT_URL
+ARG REACT_APP_RECOMMEND_URL
+
+# Create nginx user if it doesn't exist
+RUN adduser -S nginx || true
+
+# Copy build files
+COPY --from=builder /app/build /usr/share/nginx/html
+
+# Create runtime config with all smarketing APIs
+# index.html의 헤더에서 이 값을 읽어 환경변수를 생성함  
+# api.js에서 이 환경변수를 이용함
+RUN echo "console.log('=== RUNTIME-ENV.JS 로드됨 (Docker 빌드) ==='); \
+window.__runtime_config__ = { \
+    AUTH_URL: '${REACT_APP_AUTH_URL}', \
+    MEMBER_URL: '${REACT_APP_MEMBER_URL}', \
+    STORE_URL: '${REACT_APP_STORE_URL}', \
+    CONTENT_URL: '${REACT_APP_CONTENT_URL}', \
+    RECOMMEND_URL: '${REACT_APP_RECOMMEND_URL}', \
+    ENV: 'production', \
+    DEBUG: false, \
+    API_TIMEOUT: 30000, \
+    RETRY_ATTEMPTS: 3, \
+    RETRY_DELAY: 1000, \
+    VERSION: '1.0.0', \
+    BUILD_DATE: new Date().toISOString() \
+}; \
+window.getApiConfig = () => window.__runtime_config__; \
+window.getApiUrl = (serviceName) => { \
+  const config = window.__runtime_config__; \
+  const urlKey = \`\${serviceName.toUpperCase()}_URL\`; \
+  return config[urlKey] || null; \
+}; \
+console.log('✅ [RUNTIME] Docker 빌드 런타임 설정 로드 완료');" > /usr/share/nginx/html/runtime-env.js
+
+# Copy and process nginx configuration
+COPY ${BUILD_FOLDER}/nginx.conf /etc/nginx/templates/default.conf.template
+
+# Add custom nginx settings
+RUN echo "client_max_body_size 100M;" > /etc/nginx/conf.d/client_max_body_size.conf
+RUN echo "proxy_buffer_size 128k;" > /etc/nginx/conf.d/proxy_buffer_size.conf
+RUN echo "proxy_buffers 4 256k;" > /etc/nginx/conf.d/proxy_buffers.conf
+RUN echo "proxy_busy_buffers_size 256k;" > /etc/nginx/conf.d/proxy_busy_buffers_size.conf
+
+# Set permissions
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html && \
+    chown -R nginx:nginx /var/cache/nginx && \
+    chown -R nginx:nginx /var/log/nginx && \
+    chown -R nginx:nginx /etc/nginx/conf.d && \
+    touch /var/run/nginx.pid && \
+    chown -R nginx:nginx /var/run/nginx.pid
+
+USER nginx
+
+EXPOSE ${EXPORT_PORT}
+
+CMD ["nginx", "-g", "daemon off;"]

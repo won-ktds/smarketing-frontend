@@ -1,0 +1,140 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: podman
+    image: quay.io/podman/stable:latest
+    command:
+    - cat
+    tty: true
+    securityContext:
+      privileged: true
+  - name: envsubst
+    image: bhgedigital/envsubst
+    command:
+    - cat
+    tty: true
+  - name: azure-cli
+    image: mcr.microsoft.com/azure-cli:latest
+    command:
+    - cat
+    tty: true
+"""
+        }
+    }
+    
+    environment {
+        // 빌드 정보
+        imageTag = sh(script: "echo ${BUILD_NUMBER}", returnStdout: true).trim()
+        manifest = "deploy.yaml"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Load Deploy Variables') {
+            steps {
+                script {
+                    // deploy_env_vars 파일에서 환경변수 로드
+                    if (fileExists('deployment/deploy_env_vars')) {
+                        def envVars = readFile('deploy_env_vars').trim()
+                        envVars.split('\n').each { line ->
+                            if (line.contains('=')) {
+                                def (key, value) = line.split('=', 2)
+                                env."${key}" = value
+                                echo "Loaded: ${key} = ${value}"
+                            }
+                        }
+                    } else {
+                        error "deploy_env_vars 파일이 없습니다!"
+                    }
+                    
+                    // 이미지 경로 설정
+                    env.imagePath = "${env.REGISTRY}/${env.IMAGE_ORG}/smarketing-frontend:${imageTag}"
+                    echo "Image Path: ${env.imagePath}"
+                }
+            }
+        }
+        
+        stage('Build & Push Image') {
+            container('podman') {
+                steps {
+                    script {
+                        sh """
+                            podman build \\
+                                --build-arg PROJECT_FOLDER="." \\
+                                --build-arg REACT_APP_AUTH_URL="${env.AUTH_URL}" \\
+                                --build-arg REACT_APP_MEMBER_URL="${env.MEMBER_URL}" \\
+                                --build-arg REACT_APP_STORE_URL="${env.STORE_URL}" \\
+                                --build-arg REACT_APP_CONTENT_URL="${env.CONTENT_URL}" \\
+                                --build-arg REACT_APP_RECOMMEND_URL="${env.RECOMMEND_URL}" \\
+                                --build-arg BUILD_FOLDER="deployment/container" \\
+                                --build-arg EXPORT_PORT="${env.EXPORT_PORT}" \\
+                                -f deployment/container/Dockerfile-smarketing-frontend \\
+                                -t ${env.imagePath} .
+                            
+                            podman push ${env.imagePath}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Generate & Apply Manifest') {
+            container('envsubst') {
+                steps {
+                    sh """
+                        export namespace=${env.NAMESPACE}
+                        export smarketing_frontend_image_path=${env.imagePath}
+                        export replicas=${env.REPLICAS}
+                        export export_port=${env.EXPORT_PORT}
+                        export ingress_host=${env.INGRESS_HOST}
+                        export resources_requests_cpu=${env.RESOURCES_REQUESTS_CPU}
+                        export resources_requests_memory=${env.RESOURCES_REQUESTS_MEMORY}
+                        export resources_limits_cpu=${env.RESOURCES_LIMITS_CPU}
+                        export resources_limits_memory=${env.RESOURCES_LIMITS_MEMORY}
+                        
+                        envsubst < deployment/${manifest}.template > deployment/${manifest}
+                        echo "Generated manifest file:"
+                        cat deployment/${manifest}
+                    """
+                }
+            }
+
+            container('azure-cli') {
+                steps {
+                    sh """
+                        kubectl apply -f deployment/${manifest}
+                        
+                        echo "Waiting for deployment to be ready..."
+                        kubectl -n ${env.NAMESPACE} wait --for=condition=available deployment/smarketing-frontend --timeout=300s
+                        
+                        echo "Deployment completed successfully!"
+                        kubectl -n ${env.NAMESPACE} get pods -l app=smarketing-frontend
+                        kubectl -n ${env.NAMESPACE} get svc smarketing-frontend-service
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo "✅ smarketing-frontend 배포가 성공적으로 완료되었습니다!"
+        }
+        failure {
+            echo "❌ smarketing-frontend 배포 중 오류가 발생했습니다."
+        }
+    }
+}

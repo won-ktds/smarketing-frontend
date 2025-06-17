@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smarketing-frontend
+  namespace: ${namespace}
+  labels:
+    app: smarketing-frontend
+spec:
+  replicas: ${replicas}
+  selector:
+    matchLabels:
+      app: smarketing-frontend
+  template:
+    metadata:
+      labels:
+        app: smarketing-frontend
+    spec:
+      imagePullSecrets:
+      - name: acr-secret
+      containers:
+      - name: smarketing-frontend
+        image: ${smarketing_frontend_image_path}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: ${export_port}
+        resources:
+          requests:
+            cpu: ${resources_requests_cpu}
+            memory: ${resources_requests_memory}
+          limits:
+            cpu: ${resources_limits_cpu}
+            memory: ${resources_limits_memory}
+        volumeMounts:
+        - name: runtime-config
+          mountPath: /usr/share/nginx/html/runtime-env.js
+          subPath: runtime-env.js
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: ${export_port}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: ${export_port}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: runtime-config
+        configMap:
+          name: smarketing-frontend-config

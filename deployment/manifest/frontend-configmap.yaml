@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smarketing-frontend-config
+  namespace: ${namespace}
+data:
+  runtime-env.js: |
+    console.log('=== RUNTIME-ENV.JS 로드됨 (배포 환경) ===');
+
+    window.__runtime_config__ = {
+      // 백엔드 API 구조에 맞게 URL 설정
+      AUTH_URL: 'http://${ingress_host}/api/auth',
+      MEMBER_URL: 'http://${ingress_host}/api/member',
+      STORE_URL: 'http://${ingress_host}/api/store',
+      MENU_URL: 'http://${ingress_host}/api/menu',
+      SALES_URL: 'http://${ingress_host}/api/sales',
+      CONTENT_URL: 'http://${ingress_host}/api/content',
+      RECOMMEND_URL: 'http://${ingress_host}/api/recommendations',
+      
+      // Gateway URL (운영 환경)
+      GATEWAY_URL: 'http://${ingress_host}',
+      
+      // 기능 플래그
+      FEATURES: {
+        ANALYTICS: true,
+        PUSH_NOTIFICATIONS: true,
+        SOCIAL_LOGIN: false,
+        MULTI_LANGUAGE: false,
+        API_HEALTH_CHECK: true,
+      },
+
+      // 환경 설정 (배포 환경)
+      ENV: 'production',
+      DEBUG: false,
+
+      // API 타임아웃 설정
+      API_TIMEOUT: 30000,
+      
+      // 재시도 설정
+      RETRY_ATTEMPTS: 3,
+      RETRY_DELAY: 1000,
+
+      // 버전 정보
+      VERSION: '1.0.0',
+      BUILD_DATE: new Date().toISOString()
+    };
+
+    // 설정 검증 함수
+    const validateConfig = () => {
+      const config = window.__runtime_config__;
+      const requiredUrls = ['AUTH_URL', 'STORE_URL', 'SALES_URL', 'RECOMMEND_URL'];
+      
+      for (const url of requiredUrls) {
+        if (!config[url]) {
+          console.error(`❌ [CONFIG] 필수 URL 누락: ${url}`);
+          return false;
+        }
+      }
+      
+      console.log('✅ [CONFIG] 설정 검증 완료');
+      return true;
+    };
+
+    // 전역 설정 접근 함수
+    window.getApiConfig = () => window.__runtime_config__;
+    window.getApiUrl = (serviceName) => {
+      const config = window.__runtime_config__;
+      const urlKey = `${serviceName.toUpperCase()}_URL`;
+      return config[urlKey] || null;
+    };
+
+    // 설정 검증 실행
+    validateConfig();
+    console.log('✅ [RUNTIME] 런타임 설정 로드 완료 (배포 환경)');

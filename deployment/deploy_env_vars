@@ -1,0 +1,34 @@
+# smarketing-frontend 배포 환경변수 설정
+# 이 파일을 실제 환경에 맞게 수정하세요
+
+# Container Registry 설정
+REGISTRY=acrdigitalgarage02.azurecr.io
+IMAGE_ORG=smarketing
+
+# Kubernetes 설정
+NAMESPACE=smarketing
+REPLICAS=1
+EXPORT_PORT=18080
+
+# Gateway/Ingress 설정 (⭐ smarketing-backend와 동일한 IP 사용)
+INGRESS_HOST=smarketing.20.249.184.228.nip.io
+
+# 리소스 설정
+RESOURCES_REQUESTS_CPU=256m
+RESOURCES_REQUESTS_MEMORY=256Mi
+RESOURCES_LIMITS_CPU=1024m
+RESOURCES_LIMITS_MEMORY=1024Mi
+
+# API URLs (⭐ smarketing-backend ingress를 통해 라우팅)
+# 현재 설정된 백엔드 API들과 일치
+AUTH_URL=http://smarketing.20.249.184.228.nip.io/api/auth
+MEMBER_URL=http://smarketing.20.249.184.228.nip.io/api/member
+STORE_URL=http://smarketing.20.249.184.228.nip.io/api/store
+MENU_URL=http://smarketing.20.249.184.228.nip.io/api/menu
+SALES_URL=http://smarketing.20.249.184.228.nip.io/api/sales
+CONTENT_URL=http://smarketing.20.249.184.228.nip.io/api/content
+RECOMMEND_URL=http://smarketing.20.249.184.228.nip.io/api/recommend
+
+# GitHub 설정 (실제 팀 설정으로 변경)
+GITHUB_ORG=won-ktds
+TEAMID=smarketing
