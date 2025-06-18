@@ -1,4 +1,4 @@
-//* src/services/content.js - 두 파일 완전 통합 버전
+//* src/services/content.js - 완전한 파일 (모든 수정사항 포함)
 import axios from 'axios'
 
 // runtime-env.js에서 API URL 가져오기 (대체 방식 포함)
@@ -106,11 +106,6 @@ class ContentService {
   /**
    * 콘텐츠 목록 조회 (CON-021: 콘텐츠 조회)
    * @param {Object} filters - 필터 조건
-   * @param {string} filters.platform - 플랫폼 (instagram, blog, poster)
-   * @param {number} filters.storeId - 매장 ID
-   * @param {string} filters.contentType - 콘텐츠 타입
-   * @param {string} filters.period - 조회 기간
-   * @param {string} filters.sortBy - 정렬 기준
    * @returns {Promise<Object>} 콘텐츠 목록
    */
   async getContents(filters = {}) {
@@ -182,7 +177,7 @@ class ContentService {
   }
 
   /**
-   * SNS 콘텐츠 생성 (CON-019: AI 콘텐츠 생성)
+   * SNS 콘텐츠 생성 (CON-019: AI 콘텐츠 생성) - 수정된 버전
    * @param {Object} contentData - 콘텐츠 생성 데이터
    * @returns {Promise<Object>} 생성된 콘텐츠
    */
@@ -190,97 +185,171 @@ class ContentService {
     try {
       console.log('🤖 SNS 콘텐츠 생성 요청:', contentData)
       
-      // ✅ 이미지 처리 (SNS는 선택사항)
-      let processedImages = []
-      if (contentData.images && Array.isArray(contentData.images) && contentData.images.length > 0) {
-        console.log('📁 [API] SNS 이미지 처리:', contentData.images.length, '개')
-        
-        processedImages = contentData.images.filter(img => {
-          const isValid = img && typeof img === 'string' && img.length > 0
-          console.log('📁 [API] SNS 이미지 유효성:', { isValid, type: typeof img, length: img?.length })
-          return isValid
-        })
-        
-        console.log('📁 [API] SNS 유효 이미지:', processedImages.length, '개')
+      // ✅ contentData 기본 검증
+      if (!contentData || typeof contentData !== 'object') {
+        throw new Error('콘텐츠 데이터가 전달되지 않았습니다.')
       }
       
-      // ✅ 실제 전달받은 데이터만 사용 (백엔드 API 스펙에 맞춤)
-      const requestData = {}
+      // ✅ images 속성 보장 (방어 코드)
+      if (!contentData.hasOwnProperty('images')) {
+        console.warn('⚠️ [API] images 속성이 없음, 빈 배열로 설정')
+        contentData.images = []
+      }
       
-      if (contentData.storeId !== undefined) requestData.storeId = contentData.storeId
+      if (!Array.isArray(contentData.images)) {
+        console.warn('⚠️ [API] images가 배열이 아님, 빈 배열로 변환:', typeof contentData.images)
+        contentData.images = []
+      }
+      
+      // ✅ 필수 필드 검증
+      const requiredFields = ['title', 'platform']
+      const missingFields = requiredFields.filter(field => !contentData[field])
+      
+      if (missingFields.length > 0) {
+        throw new Error(`필수 필드가 누락되었습니다: ${missingFields.join(', ')}`)
+      }
+      
+      // ✅ 플랫폼 형식 통일
+      const normalizeplatform = (platform) => {
+        const platformMap = {
+          'INSTAGRAM': 'instagram',
+          'instagram': 'instagram',
+          'NAVER_BLOG': 'naver_blog', 
+          'naver_blog': 'naver_blog',
+          'FACEBOOK': 'facebook',
+          'facebook': 'facebook',
+          'KAKAO_STORY': 'kakao_story',
+          'kakao_story': 'kakao_story'
+        }
+        return platformMap[platform] || platform.toLowerCase()
+      }
+      
+      // ✅ 카테고리 매핑
+      const getCategoryFromTargetType = (targetType) => {
+        const categoryMap = {
+          'new_menu': '메뉴소개',
+          'menu': '메뉴소개',
+          'discount': '이벤트',
+          'event': '이벤트',
+          'store': '매장홍보',
+          'service': '서비스',
+          'interior': '인테리어',
+          'daily': '일상',
+          'review': '고객후기'
+        }
+        return categoryMap[targetType] || '기타'
+      }
+      
+      // ✅ 요청 데이터 구성
+      const requestData = {
+        // 필수 필드들
+        title: contentData.title.trim(),
+        platform: normalizeplatform(contentData.platform),
+        contentType: contentData.contentType || 'sns',
+        category: contentData.category || getCategoryFromTargetType(contentData.targetType),
+        images: contentData.images || [] // 기본값 보장
+      }
+      
+      // ✅ storeId 처리
+      if (contentData.storeId !== undefined && contentData.storeId !== null) {
+        requestData.storeId = contentData.storeId
+      } else {
+        try {
+          const storeInfo = JSON.parse(localStorage.getItem('storeInfo') || '{}')
+          requestData.storeId = storeInfo.storeId || 1
+        } catch {
+          requestData.storeId = 1
+        }
+      }
+      
+      // ✅ 선택적 필드들
       if (contentData.storeName) requestData.storeName = contentData.storeName
       if (contentData.storeType) requestData.storeType = contentData.storeType
-      if (contentData.platform) requestData.platform = contentData.platform
-      if (contentData.title) requestData.title = contentData.title
-      if (contentData.category) requestData.category = contentData.category
       if (contentData.requirement || contentData.requirements) {
         requestData.requirement = contentData.requirement || contentData.requirements
       }
       if (contentData.target || contentData.targetAudience) {
         requestData.target = contentData.target || contentData.targetAudience
       }
-      if (contentData.contentType) requestData.contentType = contentData.contentType
       if (contentData.eventName) requestData.eventName = contentData.eventName
       if (contentData.startDate) requestData.startDate = contentData.startDate
       if (contentData.endDate) requestData.endDate = contentData.endDate
-      if (contentData.photoStyle) requestData.photoStyle = contentData.photoStyle
       if (contentData.targetAge) requestData.targetAge = contentData.targetAge
-      if (contentData.toneAndManner) requestData.toneAndManner = contentData.toneAndManner
-      if (contentData.emotionalIntensity || contentData.emotionIntensity) {
-        requestData.emotionalIntensity = contentData.emotionalIntensity || contentData.emotionIntensity
-      }
-      if (contentData.promotionalType || contentData.promotionType) {
-        requestData.promotionalType = contentData.promotionalType || contentData.promotionType
-      }
-      if (contentData.eventDate) requestData.eventDate = contentData.eventDate
-      if (contentData.hashtagStyle) requestData.hashtagStyle = contentData.hashtagStyle
-      if (contentData.hashtagCount) requestData.hashtagCount = contentData.hashtagCount
-      if (contentData.contentLength) requestData.contentLength = contentData.contentLength
       
-      // 이미지는 처리된 것으로 설정
+      // ✅ 이미지 처리 (contentData.images가 보장됨)
+      console.log('📁 [API] 이미지 처리 시작:', contentData.images.length, '개')
+      
+      const processedImages = contentData.images
+        .filter(img => img && typeof img === 'string' && img.length > 50)
+        .map(img => {
+          if (typeof img === 'string' && img.startsWith('data:image/')) {
+            return img // Base64 그대로 사용
+          } else if (typeof img === 'string' && (img.startsWith('http') || img.startsWith('//'))) {
+            return img // URL 그대로 사용
+          } else {
+            console.warn('📁 [API] 알 수 없는 이미지 형식:', img.substring(0, 50))
+            return img
+          }
+        })
+      
       requestData.images = processedImages
+      console.log('📁 [API] 처리된 이미지:', processedImages.length, '개')
       
-      // Boolean 필드들 (기본값 처리)
-      if (contentData.includeHashtags !== undefined) requestData.includeHashtags = contentData.includeHashtags
-      if (contentData.includeEmojis !== undefined) requestData.includeEmojis = contentData.includeEmojis
-      if (contentData.includeEmoji !== undefined) requestData.includeEmoji = contentData.includeEmoji
-      if (contentData.includeCallToAction !== undefined) requestData.includeCallToAction = contentData.includeCallToAction
-      if (contentData.includeLocation !== undefined) requestData.includeLocation = contentData.includeLocation
-      if (contentData.forInstagramStory !== undefined) requestData.forInstagramStory = contentData.forInstagramStory
-      if (contentData.forNaverBlogPost !== undefined) requestData.forNaverBlogPost = contentData.forNaverBlogPost
-      
-      if (contentData.alternativeTitleCount !== undefined) requestData.alternativeTitleCount = contentData.alternativeTitleCount
-      if (contentData.alternativeHashtagSetCount !== undefined) requestData.alternativeHashtagSetCount = contentData.alternativeHashtagSetCount
-      if (contentData.preferredAiModel) requestData.preferredAiModel = contentData.preferredAiModel
-      
-      console.log('📝 [API] SNS 요청 데이터:', {
-        ...requestData,
-        images: `${requestData.images.length}개 이미지`
+      // ✅ 최종 검증
+      console.log('📝 [API] 최종 SNS 요청 데이터:', {
+        title: requestData.title,
+        platform: requestData.platform,
+        category: requestData.category,
+        contentType: requestData.contentType,
+        storeId: requestData.storeId,
+        imageCount: requestData.images.length
       })
       
-      // 기본 유효성 검사
-      if (!requestData.platform) {
-        throw new Error('플랫폼은 필수입니다.')
-      }
+      // ✅ Python AI 서비스 필수 필드 검증
+      const pythonRequiredFields = ['title', 'category', 'contentType', 'platform', 'images']
+      const pythonMissingFields = pythonRequiredFields.filter(field => {
+        if (field === 'images') {
+          return !Array.isArray(requestData[field])
+        }
+        return !requestData[field]
+      })
       
-      if (!requestData.title) {
-        throw new Error('제목은 필수입니다.')
+      if (pythonMissingFields.length > 0) {
+        console.error('❌ [API] Python AI 서비스 필수 필드 누락:', pythonMissingFields)
+        throw new Error(`AI 서비스 필수 필드가 누락되었습니다: ${pythonMissingFields.join(', ')}`)
       }
       
       const response = await contentApi.post('/sns/generate', requestData, {
-        timeout: 30000 // 30초
+        timeout: 30000
       })
 
       console.log('✅ [API] SNS 콘텐츠 생성 응답:', response.data)
       return formatSuccessResponse(response.data, 'SNS 게시물이 생성되었습니다.')
+      
     } catch (error) {
       console.error('❌ [API] SNS 콘텐츠 생성 실패:', error)
+      
+      if (error.response?.status === 400) {
+        const backendMessage = error.response.data?.message || '요청 데이터가 잘못되었습니다.'
+        return {
+          success: false,
+          message: backendMessage,
+          error: error.response.data
+        }
+      } else if (error.response?.status === 500) {
+        return {
+          success: false,
+          message: 'AI 서비스에서 콘텐츠 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+          error: error.response.data
+        }
+      }
+      
       return handleApiError(error)
     }
   }
 
   /**
-   * 포스터 생성 (CON-020: AI 포스터 생성) - 이미지 처리 강화 및 상세 검증
+   * 포스터 생성 (CON-020: AI 포스터 생성) - 수정된 버전
    * @param {Object} posterData - 포스터 생성 데이터
    * @returns {Promise<Object>} 생성된 포스터
    */
@@ -532,15 +601,6 @@ class ContentService {
           backendMessage = '서버에서 포스터 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'
         }
         
-        // 유효성 검사 오류가 있다면 추출
-        if (error.response.data && error.response.data.errors) {
-          console.error('❌ [API] 유효성 검사 오류:', error.response.data.errors)
-          const validationMessages = Object.values(error.response.data.errors).flat()
-          if (validationMessages.length > 0) {
-            backendMessage = validationMessages.join(', ')
-          }
-        }
-        
         return {
           success: false,
           message: backendMessage,
@@ -562,6 +622,37 @@ class ContentService {
           error: 'UNKNOWN_ERROR'
         }
       }
+    }
+  }
+
+  /**
+   * 통합 콘텐츠 생성 (타입에 따라 SNS 또는 포스터 생성) - 수정된 버전
+   * @param {Object} contentData - 콘텐츠 생성 데이터
+   * @returns {Promise<Object>} 생성 결과
+   */
+  async generateContent(contentData) {
+    console.log('🎯 [API] 통합 콘텐츠 생성:', contentData)
+    
+    // ✅ contentData 유효성 검사 추가
+    if (!contentData || typeof contentData !== 'object') {
+      console.error('❌ [API] contentData가 유효하지 않음:', contentData)
+      return {
+        success: false,
+        message: '콘텐츠 데이터가 유효하지 않습니다.',
+        error: 'INVALID_CONTENT_DATA'
+      }
+    }
+    
+    // ✅ images 속성 보장
+    if (!Array.isArray(contentData.images)) {
+      console.warn('⚠️ [API] images 속성이 배열이 아님, 빈 배열로 초기화:', contentData.images)
+      contentData.images = []
+    }
+    
+    if (contentData.contentType === 'poster' || contentData.type === 'poster') {
+      return await this.generatePoster(contentData)
+    } else {
+      return await this.generateSnsContent(contentData)
     }
   }
 
@@ -640,21 +731,6 @@ class ContentService {
   }
 
   /**
-   * 통합 콘텐츠 생성 (타입에 따라 SNS 또는 포스터 생성)
-   * @param {Object} contentData - 콘텐츠 생성 데이터
-   * @returns {Promise<Object>} 생성 결과
-   */
-  async generateContent(contentData) {
-    console.log('🎯 [API] 통합 콘텐츠 생성:', contentData)
-    
-    if (contentData.contentType === 'poster' || contentData.type === 'poster') {
-      return await this.generatePoster(contentData)
-    } else {
-      return await this.generateSnsContent(contentData)
-    }
-  }
-
-  /**
    * 진행 중인 콘텐츠 조회
    * @param {string} period - 조회 기간
    * @returns {Promise<Object>} 진행 중인 콘텐츠 목록
@@ -662,7 +738,6 @@ class ContentService {
   async getOngoingContents(period = 'month') {
     try {
       const response = await contentApi.get(`/ongoing?period=${period}`)
-
       return formatSuccessResponse(response.data.data, '진행 중인 콘텐츠를 조회했습니다.')
     } catch (error) {
       return handleApiError(error)
@@ -677,7 +752,6 @@ class ContentService {
   async getContentDetail(contentId) {
     try {
       const response = await contentApi.get(`/${contentId}`)
-
       return formatSuccessResponse(response.data.data, '콘텐츠 상세 정보를 조회했습니다.')
     } catch (error) {
       return handleApiError(error)
@@ -708,7 +782,6 @@ class ContentService {
       if (updateData.images) requestData.images = updateData.images
       
       const response = await contentApi.put(`/${contentId}`, requestData)
-
       return formatSuccessResponse(response.data.data, '콘텐츠가 수정되었습니다.')
     } catch (error) {
       return handleApiError(error)
@@ -723,7 +796,6 @@ class ContentService {
   async deleteContent(contentId) {
     try {
       await contentApi.delete(`/${contentId}`)
-
       return formatSuccessResponse(null, '콘텐츠가 삭제되었습니다.')
     } catch (error) {
       return handleApiError(error)
@@ -864,6 +936,19 @@ class ContentService {
       return formatSuccessResponse(response.data.data, '템플릿으로 콘텐츠가 생성되었습니다.')
     } catch (error) {
       return handleApiError(error)
+    }
+  }
+
+  /**
+   * 콘텐츠 저장 (통합)
+   * @param {Object} saveData - 저장할 콘텐츠 데이터
+   * @returns {Promise<Object>} 저장 결과
+   */
+  async saveContent(saveData) {
+    if (saveData.contentType === 'poster' || saveData.type === 'poster') {
+      return await this.savePoster(saveData)
+    } else {
+      return await this.saveSnsContent(saveData)
     }
   }
 }
