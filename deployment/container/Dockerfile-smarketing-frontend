@@ -41,11 +41,8 @@ ARG EXPORT_PORT=18080
 # Copy built files from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration
+# Copy nginx configuration (이미 포트가 18080으로 설정됨)
 COPY deployment/container/nginx.conf /etc/nginx/conf.d/default.conf
-
-# Create nginx configuration with custom port
-RUN sed -i "s/80/${EXPORT_PORT}/g" /etc/nginx/conf.d/default.conf
 
 EXPOSE ${EXPORT_PORT}
 
