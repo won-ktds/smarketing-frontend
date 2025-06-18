@@ -140,7 +140,7 @@ metadata:
   labels:
     app: smarketing-frontend
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   ports:
   - port: 80
     targetPort: ${export_port}
