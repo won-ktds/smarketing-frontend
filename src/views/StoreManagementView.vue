@@ -1,788 +1,403 @@
 <template>
   <v-container fluid class="pa-4">
-    <!-- 뒤로가기 버튼과 제목 -->
-    <div class="d-flex align-center mb-4">
-      <v-btn
-        icon
-        variant="text"
-        @click="$router.go(-1)"
-        class="me-2"
-      >
-        <v-icon>mdi-arrow-left</v-icon>
-      </v-btn>
-      <h1 class="text-h5 font-weight-bold">매장 관리</h1>
-    </div>
-
-    <!-- 매장 정보가 없는 경우 -->
-    <div v-if="!storeStore.hasStoreInfo && !storeStore.loading">
-      <v-row justify="center">
-        <v-col cols="12" md="8">
-          <v-card class="text-center pa-8" elevation="4">
-            <v-img
-              src="/images/store-placeholder.png"
-              max-width="200"
-              class="mx-auto mb-4"
-            />
-            <h2 class="text-h5 font-weight-bold mb-3">첫 매장을 등록해볼까요?</h2>
-            <p class="text-grey mb-4">
-              매장 정보를 등록하면 AI 마케팅 서비스를 이용할 수 있습니다
-            </p>
-            <div class="d-flex flex-column gap-3">
-              <v-btn
-                color="primary"
-                size="large"
-                prepend-icon="mdi-store-plus"
-                @click="openCreateDialog"
+    <!-- 🎨 소이님 UI 개선: 필터 → 검색+버튼 순서로 변경 -->
+    <v-card class="mb-6" elevation="2">
+      <v-card-text class="pa-4">
+        <!-- 1단계: 필터 탭들 (전체 너비로 배치) -->
+        <v-row class="mb-4">
+          <v-col cols="12">
+            <div class="d-flex align-center flex-wrap ga-2">
+              <span class="text-subtitle-2 font-weight-medium mr-3 text-grey-darken-1">콘텐츠 타입:</span>
+              <v-chip
+                v-for="type in contentTypeOptions"
+                :key="type.value"
+                :color="selectedContentType === type.value ? type.color : 'default'"
+                :variant="selectedContentType === type.value ? 'flat' : 'outlined'"
+                size="small"
+                class="mr-2 mb-1 chip-hover"
+                @click="selectContentType(type.value)"
               >
-                매장 정보 등록하기
-              </v-btn>
+                <span class="mr-1">{{ type.emoji }}</span>
+                {{ type.title.replace(type.emoji + ' ', '') }}
+                <span v-if="type.value !== 'all'" class="ml-1">({{ getTypeCount(type.value) }})</span>
+                <span v-else class="ml-1">({{ getTotalCount() }})</span>
+              </v-chip>
             </div>
-          </v-card>
-        </v-col>
-      </v-row>
-    </div>
+          </v-col>
+        </v-row>
 
-    <!-- 매장 정보가 있는 경우 -->
-    <div v-else-if="storeStore.hasStoreInfo">
-      <!-- 탭 메뉴 -->
-      <v-row class="mb-4">
-        <v-col cols="12">
-          <v-tabs v-model="currentTab" color="primary">
-            <v-tab value="basic">기본 정보</v-tab>
-            <v-tab value="menu">메뉴 관리</v-tab>
-          </v-tabs>
-        </v-col>
-      </v-row>
-
-      <v-tabs-window v-model="currentTab">
-        <!-- 기본 정보 탭 -->
-        <v-tabs-window-item value="basic">
-          <v-card elevation="2">
-            <v-card-title class="pa-4 d-flex align-center justify-space-between">
-              <div class="d-flex align-center">
-                <v-icon class="mr-2" color="primary">mdi-store</v-icon>
-                매장 기본 정보
-              </div>
-              <v-btn
-                color="primary"
-                variant="outlined"
-                prepend-icon="mdi-pencil"
-                @click="editBasicInfo"
-              >
-                수정
-              </v-btn>
-            </v-card-title>
-            
-            <v-divider />
-            
-            <v-card-text class="pa-6">
-              <v-row>
-                <!-- 매장 이미지 -->
-                <v-col cols="12" md="4" class="text-center">
-                  <v-avatar size="120" class="mb-3">
-                    <v-img
-                      :src="storeInfo.imageUrl || '/images/store-placeholder.png'"
-                      alt="매장 이미지"
-                    />
-                  </v-avatar>
-                  <h3 class="text-h6 font-weight-bold">{{ storeInfo.storeName }}</h3>
-                  <p class="text-grey">{{ storeInfo.businessType }}</p>
-                </v-col>
-
-                <!-- 기본 정보 -->
-                <v-col cols="12" md="8">
-                  <v-row>
-                    <v-col cols="12" sm="6">
-                      <div class="info-item">
-                        <v-icon class="mr-2" color="grey">mdi-map-marker</v-icon>
-                        <div>
-                          <div class="text-caption text-grey">주소</div>
-                          <div class="text-body-1">{{ storeInfo.address || '미입력' }}</div>
-                        </div>
-                      </div>
-                    </v-col>
-                    
-                    <v-col cols="12" sm="6">
-                      <div class="info-item">
-                        <v-icon class="mr-2" color="grey">mdi-phone</v-icon>
-                        <div>
-                          <div class="text-caption text-grey">전화번호</div>
-                          <div class="text-body-1">{{ storeInfo.phoneNumber || '미입력' }}</div>
-                        </div>
-                      </div>
-                    </v-col>
-                    
-                    <v-col cols="12" sm="6">
-                      <div class="info-item">
-                        <v-icon class="mr-2" color="grey">mdi-clock</v-icon>
-                        <div>
-                          <div class="text-caption text-grey">영업시간</div>
-                          <div class="text-body-1">{{ storeInfo.businessHours || '미입력' }}</div>
-                        </div>
-                      </div>
-                    </v-col>
-                
-                    <v-col cols="12" sm="6">
-                      <div class="info-item">
-                        <v-icon class="mr-2" color="grey">mdi-account-group</v-icon>
-                        <div>
-                          <div class="text-caption text-grey">좌석 수</div>
-                          <div class="text-body-1">{{ storeInfo.seatCount || 0 }}석</div>
-                        </div>
-                      </div>
-                    </v-col>
-                    
-                    <v-col cols="12" sm="6">
-                      <div class="info-item">
-                        <v-icon class="mr-2" color="grey">mdi-calendar-off</v-icon>
-                        <div>
-                          <div class="text-caption text-grey">휴무일</div>
-                          <div class="text-body-1">{{ formatClosedDays(storeInfo.holidays) }}</div>
-                        </div>
-                      </div>
-                    </v-col>
-                    
-                    <v-col cols="12" sm="6">
-                      <div class="info-item">
-                        <v-icon class="mr-2" color="grey">mdi-instagram</v-icon>
-                        <div>
-                          <div class="text-caption text-grey">인스타그램</div>
-                          <div class="text-body-1">{{ storeInfo.instaAccounts || '미입력' }}</div>
-                        </div>
-                      </div>
-                    </v-col>
-                  </v-row>
-                  
-                  <!-- 매장 소개 -->
-                  <v-divider class="my-4" />
-                  <div class="info-item">
-                    <v-icon class="mr-2" color="grey">mdi-text</v-icon>
-                    <div>
-                      <div class="text-caption text-grey">매장 소개</div>
-                      <div class="text-body-1">{{ storeInfo.description || '매장 소개가 없습니다' }}</div>
-                    </div>
-                  </div>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-        </v-tabs-window-item>
-
-        <!-- 메뉴 관리 탭 -->
-        <v-tabs-window-item value="menu">
-          <!-- 검색 및 필터 섹션 -->
-          <v-card class="mb-4" elevation="2">
-            <v-card-text>
-              <v-row>
-                <v-col cols="12" md="6">
-                  <v-text-field
-                    v-model="menuSearch"
-                    prepend-inner-icon="mdi-magnify"
-                    label="메뉴 검색"
-                    variant="outlined"
-                    density="compact"
-                    clearable
-                  />
-                </v-col>
-                <v-col cols="12" md="3">
-                  <v-select
-                    v-model="menuCategoryFilter"
-                    :items="['전체', ...menuCategories]"
-                    label="카테고리"
-                    variant="outlined"
-                    density="compact"
-                  />
-                </v-col>
-                <v-col cols="12" md="3" class="d-flex align-center gap-2">
-                  <v-btn
-                    color="primary"
-                    variant="outlined"
-                    prepend-icon="mdi-filter-off"
-                    @click="clearFilters"
-                    size="small"
-                  >
-                    필터 초기화
-                  </v-btn>
-                  <v-btn
-                    color="primary"
-                    prepend-icon="mdi-plus"
-                    @click="openCreateMenuDialog"
-                    size="small"
-                  >
-                    메뉴 추가
-                  </v-btn>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-
-          <!-- 메뉴 목록 -->
-          <div v-if="filteredMenus.length > 0">
-            <v-row>
-              <v-col
-                v-for="menu in filteredMenus"
-                :key="menu.id || menu.menuId"
-                cols="12"
-                sm="6"
-                md="4"
-                lg="3"
-              >
-                <v-card
-                  class="menu-card h-100"
-                  elevation="2"
-                  @click="viewMenuDetail(menu)"
-                >
-                  <div class="position-relative">
-                    <!-- 메뉴 카드에서 이미지 표시 수정 -->
-                    <v-img
-                      :src="getMenuImageUrl(menu)"
-                      height="200"
-                      cover
-                      class="grey lighten-2"
-                      @error="handleImageError($event, menu)"
-                    >
-                      <template v-slot:placeholder>
-                        <div class="d-flex align-center justify-center fill-height">
-                          <v-progress-circular
-                            color="grey-lighten-4"
-                            indeterminate
-                          />
-                        </div>
-                      </template>
-                      <!-- 이미지 로딩 실패 시 플레이스홀더 표시 -->
-                      <template v-slot:error>
-                        <div class="d-flex align-center justify-center fill-height">
-                          <v-icon size="64" color="grey-lighten-2">mdi-image-off</v-icon>
-                        </div>
-                      </template>
-                    </v-img>
-                    
-                    <!-- 상태 뱃지 -->
-                    <div class="position-absolute top-0 right-0 pa-2">
-                      <v-chip
-                        v-if="!menu.available"
-                        color="red"
-                        size="small"
-                        class="mb-1"
-                      >
-                        품절
-                      </v-chip>
-                      <v-chip
-                        v-if="menu.recommended"
-                        color="orange"
-                        size="small"
-                      >
-                        추천
-                      </v-chip>
-                    </div>
-                    
-                    <!-- 액션 버튼 -->
-                    <div class="position-absolute top-0 left-0 pa-2">
-                      <v-btn
-                        icon="mdi-pencil"
-                        size="small"
-                        color="white"
-                        variant="elevated"
-                        @click.stop="editMenu(menu)"
-                        class="me-1"
-                      />
-                      <v-btn
-                        icon="mdi-delete"
-                        size="small"
-                        color="red"
-                        variant="elevated"
-                        @click.stop="confirmDeleteMenu(menu)"
-                      />
-                    </div>
-                  </div>
-                  
-                  <v-card-text class="pa-3">
-                    <div class="d-flex justify-space-between align-start mb-2">
-                      <h4 class="text-subtitle-1 font-weight-bold">
-                        {{ menu.menuName || menu.name }}
-                      </h4>
-                      <v-chip
-                        :color="menu.available ? 'green' : 'red'"
-                        size="small"
-                        variant="tonal"
-                      >
-                        {{ menu.available ? '판매중' : '품절' }}
-                      </v-chip>
-                    </div>
-                    
-                    <p class="text-body-2 text-grey text-truncate-2 mb-2">
-                      {{ menu.description || '설명이 없습니다' }}
-                    </p>
-                    
-                    <div class="d-flex justify-space-between align-center">
-                      <span class="text-h6 font-weight-bold text-primary">
-                        {{ menu.price ? menu.price.toLocaleString() : '0' }}원
-                      </span>
-                      <v-chip
-                        size="small"
-                        variant="outlined"
-                        color="primary"
-                      >
-                        {{ menu.category }}
-                      </v-chip>
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-          </div>
-
-          <!-- 메뉴가 없는 경우 -->
-          <v-card v-else class="text-center pa-8" elevation="2">
-            <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-food-off</v-icon>
-            <h3 class="text-h6 mb-2">등록된 메뉴가 없습니다</h3>
-            <p class="text-grey mb-4">첫 번째 메뉴를 등록해보세요</p>
+        <!-- 2단계: 검색박스 + 새 콘텐츠 생성 버튼 (같은 줄에 배치) -->
+        <v-row align="center" class="ga-3">
+          <!-- 검색박스 (왼쪽, 넓게) -->
+          <v-col cols="12" md="9">
+            <v-text-field
+              v-model="searchQuery"
+              label="제목, 내용, 해시태그로 검색..."
+              prepend-inner-icon="mdi-magnify"
+              variant="outlined"
+              density="comfortable"
+              clearable
+              hide-details
+              class="search-field"
+              @update:model-value="applyFilters"
+            />
+          </v-col>
+          
+          <!-- 새 콘텐츠 생성 버튼 (오른쪽) -->
+          <v-col cols="12" md="3" class="d-flex justify-end">
             <v-btn
               color="primary"
               prepend-icon="mdi-plus"
-              @click="openCreateMenuDialog"
+              @click="$router.push('/content/create')"
+              size="large"
+              class="text-none font-weight-medium create-btn"
+              elevation="2"
             >
-              메뉴 등록하기
+              새 콘텐츠 생성
             </v-btn>
-          </v-card>
-        </v-tabs-window-item>
-      </v-tabs-window>
-    </div>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
 
-    <!-- 로딩 상태 -->
-    <div v-else class="text-center pa-8">
-      <v-progress-circular indeterminate color="primary" size="64" />
-      <p class="text-grey mt-4">매장 정보를 불러오는 중...</p>
-    </div>
-
-    <!-- 매장 등록/수정 다이얼로그 -->
-    <v-dialog 
-      v-model="showCreateDialog" 
-      max-width="600" 
-      persistent
-      :style="{ zIndex: 2000 }"
-      class="store-dialog"
-    >
-      <v-card class="store-dialog-card">
-        <v-card-title class="pa-4">
-          <div class="d-flex align-center">
-            <v-icon class="mr-2" color="primary">mdi-store</v-icon>
-            {{ editMode ? '매장 정보 수정' : '새 매장 등록' }}
-          </div>
-        </v-card-title>
-        
-        <v-divider />
-        
-        <!-- ✅ 스크롤 가능한 컨텐츠 영역 -->
-        <v-card-text class="pa-4 store-dialog-content">
-          <v-form ref="storeFormRef" v-model="formValid">
-            <v-row>
-              <v-col cols="12">
-                <v-text-field
-                  v-model="formData.storeName"
-                  label="매장명 *"
-                  :rules="[v => !!v || '매장명을 입력해주세요']"
-                  variant="outlined"
-                  density="compact"
-                  required
-                />
-              </v-col>
-              
-              <v-col cols="12" sm="6">
-                <v-select
-                  v-model="formData.businessType"
-                  :items="businessTypes"
-                  label="업종 *"
-                  :rules="[v => !!v || '업종을 선택해주세요']"
-                  variant="outlined"
-                  density="compact"
-                  required
-                />
-              </v-col>
-              
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model.number="formData.seatCount"
-                  label="좌석 수"
-                  type="number"
-                  variant="outlined"
-                  density="compact"
-                />
-              </v-col>
-              
-              <v-col cols="12">
-                <v-text-field
-                  v-model="formData.address"
-                  label="주소 *"
-                  :rules="[v => !!v || '주소를 입력해주세요']"
-                  variant="outlined"
-                  density="compact"
-                  required
-                />
-              </v-col>
-              
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="formData.phoneNumber"
-                  label="전화번호"
-                  variant="outlined"
-                  density="compact"
-                />
-              </v-col>
-              
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="formData.instagramUrl"
-                  label="인스타그램 URL"
-                  variant="outlined"
-                  density="compact"
-                />
-              </v-col>
-              
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="formData.openTime"
-                  label="오픈 시간"
-                  type="time"
-                  variant="outlined"
-                  density="compact"
-                />
-              </v-col>
-              
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model="formData.closeTime"
-                  label="마감 시간"
-                  type="time"
-                  variant="outlined"
-                  density="compact"
-                />
-              </v-col>
-              
-              <v-col cols="12">
-                <v-select
-                  v-model="formData.holidays"
-                  :items="weekDays"
-                  item-title="title"
-                  item-value="value"
-                  label="휴무일"
-                  multiple
-                  chips
-                  variant="outlined"
-                  density="compact"
-                />
-              </v-col>
-              
-              <v-col cols="12">
-                <v-text-field
-                  v-model="formData.blogUrl"
-                  label="블로그 URL"
-                  variant="outlined"
-                  density="compact"
-                />
-              </v-col>
-              
-              <v-col cols="12">
-                <v-textarea
-                  v-model="formData.description"
-                  label="매장 소개"
-                  variant="outlined"
-                  density="compact"
-                  rows="2"
-                />
-              </v-col>
-            </v-row>
-          </v-form>
-        </v-card-text>
-        
-        <v-card-actions class="pa-4">
-          <v-spacer />
+    <!-- 선택된 항목 일괄 작업 -->
+    <div v-if="selectedItems.length > 0" class="mb-4">
+      <v-alert color="info" variant="tonal" class="selected-alert">
+        <div class="d-flex justify-space-between align-center">
+          <span class="font-weight-medium">{{ selectedItems.length }}개 항목이 선택됨</span>
           <v-btn
+            color="error"
             variant="text"
-            @click="showCreateDialog = false"
+            prepend-icon="mdi-delete"
+            @click="deleteSelectedItems"
+            class="font-weight-medium"
           >
-            취소
+            선택 항목 삭제
           </v-btn>
+        </div>
+      </v-alert>
+    </div>
+
+    <!-- 콘텐츠 목록 -->
+    <v-card elevation="2">
+      <v-card-text class="pa-0">
+        <div v-if="loading" class="text-center pa-8">
+          <v-progress-circular indeterminate color="primary" size="48" width="4" />
+          <div class="mt-4 text-body-1 text-grey-darken-1">콘텐츠를 불러오는 중...</div>
+        </div>
+
+        <div v-else-if="paginatedContents.length === 0" class="text-center pa-12 empty-state">
+          <v-icon size="80" color="grey-lighten-2" class="mb-4">mdi-file-document-outline</v-icon>
+          <div class="text-h6 mb-3 text-grey-darken-1">표시할 콘텐츠가 없습니다</div>
+          <div class="text-body-2 text-grey mb-6">새로운 콘텐츠를 생성해보세요</div>
           <v-btn
             color="primary"
-            @click="saveStore"
-            :loading="saving"
-            :disabled="!formValid"
+            size="large"
+            prepend-icon="mdi-plus"
+            @click="$router.push('/content/create')"
+            class="font-weight-medium"
+            elevation="2"
           >
-            {{ editMode ? '수정' : '등록' }}
+            콘텐츠 생성하기
           </v-btn>
-        </v-card-actions>
-      </v-card>
-</v-dialog>
+        </div>
 
-    <!-- 메뉴 등록/수정 다이얼로그 -->
-    <v-dialog 
-      v-model="showMenuDialog" 
-      max-width="600" 
-      persistent
-      :style="{ zIndex: 2000 }"
-      class="menu-dialog"
-    >
-      <v-card class="menu-dialog-card">
-        <v-card-title class="pa-4">
-          <div class="d-flex align-center">
-            <v-icon class="mr-2" color="primary">mdi-food</v-icon>
-            {{ menuEditMode ? '메뉴 수정' : '새 메뉴 등록' }}
-          </div>
-        </v-card-title>
-        
-        <v-divider />
-        
-        <!-- ✅ 스크롤 가능한 컨텐츠 영역 -->
-        <v-card-text class="pa-4 dialog-content">
-          <v-form ref="menuFormRef" v-model="menuFormValid">
-            <v-row>
-              <!-- 메뉴 이미지 업로드 -->
-              <v-col cols="12">
-                <div class="mb-4">
-                  <h4 class="text-subtitle-1 font-weight-bold mb-3 d-flex align-center">
-                    <v-icon class="mr-2" color="primary">mdi-image</v-icon>
-                    메뉴 이미지 {{ !menuEditMode ? '*' : '' }}
-                  </h4>
-                  
-                  <!-- 이미지 미리보기 -->
-                  <div v-if="shouldShowImagePreview" class="mb-3">
-                    <v-img
-                      :src="shouldShowImagePreview"
-                      max-height="180"
-                      max-width="280"
-                      class="rounded mx-auto"
-                      style="border: 2px solid #e0e0e0;"
-                    />
-                    <div class="text-center mt-2">
-                      <v-chip 
-                        v-if="previewImageUrl" 
-                        color="success" 
-                        size="small" 
-                        class="mr-2"
-                      >
-                        새 이미지 선택됨
-                      </v-chip>
-                      <v-chip 
-                        v-else-if="menuEditMode" 
-                        color="info" 
-                        size="small" 
-                        class="mr-2"
-                      >
-                        현재 이미지
-                      </v-chip>
-                      <v-btn
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                        prepend-icon="mdi-image-edit"
-                        @click="resetImageSelection"
-                      >
-                        다른 이미지 선택
-                      </v-btn>
-                    </div>
-                  </div>
-                  
-                  <!-- 이미지 선택 섹션 -->
-                  <div v-else>
-                    <v-file-input
-                      v-model="selectedImageFile"
-                      label="메뉴 이미지 선택 *"
-                      accept="image/*"
-                      prepend-icon="mdi-camera"
-                      variant="outlined"
-                      density="compact"
-                      :rules="[
-                        v => menuEditMode || !!v || '메뉴 이미지는 필수입니다',
-                        v => !v || v.size < 10485760 || '파일 크기는 10MB 이하여야 합니다',
-                        v => !v || v.type.startsWith('image/') || '이미지 파일만 업로드 가능합니다'
-                      ]"
-                      @update:modelValue="onFileInputChange"
-                      show-size
-                      required
-                    />
-                    
-                    <!-- 드래그앤드롭 영역 - 높이 축소 -->
-                    <div
-                      class="drop-zone pa-3 text-center"
-                      style="border: 2px dashed #ccc; border-radius: 8px; background: #fafafa; min-height: 80px;"
-                      @drop="onDropImage"
-                      @dragover.prevent
-                      @dragenter.prevent
+        <!-- 콘텐츠 목록 테이블 -->
+        <div v-else>
+          <v-table hover class="content-table">
+            <thead>
+              <tr class="table-header">
+                <th width="50" class="pa-4">
+                  <v-checkbox
+                    v-model="selectAll"
+                    @change="toggleSelectAll"
+                    density="compact"
+                    color="primary"
+                  />
+                </th>
+                <th width="450" class="pa-4 font-weight-bold text-grey-darken-2">제목</th>
+                <th width="150" class="pa-4 font-weight-bold text-grey-darken-2">플랫폼</th>
+                <th width="200" class="pa-4 sortable-header cursor-pointer" @click="sortByPromotionDate">
+                  <div class="d-flex align-center">
+                    <span class="font-weight-bold text-grey-darken-2">프로모션 기간</span>
+                    <v-icon 
+                      :color="promotionSortOrder === 'none' ? 'grey-lighten-1' : 'primary'"
+                      size="18" 
+                      class="ml-2"
                     >
-                      <v-icon size="32" color="grey-lighten-2">mdi-cloud-upload</v-icon>
-                      <p class="text-grey text-center mt-1 mb-1 text-caption">
-                        이미지를 드래그하여 업로드하거나 위의 버튼을 클릭하세요
-                      </p>
-                      <p class="text-caption text-grey text-center">
-                        JPG, PNG 파일만 업로드 가능 (최대 10MB)
-                      </p>
+                      {{
+                        promotionSortOrder === 'asc' ? 'mdi-arrow-up' :
+                        promotionSortOrder === 'desc' ? 'mdi-arrow-down' :
+                        'mdi-unfold-more-horizontal'
+                      }}
+                    </v-icon>
+                  </div>
+                </th>
+                <th width="120" class="pa-4 font-weight-bold text-grey-darken-2">액션</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr 
+                v-for="content in paginatedContents" 
+                :key="content.id" 
+                class="content-row cursor-pointer" 
+                @click="showDetail(content)"
+              >
+                <td class="pa-4" @click.stop>
+                  <v-checkbox
+                    v-model="selectedItems"
+                    :value="content.id"
+                    density="compact"
+                    color="primary"
+                  />
+                </td>
+                <td class="pa-4">
+                  <div class="d-flex flex-column">
+                    <div class="d-flex align-center mb-2">
+                      <span class="font-weight-medium text-subtitle-2 mr-3">{{ content.title }}</span>
+                      <v-chip
+                        :color="getStatusColor(content.status)"
+                        size="x-small"
+                        variant="tonal"
+                        class="font-weight-medium"
+                      >
+                        {{ getStatusText(content.status) }}
+                      </v-chip>
+                    </div>
+                    <div class="text-caption text-truncate text-grey-darken-1" style="max-width: 400px;">
+                      {{ content.content ? content.content.replace(/<[^>]*>/g, '').substring(0, 100) + '...' : 'string...' }}
                     </div>
                   </div>
-                </div>
-              </v-col>
-              
-              <v-col cols="12">
-                <v-text-field
-                  v-model="menuFormData.menuName"
-                  label="메뉴명 *"
-                  :rules="[v => !!v || '메뉴명을 입력해주세요']"
-                  variant="outlined"
-                  density="compact"
-                  required
-                />
-              </v-col>
-              
-              <v-col cols="12" sm="6">
-                <v-select
-                  v-model="menuFormData.category"
-                  :items="menuCategories"
-                  label="카테고리 *"
-                  :rules="[v => !!v || '카테고리를 선택해주세요']"
-                  variant="outlined"
-                  density="compact"
-                  required
-                />
-              </v-col>
-              
-              <v-col cols="12" sm="6">
-                <v-text-field
-                  v-model.number="menuFormData.price"
-                  label="가격 (원) *"
-                  type="number"
-                  :rules="[
-                    v => !!v || '가격을 입력해주세요',
-                    v => v > 0 || '가격은 0보다 커야 합니다'
-                  ]"
-                  variant="outlined"
-                  density="compact"
-                  required
-                />
-              </v-col>
-              
-              <v-col cols="12">
+                </td>
+                <td class="pa-4">
+                  <v-chip
+                    :color="getPlatformColor(content.platform)"
+                    size="small"
+                    variant="tonal"
+                    class="font-weight-medium"
+                  >
+                    {{ getPlatformText(content.platform) }}
+                  </v-chip>
+                </td>
+                <td class="pa-4">
+                  <div class="text-body-2 text-grey-darken-1">
+                    {{ formatDateRange(content.startDate, content.endDate) }}
+                  </div>
+                </td>
+                <td class="pa-4" @click.stop>
+                  <div class="d-flex align-center ga-1">
+                    <v-btn
+                      icon="mdi-pencil"
+                      size="small"
+                      variant="text"
+                      color="primary"
+                      @click="showDetailWithEdit(content)"
+                      class="action-btn"
+                    />
+                    <v-btn
+                      icon="mdi-delete"
+                      size="small"
+                      variant="text"
+                      color="error"
+                      @click="confirmDelete(content)"
+                      class="action-btn"
+                    />
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </v-table>
+
+          <!-- 페이지네이션 -->
+          <div v-if="totalPages > 1" class="pa-4 d-flex justify-center">
+            <v-pagination
+              v-model="currentPage"
+              :length="totalPages"
+              :total-visible="7"
+              rounded="circle"
+              color="primary"
+              class="pagination-custom"
+            />
+          </div>
+        </div>
+      </v-card-text>
+    </v-card>
+
+    <!-- 콘텐츠 상세/수정 다이얼로그 -->
+    <v-dialog v-model="showDetailDialog" max-width="800" persistent>
+      <v-card class="detail-dialog">
+        <v-card-title class="pa-6 pb-4">
+          <div class="d-flex align-center">
+            <v-icon class="mr-3" color="primary">
+              {{ isEditMode ? 'mdi-pencil' : 'mdi-eye' }}
+            </v-icon>
+            <span class="text-h6 font-weight-bold">
+              {{ isEditMode ? '콘텐츠 수정' : '콘텐츠 상세' }}
+            </span>
+          </div>
+        </v-card-title>
+        
+        <v-divider />
+        
+        <v-card-text class="pa-6" style="max-height: 70vh; overflow-y: auto;">
+          <v-form ref="editForm" v-model="editFormValid" v-if="selectedContent">
+            <!-- 제목 -->
+            <div class="mb-6">
+              <label class="text-subtitle-2 font-weight-bold mb-3 d-block text-grey-darken-2">제목</label>
+              <v-text-field
+                v-if="isEditMode"
+                v-model="editingContent.title"
+                variant="outlined"
+                density="comfortable"
+                :rules="titleRules"
+                hide-details="auto"
+                class="edit-field"
+              />
+              <div v-else class="text-body-1 pa-3 bg-grey-lighten-5 rounded">
+                {{ selectedContent.title }}
+              </div>
+            </div>
+
+            <!-- 콘텐츠 내용 -->
+            <div class="mb-6">
+              <label class="text-subtitle-2 font-weight-bold mb-3 d-block text-grey-darken-2">내용</label>
+              <div v-if="isEditMode">
                 <v-textarea
-                  v-model="menuFormData.description"
-                  label="메뉴 설명"
+                  v-model="editingContent.content"
                   variant="outlined"
-                  density="compact"
-                  rows="2"
+                  rows="8"
+                  auto-grow
+                  hide-details
+                  class="edit-field"
                 />
-              </v-col>
-              
-              <v-col cols="12" sm="6">
-                <v-switch
-                  v-model="menuFormData.available"
-                  label="판매 가능"
+              </div>
+              <div v-else class="content-display pa-4 bg-grey-lighten-5 rounded">
+                <div v-if="selectedContent.content && selectedContent.content.includes('<')" 
+                     v-html="selectedContent.content"
+                     class="content-html">
+                </div>
+                <div v-else class="text-body-1" style="white-space: pre-wrap;">
+                  {{ selectedContent.content }}
+                </div>
+              </div>
+            </div>
+
+            <!-- 해시태그 -->
+            <div class="mb-6">
+              <label class="text-subtitle-2 font-weight-bold mb-3 d-block text-grey-darken-2">해시태그</label>
+              <div class="d-flex flex-wrap ga-2">
+                <v-chip
+                  v-for="tag in selectedContent.hashtags"
+                  :key="tag"
+                  size="small"
                   color="primary"
-                  density="compact"
-                />
+                  variant="tonal"
+                  class="font-weight-medium"
+                >
+                  #{{ tag }}
+                </v-chip>
+              </div>
+              <div v-if="isEditMode" class="text-caption text-grey mt-2">
+                해시태그는 수정할 수 없습니다. 새로 생성해주세요.
+              </div>
+            </div>
+
+            <!-- 플랫폼 및 상태 정보 -->
+            <v-row>
+              <v-col cols="6">
+                <label class="text-subtitle-2 font-weight-bold mb-3 d-block text-grey-darken-2">플랫폼</label>
+                <v-chip
+                  :color="getPlatformColor(selectedContent.platform)"
+                  variant="tonal"
+                  class="font-weight-medium"
+                >
+                  {{ getPlatformText(selectedContent.platform) }}
+                </v-chip>
               </v-col>
-              
-              <v-col cols="12" sm="6">
-                <v-switch
-                  v-model="menuFormData.recommended"
-                  label="추천 메뉴"
-                  color="orange"
-                  density="compact"
-                />
+              <v-col cols="6">
+                <label class="text-subtitle-2 font-weight-bold mb-3 d-block text-grey-darken-2">상태</label>
+                <v-chip
+                  :color="getStatusColor(selectedContent.status)"
+                  variant="tonal"
+                  class="font-weight-medium"
+                >
+                  {{ getStatusText(selectedContent.status) }}
+                </v-chip>
               </v-col>
             </v-row>
           </v-form>
         </v-card-text>
         
-        <v-card-actions class="pa-4">
+        <v-divider />
+        
+        <!-- 다이얼로그 액션 버튼 -->
+        <v-card-actions class="pa-6 pt-4">
           <v-spacer />
-          <v-btn
-            variant="text"
-            @click="cancelMenuForm"
-          >
-            취소
-          </v-btn>
-          <v-btn
-            color="primary"
-            @click="saveMenu"
-            :loading="saving"
-            :disabled="!menuFormValid"
-          >
-            {{ menuEditMode ? '수정' : '등록' }}
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-    <!-- 메뉴 상세 다이얼로그 -->
-    <v-dialog v-model="showMenuDetailDialog" max-width="500">
-      <v-card v-if="selectedMenu">
-        <v-img
-          :src="getMenuImageUrl(selectedMenu)"
-          height="250"
-          cover
-          @error="handleImageError($event, selectedMenu)"
-        />
-        
-        <v-card-title class="pa-4 d-flex justify-space-between align-center">
-          <span>{{ selectedMenu.menuName || selectedMenu.name }}</span>
-          <v-chip
-            :color="selectedMenu.available ? 'green' : 'red'"
-            size="small"
-          >
-            {{ selectedMenu.available ? '판매중' : '품절' }}
-          </v-chip>
-        </v-card-title>
-        
-        <v-card-text class="pa-4">
-          <div class="mb-3">
-            <div class="text-caption text-grey">카테고리</div>
-            <div class="text-body-1">{{ selectedMenu.category }}</div>
+          <div v-if="isEditMode" class="d-flex ga-3">
+            <v-btn 
+              variant="outlined"
+              color="grey-darken-1"
+              @click="cancelEdit"
+              class="px-6 font-weight-medium"
+            >
+              취소
+            </v-btn>
+            <v-btn 
+              color="primary" 
+              @click="saveEdit"
+              :loading="updating"
+              :disabled="!editFormValid"
+              class="px-6 font-weight-medium"
+              elevation="2"
+            >
+              저장
+            </v-btn>
           </div>
-          
-          <div class="mb-3">
-            <div class="text-caption text-grey">가격</div>
-            <div class="text-h6 text-primary font-weight-bold">
-              {{ selectedMenu.price ? selectedMenu.price.toLocaleString() : '0' }}원
-            </div>
+          <div v-else class="d-flex ga-3">
+            <v-btn 
+              variant="outlined"
+              color="grey-darken-1"
+              @click="closeDialog"
+              class="px-6 font-weight-medium"
+            >
+              닫기
+            </v-btn>
+            <v-btn 
+              variant="outlined"
+              color="primary"
+              prepend-icon="mdi-pencil"
+              @click="showEditMode"
+              class="px-6 font-weight-medium"
+            >
+              수정
+            </v-btn>
+            <v-btn 
+              variant="outlined"
+              color="error"
+              prepend-icon="mdi-delete"
+              @click="confirmDelete(selectedContent)"
+              class="px-6 font-weight-medium"
+            >
+              삭제
+            </v-btn>
           </div>
-          
-          <div class="mb-3">
-            <div class="text-caption text-grey">설명</div>
-            <div class="text-body-1">{{ selectedMenu.description || '설명이 없습니다' }}</div>
-          </div>
-          
-          <div v-if="selectedMenu.recommended" class="mb-3">
-            <v-chip color="orange" size="small">추천 메뉴</v-chip>
-          </div>
-        </v-card-text>
-        
-        <v-card-actions class="pa-4">
-          <v-spacer />
-          <v-btn
-            variant="text"
-            @click="closeMenuDetail"
-          >
-            닫기
-          </v-btn>
-          <v-btn
-            color="primary"
-            variant="text"
-            @click="editMenu(selectedMenu); closeMenuDetail()"
-          >
-            수정
-          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- 스낵바 -->
-    <v-snackbar
-      v-model="snackbar.show"
-      :color="snackbar.color"
-      :timeout="3000"
-      location="bottom"
-    >
-      {{ snackbar.message }}
+    <!-- 성공/오류 스낵바 -->
+    <v-snackbar v-model="showSuccess" color="success" timeout="4000" location="bottom">
+      <v-icon class="mr-2">mdi-check-circle</v-icon>
+      {{ successMessage }}
+    </v-snackbar>
+    
+    <v-snackbar v-model="showError" color="error" timeout="4000" location="bottom">
+      <v-icon class="mr-2">mdi-alert-circle</v-icon>
+      {{ errorMessage }}
     </v-snackbar>
   </v-container>
 </template>
+
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
@@ -2233,6 +1848,170 @@ onMounted(async () => {
 }
 
 .store-dialog-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+/* 🎨 소이님 UI 개선을 위한 스타일 */
+
+/* 필터 칩 호버 효과 */
+.chip-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.chip-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* 검색 필드 스타일 */
+.search-field {
+  transition: all 0.3s ease;
+}
+
+.search-field:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* 새 콘텐츠 생성 버튼 */
+.create-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 160px;
+}
+
+.create-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(25, 118, 210, 0.3);
+}
+
+/* 선택된 항목 알림 */
+.selected-alert {
+  border-left: 4px solid #2196F3;
+  background: linear-gradient(90deg, rgba(33, 150, 243, 0.05) 0%, rgba(33, 150, 243, 0.02) 100%);
+}
+
+/* 테이블 스타일 */
+.content-table {
+  border-radius: 0;
+}
+
+.table-header {
+  background: linear-gradient(90deg, #fafafa 0%, #f5f5f5 100%);
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.content-row {
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.content-row:hover {
+  background: linear-gradient(90deg, rgba(25, 118, 210, 0.02) 0%, rgba(25, 118, 210, 0.01) 100%);
+  transform: translateX(2px);
+  box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+}
+
+.content-row:last-child {
+  border-bottom: none;
+}
+
+/* 정렬 가능한 헤더 */
+.sortable-header {
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+.sortable-header:hover {
+  background: rgba(25, 118, 210, 0.08);
+  color: #1976D2;
+}
+
+/* 액션 버튼 */
+.action-btn {
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+/* 빈 상태 */
+.empty-state {
+  background: linear-gradient(145deg, #fafafa 0%, #f0f0f0 100%);
+  border-radius: 12px;
+  margin: 20px;
+}
+
+/* 다이얼로그 스타일 */
+.detail-dialog {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.edit-field {
+  transition: all 0.3s ease;
+}
+
+.edit-field:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.content-display {
+  min-height: 100px;
+  border: 1px solid #e0e0e0;
+}
+
+.content-html {
+  line-height: 1.6;
+}
+
+.content-html img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+.content-html p {
+  margin-bottom: 12px;
+}
+
+/* 페이지네이션 */
+.pagination-custom {
+  margin-top: 16px;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .create-btn {
+    width: 100%;
+    min-width: unset;
+  }
+  
+  .content-row:hover {
+    transform: none;
+  }
+  
+  .chip-hover:hover {
+    transform: none;
+  }
+}
+
+/* 스크롤바 커스터마이징 */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
 </style>

@@ -46,18 +46,6 @@
             @input="applyFilters"
             class="flex-grow-1"
           />
-          
-          <!-- 정렬 -->
-          <v-select
-            v-model="sortBy"
-            :items="sortOptions"
-            item-title="title"
-            item-value="value"
-            variant="outlined"
-            density="compact"
-            hide-details
-            style="min-width: 140px;"
-          />
         </div>
       </v-col>
     </v-row>
@@ -435,17 +423,10 @@ const errorMessage = ref('')
 
 // 옵션 데이터
 const contentTypeOptions = [
-  { title: '📊 전체', value: 'all', color: 'primary', emoji: '📊' },
-  { title: '📷 Instagram', value: 'instagram', color: 'pink', emoji: '📷' },
-  { title: '📝 네이버 블로그', value: 'blog', color: 'green', emoji: '📝' },
-  { title: '🎨 포스터', value: 'poster', color: 'orange', emoji: '🎨' }
-]
-
-const sortOptions = [
-  { title: '최신순', value: 'latest' },
-  { title: '오래된순', value: 'oldest' },
-  { title: '제목순', value: 'title' },
-  { title: '조회수순', value: 'views' }
+  { title: '전체', value: 'all', color: 'primary', emoji: '📊' },
+  { title: 'Instagram', value: 'instagram', color: 'pink', emoji: '📷' },
+  { title: '네이버 블로그', value: 'blog', color: 'green', emoji: '📝' },
+  { title: '포스터', value: 'poster', color: 'orange', emoji: '🎨' }
 ]
 
 const titleRules = [
