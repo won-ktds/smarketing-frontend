@@ -79,80 +79,88 @@ export const useStoreStore = defineStore('store', {
       }
     },
 
-    /**
-     * 메뉴 목록 조회 - 실제 API 연동 (매장 ID 필요) - ✅ ID 필드 보장
-     */
-    async fetchMenus() {
-      console.log('=== Store 스토어: 메뉴 목록 조회 시작 ===')
+    // src/store/index.js에서 fetchMenus 부분만 수정
+
+/**
+ * 메뉴 목록 조회 - 실제 API 연동 (매장 ID 필요) - ✅ 이미지 필드 매핑 수정
+ */
+async fetchMenus() {
+  console.log('=== Store 스토어: 메뉴 목록 조회 시작 ===')
+  
+  try {
+    // 매장 정보에서 storeId 가져오기
+    const storeId = this.storeInfo?.storeId
+    if (!storeId) {
+      console.warn('매장 ID가 없습니다. 매장 정보를 먼저 조회해주세요.')
+      return { success: false, message: '매장 정보가 필요합니다', data: [] }
+    }
+    
+    // 메뉴 서비스 임포트
+    const { menuService } = await import('@/services/menu')
+    
+    console.log('메뉴 목록 API 호출, 매장 ID:', storeId)
+    const result = await menuService.getMenus(storeId)
+    
+    console.log('=== Store 스토어: 메뉴 API 응답 분석 ===')
+    console.log('Result:', result)
+    console.log('Result.success:', result.success)
+    console.log('Result.data:', result.data)
+    console.log('Result.message:', result.message)
+    
+    if (result.success && result.data) {
+      // ✅ 백엔드 MenuResponse의 필드명에 맞게 매핑 수정
+      const menusWithId = (result.data || []).map(menu => {
+        // ID 필드가 확실히 있도록 보장
+        const menuId = menu.menuId || menu.id
+        
+        if (!menuId) {
+          console.warn('⚠️ 메뉴 ID가 없는 항목 발견:', menu)
+        }
+        
+        console.log('메뉴 원본 데이터:', menu) // 디버깅용
+        
+        return {
+          ...menu,
+          id: menuId, // ✅ id 필드 확실히 설정
+          menuId: menuId, // ✅ menuId 필드도 설정
+          // 기타 필드들 보장
+          menuName: menu.menuName || menu.name || '이름 없음',
+          category: menu.category || '기타',
+          price: menu.price || 0,
+          description: menu.description || '',
+          available: menu.available !== undefined ? menu.available : true,
+          recommended: menu.recommended !== undefined ? menu.recommended : false,
+          // ✅ 이미지 필드 수정: 백엔드는 'image' 필드 사용
+          imageUrl: menu.image || menu.imageUrl || '/images/menu-placeholder.png',
+          image: menu.image || menu.imageUrl, // 백엔드 호환성
+          createdAt: menu.createdAt,
+          updatedAt: menu.updatedAt
+        }
+      })
       
-      try {
-        // 매장 정보에서 storeId 가져오기
-        const storeId = this.storeInfo?.storeId
-        if (!storeId) {
-          console.warn('매장 ID가 없습니다. 매장 정보를 먼저 조회해주세요.')
-          return { success: false, message: '매장 정보가 필요합니다', data: [] }
-        }
-        
-        // 메뉴 서비스 임포트
-        const { menuService } = await import('@/services/menu')
-        
-        console.log('메뉴 목록 API 호출, 매장 ID:', storeId)
-        const result = await menuService.getMenus(storeId)
-        
-        console.log('=== Store 스토어: 메뉴 API 응답 분석 ===')
-        console.log('Result:', result)
-        console.log('Result.success:', result.success)
-        console.log('Result.data:', result.data)
-        console.log('Result.message:', result.message)
-        
-        if (result.success && result.data) {
-          // ✅ 메뉴 데이터 ID 필드 보장 처리
-          const menusWithId = (result.data || []).map(menu => {
-            // ID 필드가 확실히 있도록 보장
-            const menuId = menu.menuId || menu.id
-            
-            if (!menuId) {
-              console.warn('⚠️ 메뉴 ID가 없는 항목 발견:', menu)
-            }
-            
-            return {
-              ...menu,
-              id: menuId, // ✅ id 필드 확실히 설정
-              menuId: menuId, // ✅ menuId 필드도 설정
-              // 기타 필드들 보장
-              menuName: menu.menuName || menu.name || '이름 없음',
-              category: menu.category || '기타',
-              price: menu.price || 0,
-              description: menu.description || '',
-              available: menu.available !== undefined ? menu.available : true,
-              recommended: menu.recommended !== undefined ? menu.recommended : false,
-              imageUrl: menu.imageUrl || '/images/menu-placeholder.png'
-            }
-          })
-          
-          // 메뉴 목록이 있는 경우
-          console.log('✅ 메뉴 목록 설정 (ID 보장됨):', menusWithId)
-          this.menus = menusWithId
-          return { success: true, data: menusWithId }
-        } else {
-          // 메뉴가 없거나 조회 실패한 경우
-          console.log('⚠️ 메뉴 목록 없음 또는 조회 실패')
-          this.menus = []
-          
-          if (result.message === '등록된 메뉴가 없습니다') {
-            return { success: false, message: '등록된 메뉴가 없습니다', data: [] }
-          } else {
-            return { success: false, message: result.message || '메뉴 목록 조회에 실패했습니다', data: [] }
-          }
-        }
-      } catch (error) {
-        console.error('=== Store 스토어: 메뉴 목록 조회 실패 ===')
-        console.error('Error:', error)
-        
-        this.menus = []
-        return { success: false, message: error.message || '메뉴 목록을 불러오는데 실패했습니다', data: [] }
+      // 메뉴 목록이 있는 경우
+      console.log('✅ 메뉴 목록 설정 (이미지 필드 매핑 완료):', menusWithId)
+      this.menus = menusWithId
+      return { success: true, data: menusWithId }
+    } else {
+      // 메뉴가 없거나 조회 실패한 경우
+      console.log('⚠️ 메뉴 목록 없음 또는 조회 실패')
+      this.menus = []
+      
+      if (result.message === '등록된 메뉴가 없습니다') {
+        return { success: false, message: '등록된 메뉴가 없습니다', data: [] }
+      } else {
+        return { success: false, message: result.message || '메뉴 목록 조회에 실패했습니다', data: [] }
       }
-    },
+    }
+    } catch (error) {
+      console.error('=== Store 스토어: 메뉴 목록 조회 실패 ===')
+      console.error('Error:', error)
+      
+      this.menus = []
+      return { success: false, message: error.message || '메뉴 목록을 불러오는데 실패했습니다', data: [] }
+    }
+  },
 
     /**
      * 매장 등록

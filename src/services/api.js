@@ -1,4 +1,5 @@
-//* src/services/api.js - 수정된 API URL 설정
+//* src/services/api.js - 수정된 버전 (createImageApiInstance 함수 추가)
+
 import axios from 'axios'
 
 // 런타임 환경 설정에서 API URL 가져오기
@@ -11,10 +12,9 @@ const getApiUrls = () => {
     STORE_URL: config.STORE_URL || 'http://localhost:8082/api/store',
     CONTENT_URL: config.CONTENT_URL || 'http://localhost:8083/api/content',
     MENU_URL: config.MENU_URL || 'http://localhost:8082/api/menu',
-    // ⚠️ 수정: 매출 API는 store 서비스 (포트 8082)
     SALES_URL: config.SALES_URL || 'http://localhost:8082/api/sales',
-    // ⚠️ 수정: 추천 API는 ai-recommend 서비스 (포트 8084)
-    RECOMMEND_URL: config.RECOMMEND_URL || 'http://localhost:8084/api/recommendations'
+    RECOMMEND_URL: config.RECOMMEND_URL || 'http://localhost:8084/api/recommendations',
+    IMAGE_URL: config.IMAGE_URL || 'http://localhost:8082/api/images'
   }
 }
 
@@ -37,7 +37,6 @@ const createApiInstance = (baseURL) => {
         config.headers.Authorization = `Bearer ${token}`
       }
       
-      // ⚠️ 추가: 요청 로깅 (개발 환경에서만)
       if (import.meta.env.DEV) {
         console.log(`🌐 [API_REQ] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`)
       }
@@ -52,14 +51,12 @@ const createApiInstance = (baseURL) => {
   // 응답 인터셉터 - 토큰 갱신 및 에러 처리
   instance.interceptors.response.use(
     (response) => {
-      // ⚠️ 추가: 응답 로깅 (개발 환경에서만)
       if (import.meta.env.DEV) {
         console.log(`✅ [API_RES] ${response.status} ${response.config?.method?.toUpperCase()} ${response.config?.url}`)
       }
       return response
     },
     async (error) => {
-      // ⚠️ 추가: 에러 로깅 (개발 환경에서만)
       if (import.meta.env.DEV) {
         console.error(`❌ [API_ERR] ${error.response?.status || 'Network'} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, error.response?.data)
       }
@@ -102,10 +99,155 @@ const createApiInstance = (baseURL) => {
   return instance
 }
 
+// ✅ 이미지 업로드 전용 API 인스턴스 생성 함수 추가
+const createImageApiInstance = (baseURL) => {
+  const instance = axios.create({
+    baseURL,
+    timeout: 60000, // 이미지 업로드는 시간이 더 걸릴 수 있음
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  // 요청 인터셉터 - JWT 토큰 자동 추가
+  instance.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('accessToken')
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+      
+      if (import.meta.env.DEV) {
+        console.log(`🌐 [IMG_REQ] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`)
+        console.log('FormData 포함:', config.data instanceof FormData)
+      }
+      
+      return config
+    },
+    (error) => {
+      return Promise.reject(error)
+    },
+  )
+
+  // 응답 인터셉터
+  instance.interceptors.response.use(
+    (response) => {
+      if (import.meta.env.DEV) {
+        console.log(`✅ [IMG_RES] ${response.status} ${response.config?.method?.toUpperCase()} ${response.config?.url}`)
+      }
+      return response
+    },
+    async (error) => {
+      if (import.meta.env.DEV) {
+        console.error(`❌ [IMG_ERR] ${error.response?.status || 'Network'} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, error.response?.data)
+      }
+      
+      // 토큰 갱신 로직은 기존과 동일
+      const originalRequest = error.config
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true
+        try {
+          const refreshToken = localStorage.getItem('refreshToken')
+          if (refreshToken) {
+            const refreshResponse = await axios.post(`${getApiUrls().AUTH_URL}/refresh`, {
+              refreshToken,
+            })
+            const { accessToken, refreshToken: newRefreshToken } = refreshResponse.data.data
+            localStorage.setItem('accessToken', accessToken)
+            localStorage.setItem('refreshToken', newRefreshToken)
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`
+            return instance(originalRequest)
+          }
+        } catch (refreshError) {
+          localStorage.removeItem('accessToken')
+          localStorage.removeItem('refreshToken')
+          localStorage.removeItem('userInfo')
+          window.location.href = '/login'
+        }
+      }
+      return Promise.reject(error)
+    },
+  )
+
+  return instance
+}
+
+// ✅ 메뉴 이미지 업로드 전용 API 인스턴스 생성 함수 추가
+const createMenuImageApiInstance = (baseURL) => {
+  const instance = axios.create({
+    baseURL,
+    timeout: 60000, // 이미지 업로드는 시간이 더 걸릴 수 있음
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  // 요청 인터셉터 - JWT 토큰 자동 추가
+  instance.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('accessToken')
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+      
+      if (import.meta.env.DEV) {
+        console.log(`🌐 [MENU_IMG_REQ] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`)
+        console.log('FormData 포함:', config.data instanceof FormData)
+      }
+      
+      return config
+    },
+    (error) => {
+      return Promise.reject(error)
+    },
+  )
+
+  // 응답 인터셉터
+  instance.interceptors.response.use(
+    (response) => {
+      if (import.meta.env.DEV) {
+        console.log(`✅ [MENU_IMG_RES] ${response.status} ${response.config?.method?.toUpperCase()} ${response.config?.url}`)
+      }
+      return response
+    },
+    async (error) => {
+      if (import.meta.env.DEV) {
+        console.error(`❌ [MENU_IMG_ERR] ${error.response?.status || 'Network'} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, error.response?.data)
+      }
+      
+      // 토큰 갱신 로직은 기존과 동일
+      const originalRequest = error.config
+      if (error.response?.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true
+        try {
+          const refreshToken = localStorage.getItem('refreshToken')
+          if (refreshToken) {
+            const refreshResponse = await axios.post(`${getApiUrls().AUTH_URL}/refresh`, {
+              refreshToken,
+            })
+            const { accessToken, refreshToken: newRefreshToken } = refreshResponse.data.data
+            localStorage.setItem('accessToken', accessToken)
+            localStorage.setItem('refreshToken', newRefreshToken)
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`
+            return instance(originalRequest)
+          }
+        } catch (refreshError) {
+          localStorage.removeItem('accessToken')
+          localStorage.removeItem('refreshToken')
+          localStorage.removeItem('userInfo')
+          window.location.href = '/login'
+        }
+      }
+      return Promise.reject(error)
+    },
+  )
+
+  return instance
+}
+
 // API 인스턴스들 생성
 const apiUrls = getApiUrls()
 
-// ⚠️ 추가: API URL 확인 로깅 (개발 환경에서만)
 if (import.meta.env.DEV) {
   console.log('🔧 [API_CONFIG] API URLs 설정:', apiUrls)
 }
@@ -115,8 +257,11 @@ export const authApi = createApiInstance(apiUrls.AUTH_URL)
 export const storeApi = createApiInstance(apiUrls.STORE_URL)
 export const contentApi = createApiInstance(apiUrls.CONTENT_URL)
 export const menuApi = createApiInstance(apiUrls.MENU_URL)
+export const menuImageApi = createMenuImageApiInstance(apiUrls.MENU_URL) // ✅ 추가
 export const salesApi = createApiInstance(apiUrls.SALES_URL)
 export const recommendApi = createApiInstance(apiUrls.RECOMMEND_URL)
+export const imageApi = createApiInstance(apiUrls.IMAGE_URL)
+export const apiWithImage = imageApi // 별칭 (기존 코드 호환성)
 
 // 기본 API 인스턴스 (Gateway URL 사용)
 export const api = createApiInstance(apiUrls.GATEWAY_URL)
@@ -185,7 +330,7 @@ export const formatSuccessResponse = (data, message = '요청이 성공적으로
   }
 }
 
-// ⚠️ 추가: API 상태 확인 함수
+// API 상태 확인 함수
 export const checkApiHealth = async () => {
   const results = {}
   
@@ -214,11 +359,14 @@ export const checkApiHealth = async () => {
   return results
 }
 
-// ⚠️ 추가: 개발 환경에서 전역 노출
+// 개발 환경에서 전역 노출
 if (import.meta.env.DEV) {
   window.__api_debug__ = {
     urls: apiUrls,
-    instances: { memberApi, authApi, storeApi, contentApi, menuApi, salesApi, recommendApi },
+    instances: { 
+      memberApi, authApi, storeApi, contentApi, menuApi, menuImageApi, 
+      salesApi, recommendApi, imageApi 
+    },
     checkHealth: checkApiHealth
   }
   console.log('🔧 [DEBUG] API 인스턴스가 window.__api_debug__에 노출됨')
