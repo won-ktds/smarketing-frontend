@@ -121,6 +121,21 @@ podTemplate(
                     export resources_limits_cpu=${props.resources_limits_cpu}
                     export resources_limits_memory=${props.resources_limits_memory}
                     
+                    # API URLs도 export (혹시 사용할 수도 있으니)
+                    export auth_url=${props.auth_url}
+                    export member_url=${props.member_url}
+                    export store_url=${props.store_url}
+                    export menu_url=${props.menu_url}
+                    export sales_url=${props.sales_url}
+                    export content_url=${props.content_url}
+                    export recommend_url=${props.recommend_url}
+                    
+                    echo "=== 환경변수 확인 ==="
+                    echo "namespace: \$namespace"
+                    echo "ingress_host: \$ingress_host"
+                    echo "export_port: \$export_port"
+                    echo "========================="
+                    
                     envsubst < deployment/${manifest}.template > deployment/${manifest}
                     echo "Generated manifest file:"
                     cat deployment/${manifest}
