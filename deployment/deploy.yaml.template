@@ -140,7 +140,7 @@ metadata:
   labels:
     app: smarketing-frontend
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
   - port: 80
     targetPort: ${export_port}
@@ -157,6 +157,7 @@ metadata:
   namespace: ${namespace}
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   rules:
   - host: ${ingress_host}

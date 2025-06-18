@@ -1,18 +1,62 @@
-//* public/runtime-env.js - 백엔드 API 경로에 맞게 수정
+//* public/runtime-env.js - 배포 환경 우선 설정
 console.log('=== RUNTIME-ENV.JS 로드됨 ===');
 
+// 배포 환경 감지 함수
+const isProduction = () => {
+  // 프로덕션 환경 감지 로직
+  return window.location.hostname !== 'localhost' && 
+         window.location.hostname !== '127.0.0.1' &&
+         !window.location.hostname.includes('dev');
+};
+
+// 기본 ingress host 설정 (deploy_env_vars에서 설정된 값)
+const DEFAULT_INGRESS_HOST = 'smarketing.20.249.184.228.nip.io';
+
+// 환경별 API URL 설정
+const getBaseUrl = () => {
+  if (isProduction()) {
+    // 프로덕션: ingress host 사용
+    return `http://${DEFAULT_INGRESS_HOST}`;
+  } else {
+    // 개발환경: localhost 사용
+    return '';
+  }
+};
+
+const baseUrl = getBaseUrl();
+
 window.__runtime_config__ = {
-  // ⚠️ 수정: 백엔드 API 구조에 맞게 URL 설정
-  AUTH_URL: 'http://localhost:8081/api/auth',
-  MEMBER_URL: 'http://localhost:8081/api/member',  
-  STORE_URL: 'http://localhost:8082/api/store',
-  MENU_URL: 'http://localhost:8082/api/menu',
-  SALES_URL: 'http://localhost:8082/api/sales',  // store 서비스
-  CONTENT_URL: 'http://localhost:8083/api/content',
-  RECOMMEND_URL: 'http://localhost:8084/api/recommendations', // ⚠️ 수정: 올바른 경로
+  // 프로덕션 환경에서는 ingress host 사용, 개발환경에서는 localhost
+  AUTH_URL: isProduction() ? 
+    `${baseUrl}/api/auth` : 
+    'http://localhost:8081/api/auth',
+    
+  MEMBER_URL: isProduction() ? 
+    `${baseUrl}/api/member` : 
+    'http://localhost:8081/api/member',
+    
+  STORE_URL: isProduction() ? 
+    `${baseUrl}/api/store` : 
+    'http://localhost:8082/api/store',
+    
+  MENU_URL: isProduction() ? 
+    `${baseUrl}/api/menu` : 
+    'http://localhost:8082/api/menu',
+    
+  SALES_URL: isProduction() ? 
+    `${baseUrl}/api/sales` : 
+    'http://localhost:8082/api/sales',
+    
+  CONTENT_URL: isProduction() ? 
+    `${baseUrl}/api/content` : 
+    'http://localhost:8083/api/content',
+    
+  RECOMMEND_URL: isProduction() ? 
+    `${baseUrl}/api/recommend` : 
+    'http://localhost:8084/api/recommendations',
   
-  // Gateway URL (운영 환경용)
-  GATEWAY_URL: 'http://20.1.2.3',
+  // Gateway URL
+  GATEWAY_URL: isProduction() ? baseUrl : 'http://20.1.2.3',
   
   // 기능 플래그
   FEATURES: {
@@ -20,17 +64,17 @@ window.__runtime_config__ = {
     PUSH_NOTIFICATIONS: true,
     SOCIAL_LOGIN: false,
     MULTI_LANGUAGE: false,
-    API_HEALTH_CHECK: true, // ⚠️ 추가
+    API_HEALTH_CHECK: true,
   },
 
   // 환경 설정
-  ENV: 'development',
-  DEBUG: true,
+  ENV: isProduction() ? 'production' : 'development',
+  DEBUG: !isProduction(),
 
-  // ⚠️ 추가: API 타임아웃 설정
+  // API 타임아웃 설정
   API_TIMEOUT: 30000,
   
-  // ⚠️ 추가: 재시도 설정
+  // 재시도 설정
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
 
@@ -38,7 +82,7 @@ window.__runtime_config__ = {
   VERSION: '1.0.0',
   BUILD_DATE: new Date().toISOString(),
   
-  // ⚠️ 추가: 백엔드 서비스 포트 정보 (디버깅용)
+  // 백엔드 서비스 포트 정보 (디버깅용)
   BACKEND_PORTS: {
     AUTH: 8081,
     STORE: 8082,
@@ -47,7 +91,7 @@ window.__runtime_config__ = {
   }
 };
 
-// ⚠️ 추가: 설정 검증 함수
+// 설정 검증 함수
 const validateConfig = () => {
   const config = window.__runtime_config__;
   const requiredUrls = ['AUTH_URL', 'STORE_URL', 'SALES_URL', 'RECOMMEND_URL'];
@@ -63,8 +107,13 @@ const validateConfig = () => {
   return true;
 };
 
-// ⚠️ 추가: 개발 환경에서만 상세 로깅
+// 환경별 상세 로깅
 if (window.__runtime_config__.DEBUG) {
+  console.log('=== 현재 환경 정보 ===');
+  console.log('🌍 Environment:', window.__runtime_config__.ENV);
+  console.log('🏠 Hostname:', window.location.hostname);
+  console.log('🔧 Is Production:', isProduction());
+  
   console.log('=== 백엔드 API URLs ===');
   console.log('🔐 AUTH_URL:', window.__runtime_config__.AUTH_URL);
   console.log('🏪 STORE_URL:', window.__runtime_config__.STORE_URL);
@@ -74,12 +123,9 @@ if (window.__runtime_config__.DEBUG) {
   
   console.log('=== 설정 상세 정보 ===');
   console.log('전체 설정:', window.__runtime_config__);
-  
-  // 설정 검증 실행
-  validateConfig();
 }
 
-// ⚠️ 추가: 전역 설정 접근 함수
+// 전역 설정 접근 함수
 window.getApiConfig = () => window.__runtime_config__;
 window.getApiUrl = (serviceName) => {
   const config = window.__runtime_config__;
@@ -87,4 +133,7 @@ window.getApiUrl = (serviceName) => {
   return config[urlKey] || null;
 };
 
-console.log('✅ [RUNTIME] 런타임 설정 로드 완료');
+// 설정 검증 실행
+validateConfig();
+
+console.log(`✅ [RUNTIME] 런타임 설정 로드 완료 (${window.__runtime_config__.ENV} 환경)`);

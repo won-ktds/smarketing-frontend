@@ -8,14 +8,14 @@ data:
     console.log('=== RUNTIME-ENV.JS 로드됨 (배포 환경) ===');
 
     window.__runtime_config__ = {
-      // 백엔드 API 구조에 맞게 URL 설정
+      // 백엔드 API 구조에 맞게 URL 설정 - ingress host 사용
       AUTH_URL: 'http://${ingress_host}/api/auth',
       MEMBER_URL: 'http://${ingress_host}/api/member',
       STORE_URL: 'http://${ingress_host}/api/store',
       MENU_URL: 'http://${ingress_host}/api/menu',
       SALES_URL: 'http://${ingress_host}/api/sales',
       CONTENT_URL: 'http://${ingress_host}/api/content',
-      RECOMMEND_URL: 'http://${ingress_host}/api/recommendations',
+      RECOMMEND_URL: 'http://${ingress_host}/api/recommend',
       
       // Gateway URL (운영 환경)
       GATEWAY_URL: 'http://${ingress_host}',
