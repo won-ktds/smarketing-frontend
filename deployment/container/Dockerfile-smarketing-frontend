@@ -24,14 +24,20 @@ WORKDIR /app
 # Copy package files
 COPY ${PROJECT_FOLDER}/package*.json ./
 
-# Install all dependencies (use npm install instead of npm ci)
+# Install all dependencies
 RUN npm install
 
 # Copy source code
 COPY ${PROJECT_FOLDER} .
 
+# ⚠️ 중요: public/runtime-env.js 삭제 (ConfigMap으로 대체)
+RUN rm -f public/runtime-env.js
+
 # Build the application
 RUN NODE_ENV=production npm run build
+
+# ⚠️ 빌드된 파일에서도 runtime-env.js 삭제
+RUN rm -f dist/runtime-env.js
 
 # Production stage
 FROM nginx:alpine AS production
@@ -41,8 +47,11 @@ ARG EXPORT_PORT=18080
 # Copy built files from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration (이미 포트가 18080으로 설정됨)
+# Copy nginx configuration
 COPY deployment/container/nginx.conf /etc/nginx/conf.d/default.conf
+
+# ⚠️ 더미 runtime-env.js 생성 (ConfigMap으로 덮어씌워질 예정)
+RUN echo "console.log('Runtime config will be loaded from ConfigMap');" > /usr/share/nginx/html/runtime-env.js
 
 EXPOSE ${EXPORT_PORT}
 
