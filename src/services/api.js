@@ -6,15 +6,15 @@ const getApiUrls = () => {
   const config = window.__runtime_config__ || {}
   return {
     GATEWAY_URL: config.GATEWAY_URL || 'http://20.1.2.3',
-    AUTH_URL: config.AUTH_URL || 'http://smarketing.20.249.184.228.nip.io/api/auth',
-    MEMBER_URL: config.MEMBER_URL || 'http://smarketing.20.249.184.228.nip.io/api/member',
-    STORE_URL: config.STORE_URL || 'http://smarketing.20.249.184.228.nip.io/api/store',
-    CONTENT_URL: config.CONTENT_URL || 'http://smarketing.20.249.184.228.nip.io/api/content',
-    MENU_URL: config.MENU_URL || 'http://smarketing.20.249.184.228.nip.io/api/menu',
+    AUTH_URL: config.AUTH_URL || 'http://localhost:8081/api/auth',
+    MEMBER_URL: config.MEMBER_URL || 'http://localhost:8081/api/member',
+    STORE_URL: config.STORE_URL || 'http://localhost:8082/api/store',
+    CONTENT_URL: config.CONTENT_URL || 'http://localhost:8083/api/content',
+    MENU_URL: config.MENU_URL || 'http://localhost:8082/api/menu',
     // ⚠️ 수정: 매출 API는 store 서비스 (포트 8082)
-    SALES_URL: config.SALES_URL || 'http://smarketing.20.249.184.228.nip.io/api/sales',
+    SALES_URL: config.SALES_URL || 'http://localhost:8082/api/sales',
     // ⚠️ 수정: 추천 API는 ai-recommend 서비스 (포트 8084)
-    RECOMMEND_URL: config.RECOMMEND_URL || 'http://smarketing.20.249.184.228.nip.io/api/recommendations'
+    RECOMMEND_URL: config.RECOMMEND_URL || 'http://localhost:8084/api/recommendations'
   }
 }
 

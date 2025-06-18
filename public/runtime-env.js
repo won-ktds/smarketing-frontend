@@ -1,24 +1,24 @@
-//* public/runtime-env.js - 배포 환경 우선 설정
-console.log('=== RUNTIME-ENV.JS 로드됨 ===');
+//* public/runtime-env.js - Production environment priority configuration
+console.log('=== RUNTIME-ENV.JS LOADED ===');
 
-// 배포 환경 감지 함수
+// Production environment detection function
 const isProduction = () => {
-  // 프로덕션 환경 감지 로직
+  // Production environment detection logic
   return window.location.hostname !== 'localhost' && 
          window.location.hostname !== '127.0.0.1' &&
          !window.location.hostname.includes('dev');
 };
 
-// 기본 ingress host 설정 (deploy_env_vars에서 설정된 값)
+// Default ingress host setting (from deploy_env_vars)
 const DEFAULT_INGRESS_HOST = 'smarketing.20.249.184.228.nip.io';
 
-// 환경별 API URL 설정
+// Environment-specific API URL configuration
 const getBaseUrl = () => {
   if (isProduction()) {
-    // 프로덕션: ingress host 사용
+    // Production: use ingress host
     return `http://${DEFAULT_INGRESS_HOST}`;
   } else {
-    // 개발환경: localhost 사용
+    // Development: use localhost
     return '';
   }
 };
@@ -26,7 +26,7 @@ const getBaseUrl = () => {
 const baseUrl = getBaseUrl();
 
 window.__runtime_config__ = {
-  // 프로덕션 환경에서는 ingress host 사용, 개발환경에서는 localhost
+  // Use ingress host in production, localhost in development
   AUTH_URL: isProduction() ? 
     `${baseUrl}/api/auth` : 
     'http://localhost:8081/api/auth',
@@ -58,7 +58,7 @@ window.__runtime_config__ = {
   // Gateway URL
   GATEWAY_URL: isProduction() ? baseUrl : 'http://20.1.2.3',
   
-  // 기능 플래그
+  // Feature flags
   FEATURES: {
     ANALYTICS: true,
     PUSH_NOTIFICATIONS: true,
@@ -67,22 +67,22 @@ window.__runtime_config__ = {
     API_HEALTH_CHECK: true,
   },
 
-  // 환경 설정
+  // Environment settings
   ENV: isProduction() ? 'production' : 'development',
   DEBUG: !isProduction(),
 
-  // API 타임아웃 설정
+  // API timeout settings
   API_TIMEOUT: 30000,
   
-  // 재시도 설정
+  // Retry settings
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
 
-  // 버전 정보
+  // Version information
   VERSION: '1.0.0',
   BUILD_DATE: new Date().toISOString(),
   
-  // 백엔드 서비스 포트 정보 (디버깅용)
+  // Backend service port information (for debugging)
   BACKEND_PORTS: {
     AUTH: 8081,
     STORE: 8082,
@@ -91,41 +91,41 @@ window.__runtime_config__ = {
   }
 };
 
-// 설정 검증 함수
+// Configuration validation function
 const validateConfig = () => {
   const config = window.__runtime_config__;
   const requiredUrls = ['AUTH_URL', 'STORE_URL', 'SALES_URL', 'RECOMMEND_URL'];
   
   for (const url of requiredUrls) {
     if (!config[url]) {
-      console.error(`❌ [CONFIG] 필수 URL 누락: ${url}`);
+      console.error(`Missing required URL: ${url}`);
       return false;
     }
   }
   
-  console.log('✅ [CONFIG] 설정 검증 완료');
+  console.log('Config validation completed');
   return true;
 };
 
-// 환경별 상세 로깅
+// Environment-specific detailed logging
 if (window.__runtime_config__.DEBUG) {
-  console.log('=== 현재 환경 정보 ===');
-  console.log('🌍 Environment:', window.__runtime_config__.ENV);
-  console.log('🏠 Hostname:', window.location.hostname);
-  console.log('🔧 Is Production:', isProduction());
+  console.log('=== Current Environment Info ===');
+  console.log('Environment:', window.__runtime_config__.ENV);
+  console.log('Hostname:', window.location.hostname);
+  console.log('Is Production:', isProduction());
   
-  console.log('=== 백엔드 API URLs ===');
-  console.log('🔐 AUTH_URL:', window.__runtime_config__.AUTH_URL);
-  console.log('🏪 STORE_URL:', window.__runtime_config__.STORE_URL);
-  console.log('📊 SALES_URL:', window.__runtime_config__.SALES_URL);
-  console.log('🤖 RECOMMEND_URL:', window.__runtime_config__.RECOMMEND_URL);
-  console.log('📄 CONTENT_URL:', window.__runtime_config__.CONTENT_URL);
+  console.log('=== Backend API URLs ===');
+  console.log('AUTH_URL:', window.__runtime_config__.AUTH_URL);
+  console.log('STORE_URL:', window.__runtime_config__.STORE_URL);
+  console.log('SALES_URL:', window.__runtime_config__.SALES_URL);
+  console.log('RECOMMEND_URL:', window.__runtime_config__.RECOMMEND_URL);
+  console.log('CONTENT_URL:', window.__runtime_config__.CONTENT_URL);
   
-  console.log('=== 설정 상세 정보 ===');
-  console.log('전체 설정:', window.__runtime_config__);
+  console.log('=== Detailed Configuration ===');
+  console.log('Full config:', window.__runtime_config__);
 }
 
-// 전역 설정 접근 함수
+// Global configuration access functions
 window.getApiConfig = () => window.__runtime_config__;
 window.getApiUrl = (serviceName) => {
   const config = window.__runtime_config__;
@@ -133,7 +133,7 @@ window.getApiUrl = (serviceName) => {
   return config[urlKey] || null;
 };
 
-// 설정 검증 실행
+// Execute configuration validation
 validateConfig();
 
-console.log(`✅ [RUNTIME] 런타임 설정 로드 완료 (${window.__runtime_config__.ENV} 환경)`);
+console.log(`Runtime configuration loaded successfully (${window.__runtime_config__.ENV} environment)`);
