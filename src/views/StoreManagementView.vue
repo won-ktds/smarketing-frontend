@@ -356,8 +356,14 @@
     </div>
 
     <!-- 매장 등록/수정 다이얼로그 -->
-    <v-dialog v-model="showCreateDialog" max-width="600" persistent>
-      <v-card>
+    <v-dialog 
+      v-model="showCreateDialog" 
+      max-width="600" 
+      persistent
+      :style="{ zIndex: 2000 }"
+      class="store-dialog"
+    >
+      <v-card class="store-dialog-card">
         <v-card-title class="pa-4">
           <div class="d-flex align-center">
             <v-icon class="mr-2" color="primary">mdi-store</v-icon>
@@ -367,7 +373,8 @@
         
         <v-divider />
         
-        <v-card-text class="pa-4">
+        <!-- ✅ 스크롤 가능한 컨텐츠 영역 -->
+        <v-card-text class="pa-4 store-dialog-content">
           <v-form ref="storeFormRef" v-model="formValid">
             <v-row>
               <v-col cols="12">
@@ -481,7 +488,7 @@
                   label="매장 소개"
                   variant="outlined"
                   density="compact"
-                  rows="3"
+                  rows="2"
                 />
               </v-col>
             </v-row>
@@ -506,7 +513,7 @@
           </v-btn>
         </v-card-actions>
       </v-card>
-    </v-dialog>
+</v-dialog>
 
     <!-- 메뉴 등록/수정 다이얼로그 -->
     <v-dialog 
@@ -778,7 +785,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useStoreStore } from '@/store/index'
 
 const storeStore = useStoreStore()
@@ -804,6 +811,7 @@ const menuFormValid = ref(false)
 // 이미지 관련 상태
 const selectedImageFile = ref(null)
 const previewImageUrl = ref('')
+const forceShowFileInput = ref(false) // ✅ 추가: 파일 입력 강제 표시용
 
 // 메뉴 폼 데이터
 const menuFormData = ref({
@@ -881,8 +889,13 @@ const filteredMenus = computed(() => {
   return filtered
 })
 
-// 이미지 미리보기 표시 조건 (computed)
+// 이미지 미리보기 표시 조건 수정
 const shouldShowImagePreview = computed(() => {
+  // ✅ 강제로 파일 입력을 보여줘야 하는 경우
+  if (forceShowFileInput.value) {
+    return null
+  }
+  
   // 1순위: 새로 선택한 이미지 미리보기
   if (previewImageUrl.value) {
     return previewImageUrl.value
@@ -895,7 +908,6 @@ const shouldShowImagePreview = computed(() => {
   
   return null
 })
-
 // ===== 유틸리티 함수들 =====
 
 /**
@@ -1016,13 +1028,14 @@ watch(selectedImageFile, (newFile, oldFile) => {
   }
 }, { immediate: false })
 
-// v-file-input의 modelValue 변경 감지 함수
+// ✅ 파일 입력 변경 감지 함수 개선
 const onFileInputChange = (file) => {
   console.log('=== v-file-input v-model 변경 감지 ===')
   console.log('전달받은 file:', file)
   
   if (file) {
-    // selectedImageFile에 할당
+    // 파일이 선택되면 강제 표시 모드 해제
+    forceShowFileInput.value = false
     selectedImageFile.value = file
     onImageFileSelected(file)
   } else {
@@ -1158,17 +1171,21 @@ const uploadMenuImage = async (menuId) => {
   }
 }
 
-// 이미지 선택 초기화 함수
+// ✅ 개선된 이미지 선택 초기화 함수
 const resetImageSelection = () => {
-  console.log('이미지 선택 초기화')
+  console.log('=== 이미지 선택 초기화 시작 ===')
+  
+  // 1. 모든 이미지 관련 상태 초기화
   selectedImageFile.value = null
   previewImageUrl.value = ''
   
-  // v-file-input도 초기화하기 위해 DOM 조작 추가
-  const fileInput = document.querySelector('input[type="file"]')
-  if (fileInput) {
-    fileInput.value = ''
-  }
+  // 2. 강제로 파일 입력 표시
+  forceShowFileInput.value = true
+  
+  // 3. Vue의 반응성을 위해 nextTick 사용
+  nextTick(() => {
+    console.log('✅ 이미지 선택 초기화 완료 - 파일 입력 표시됨')
+  })
 }
 
 // 드래그앤드롭 처리
@@ -1206,7 +1223,7 @@ const resetForm = () => {
   }
 }
 
-// 메뉴 폼 리셋 함수
+// ✅ 메뉴 폼 리셋 함수 개선
 const resetMenuForm = () => {
   console.log('=== 메뉴 폼 리셋 ===')
   
@@ -1225,6 +1242,7 @@ const resetMenuForm = () => {
   // 이미지 관련 상태 초기화
   selectedImageFile.value = null
   previewImageUrl.value = ''
+  forceShowFileInput.value = false // ✅ 추가
   
   if (menuFormRef.value) {
     menuFormRef.value.resetValidation()
@@ -1273,7 +1291,7 @@ const openCreateMenuDialog = () => {
   showMenuDialog.value = true
 }
 
-// 메뉴 수정 함수
+// ✅ 메뉴 수정 함수에서 이미지 상태 올바르게 설정
 const editMenu = (menu) => {
   console.log('=== 메뉴 수정 호출 ===')
   console.log('전달받은 메뉴 객체:', menu)
@@ -1309,11 +1327,13 @@ const editMenu = (menu) => {
     imageUrl: menu.image || menu.imageUrl || ''
   }
   
-  // 이미지 상태 초기화
+  // ✅ 이미지 상태 올바르게 초기화
   selectedImageFile.value = null
   previewImageUrl.value = ''
+  forceShowFileInput.value = false // 기존 이미지를 먼저 보여줌
   
   console.log('✅ 메뉴 수정 폼 데이터 설정 완료:', menuFormData.value)
+  console.log('✅ 기존 이미지 URL:', menuFormData.value.imageUrl)
   showMenuDialog.value = true
 }
 
@@ -1372,6 +1392,8 @@ const cancelMenuForm = () => {
 
 // ===== 저장 관련 함수들 =====
 
+// ✅ StoreManagementView.vue의 saveStore 함수 수정
+
 // 매장 정보 저장 함수
 const saveStore = async () => {
   if (!storeFormRef.value) {
@@ -1389,17 +1411,19 @@ const saveStore = async () => {
   
   try {
     console.log('매장 정보 저장 시작')
+    console.log('폼 데이터:', formData.value)
     
-    // 백엔드 형식에 맞는 데이터 구조로 변환
+    // ✅ 백엔드 형식에 맞는 데이터 구조로 변환
     const storeData = {
       storeName: formData.value.storeName,
       businessType: formData.value.businessType,
       address: formData.value.address,
       phoneNumber: formData.value.phoneNumber || '',
-      openTime: formData.value.openTime || '09:00',
-      closeTime: formData.value.closeTime || '21:00',
-      holidays: Array.isArray(formData.value.holidays) ? 
-        formData.value.holidays.join(',') : '',
+      // ✅ 수정: 시간 범위 문자열로 생성
+      businessHours: `${formData.value.openTime || '09:00'}-${formData.value.closeTime || '21:00'}`,
+      // ✅ 수정: 휴무일 배열을 문자열로 변환
+      closedDays: Array.isArray(formData.value.holidays) ? 
+        formData.value.holidays.join(',') : (formData.value.holidays || ''),
       seatCount: parseInt(formData.value.seatCount) || 0,
       instaAccounts: formData.value.instagramUrl || '',
       blogAccounts: formData.value.blogUrl || '',
@@ -1407,11 +1431,19 @@ const saveStore = async () => {
     }
     
     console.log('백엔드로 전송할 데이터:', storeData)
+    console.log('=== 필드별 상세 정보 ===')
+    console.log('storeName:', storeData.storeName, '(타입:', typeof storeData.storeName, ')')
+    console.log('businessType:', storeData.businessType, '(타입:', typeof storeData.businessType, ')')
+    console.log('businessHours:', storeData.businessHours, '(타입:', typeof storeData.businessHours, ')')
+    console.log('closedDays:', storeData.closedDays, '(타입:', typeof storeData.closedDays, ')')
+    console.log('seatCount:', storeData.seatCount, '(타입:', typeof storeData.seatCount, ')')
     
     let result
     if (editMode.value) {
+      console.log('🔄 매장 정보 수정 API 호출')
       result = await storeStore.updateStore(storeInfo.value.storeId, storeData)
     } else {
+      console.log('➕ 매장 정보 등록 API 호출')
       result = await storeStore.registerStore(storeData)
     }
     
@@ -1436,6 +1468,8 @@ const saveStore = async () => {
     saving.value = false
   }
 }
+
+// ✅ 메뉴 수정 후 위치 유지를 위한 saveMenu 함수 개선
 
 // 메뉴 저장 함수
 const saveMenu = async () => {
@@ -1469,6 +1503,7 @@ const saveMenu = async () => {
     
     let menuResult
     let savedMenuId
+    let isEdit = menuEditMode.value // ✅ 수정 모드 여부 저장
     
     if (menuEditMode.value) {
       // 메뉴 수정
@@ -1530,21 +1565,33 @@ const saveMenu = async () => {
       
       if (imageUrl) {
         console.log('✅ 이미지 업로드 완료:', imageUrl)
-        showSnackbar(`메뉴가 ${menuEditMode.value ? '수정' : '등록'}되었고 이미지도 업로드되었습니다`, 'success')
+        showSnackbar(`메뉴가 ${isEdit ? '수정' : '등록'}되었고 이미지도 업로드되었습니다`, 'success')
       } else {
         console.warn('⚠️ 이미지 업로드 실패')
-        showSnackbar(`메뉴는 ${menuEditMode.value ? '수정' : '등록'}되었지만 이미지 업로드에 실패했습니다`, 'warning')
+        showSnackbar(`메뉴는 ${isEdit ? '수정' : '등록'}되었지만 이미지 업로드에 실패했습니다`, 'warning')
       }
     } else {
       console.log('새 이미지가 선택되지 않아 이미지 업로드 건너뜀')
-      showSnackbar(`메뉴가 ${menuEditMode.value ? '수정' : '등록'}되었습니다`, 'success')
+      showSnackbar(`메뉴가 ${isEdit ? '수정' : '등록'}되었습니다`, 'success')
     }
     
-    // 다이얼로그 닫기 및 목록 새로고침
+    // ✅ 다이얼로그 닫기 및 상태 초기화
     showMenuDialog.value = false
     menuEditMode.value = false
     resetMenuForm()
-    await loadMenus()
+    
+    // ✅ 메뉴 목록 새로고침 (수정 모드일 때는 지연 없이 즉시)
+    if (isEdit) {
+      // 수정인 경우: 즉시 새로고침하여 위치 유지
+      await loadMenus()
+      console.log('✅ 메뉴 수정 완료 - 목록 새로고침됨 (위치 유지)')
+    } else {
+      // 신규 등록인 경우: 약간의 지연 후 새로고침 (새 메뉴가 맨 앞에 추가됨)
+      setTimeout(async () => {
+        await loadMenus()
+        console.log('✅ 메뉴 등록 완료 - 목록 새로고침됨')
+      }, 500)
+    }
     
   } catch (error) {
     console.error('❌ 메뉴 저장 중 예외 발생:', error)
@@ -2134,6 +2181,58 @@ onMounted(async () => {
 }
 
 .dialog-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* ✅ 매장 다이얼로그 스타일 추가 - Style 부분에 추가 */
+
+/* 매장 다이얼로그 전용 스타일 */
+.store-dialog .v-overlay__content {
+  max-height: 90vh !important;
+  margin: 24px;
+}
+
+.store-dialog-card {
+  max-height: 90vh !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.store-dialog-card .store-dialog-content {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(90vh - 120px); /* 헤더와 푸터 공간 제외 */
+}
+
+/* 모바일에서 매장 다이얼로그 최적화 */
+@media (max-width: 600px) {
+  .store-dialog .v-overlay__content {
+    margin: 16px;
+    max-height: 95vh !important;
+  }
+  
+  .store-dialog-card .store-dialog-content {
+    max-height: calc(95vh - 100px);
+    padding: 16px !important;
+  }
+}
+
+/* 매장 다이얼로그 스크롤바 스타일 */
+.store-dialog-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.store-dialog-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.store-dialog-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.store-dialog-content::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
 </style>
