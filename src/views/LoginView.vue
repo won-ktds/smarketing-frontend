@@ -29,7 +29,7 @@
                 @keyup.enter="handleLogin"
               />
 
-              <!-- 비밀번호 입력 -->
+              <!-- 비밀번호 입력  -->
               <v-text-field
                 v-model="credentials.password"
                 label="비밀번호"
@@ -45,6 +45,7 @@
                 @keyup.enter="handleLogin"
               />
 
+              
               <!-- 로그인 옵션 -->
               <div class="d-flex justify-space-between align-center mb-6">
                 <v-checkbox

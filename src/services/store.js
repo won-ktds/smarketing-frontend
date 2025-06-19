@@ -140,8 +140,10 @@ class StoreService {
         businessType: storeData.businessType,
         address: storeData.address,
         phoneNumber: storeData.phoneNumber,
-        businessHours: storeData.businessHours,
-        closedDays: storeData.closedDays,
+        // ✅ 수정: businessHours 필드 처리
+        businessHours: storeData.businessHours || `${storeData.openTime || '09:00'}-${storeData.closeTime || '21:00'}`,
+        // ✅ 수정: closedDays 필드 처리  
+        closedDays: storeData.closedDays || storeData.holidays || '',
         seatCount: parseInt(storeData.seatCount) || 0,
         instaAccounts: storeData.instaAccounts || '',
         blogAccounts: storeData.blogAccounts || '',
@@ -150,9 +152,9 @@ class StoreService {
       
       console.log('백엔드 전송 데이터:', requestData)
       
-      // PUT 요청 (storeId는 JWT에서 추출하므로 URL에 포함하지 않음)
-      const response = await storeApi.put('/', requestData)
-      
+      // ✅ 핵심 수정: 슬래시 제거하고 빈 문자열 사용
+      console.log('API 호출 경로: PUT /api/store (baseURL + 빈 문자열)')
+      const response = await storeApi.put('', requestData)
       console.log('매장 정보 수정 API 응답:', response.data)
       
       if (response.data && (response.data.status === 200 || response.data.success !== false)) {

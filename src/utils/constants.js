@@ -7,15 +7,7 @@
 export const CONTENT_TYPES = {
   SNS: 'sns',
   POSTER: 'poster',
-  VIDEO: 'video',
-  BLOG: 'blog',
-}
-
-export const CONTENT_TYPE_LABELS = {
-  [CONTENT_TYPES.SNS]: 'SNS 게시물',
-  [CONTENT_TYPES.POSTER]: '홍보 포스터',
-  [CONTENT_TYPES.VIDEO]: '비디오',
-  [CONTENT_TYPES.BLOG]: '블로그 포스트',
+  BLOG: 'blog'
 }
 
 // 플랫폼
@@ -23,191 +15,201 @@ export const PLATFORMS = {
   INSTAGRAM: 'instagram',
   NAVER_BLOG: 'naver_blog',
   FACEBOOK: 'facebook',
-  TWITTER: 'twitter',
-  YOUTUBE: 'youtube',
-  KAKAO: 'kakao',
+  KAKAO_STORY: 'kakao_story'
 }
 
+// 플랫폼 라벨
 export const PLATFORM_LABELS = {
   [PLATFORMS.INSTAGRAM]: '인스타그램',
   [PLATFORMS.NAVER_BLOG]: '네이버 블로그',
   [PLATFORMS.FACEBOOK]: '페이스북',
-  [PLATFORMS.TWITTER]: '트위터',
-  [PLATFORMS.YOUTUBE]: '유튜브',
-  [PLATFORMS.KAKAO]: '카카오',
+  [PLATFORMS.KAKAO_STORY]: '카카오스토리'
 }
 
+// 플랫폼 컬러
 export const PLATFORM_COLORS = {
-  [PLATFORMS.INSTAGRAM]: 'purple',
+  [PLATFORMS.INSTAGRAM]: 'pink',
   [PLATFORMS.NAVER_BLOG]: 'green',
   [PLATFORMS.FACEBOOK]: 'blue',
-  [PLATFORMS.TWITTER]: 'light-blue',
-  [PLATFORMS.YOUTUBE]: 'red',
-  [PLATFORMS.KAKAO]: 'yellow',
+  [PLATFORMS.KAKAO_STORY]: 'amber'
 }
 
-// 콘텐츠 상태
-export const CONTENT_STATUS = {
-  DRAFT: 'draft',
-  PUBLISHED: 'published',
-  SCHEDULED: 'scheduled',
-  ARCHIVED: 'archived',
-  FAILED: 'failed',
+// 플랫폼 아이콘
+export const PLATFORM_ICONS = {
+  [PLATFORMS.INSTAGRAM]: 'mdi-instagram',
+  [PLATFORMS.NAVER_BLOG]: 'mdi-web',
+  [PLATFORMS.FACEBOOK]: 'mdi-facebook',
+  [PLATFORMS.KAKAO_STORY]: 'mdi-chat'
 }
 
-export const CONTENT_STATUS_LABELS = {
-  [CONTENT_STATUS.DRAFT]: '임시저장',
-  [CONTENT_STATUS.PUBLISHED]: '발행됨',
-  [CONTENT_STATUS.SCHEDULED]: '예약됨',
-  [CONTENT_STATUS.ARCHIVED]: '보관됨',
-  [CONTENT_STATUS.FAILED]: '실패',
-}
-
-export const CONTENT_STATUS_COLORS = {
-  [CONTENT_STATUS.DRAFT]: 'orange',
-  [CONTENT_STATUS.PUBLISHED]: 'success',
-  [CONTENT_STATUS.SCHEDULED]: 'info',
-  [CONTENT_STATUS.ARCHIVED]: 'grey',
-  [CONTENT_STATUS.FAILED]: 'error',
-}
-
-// 매장 업종
-export const BUSINESS_TYPES = {
-  RESTAURANT: 'restaurant',
-  CAFE: 'cafe',
-  SNACK_BAR: 'snack_bar',
-  FAST_FOOD: 'fast_food',
-  BAKERY: 'bakery',
-  DESSERT: 'dessert',
-  CONVENIENCE: 'convenience',
-  OTHER: 'other',
-}
-
-export const BUSINESS_TYPE_LABELS = {
-  [BUSINESS_TYPES.RESTAURANT]: '일반음식점',
-  [BUSINESS_TYPES.CAFE]: '카페',
-  [BUSINESS_TYPES.SNACK_BAR]: '분식점',
-  [BUSINESS_TYPES.FAST_FOOD]: '패스트푸드',
-  [BUSINESS_TYPES.BAKERY]: '제과점',
-  [BUSINESS_TYPES.DESSERT]: '디저트카페',
-  [BUSINESS_TYPES.CONVENIENCE]: '편의점',
-  [BUSINESS_TYPES.OTHER]: '기타',
+// 플랫폼 사양 정의 (누락된 PLATFORM_SPECS 추가)
+export const PLATFORM_SPECS = {
+  [PLATFORMS.INSTAGRAM]: {
+    name: '인스타그램',
+    icon: 'mdi-instagram',
+    color: 'pink',
+    maxLength: 2200,
+    hashtags: true,
+    imageRequired: true,
+    format: 'sns'
+  },
+  [PLATFORMS.NAVER_BLOG]: {
+    name: '네이버 블로그',
+    icon: 'mdi-web',
+    color: 'green',
+    maxLength: 5000,
+    hashtags: false,
+    imageRequired: false,
+    format: 'blog'
+  },
+  [PLATFORMS.FACEBOOK]: {
+    name: '페이스북',
+    icon: 'mdi-facebook',
+    color: 'blue',
+    maxLength: 63206,
+    hashtags: true,
+    imageRequired: false,
+    format: 'sns'
+  },
+  [PLATFORMS.KAKAO_STORY]: {
+    name: '카카오스토리',
+    icon: 'mdi-chat',
+    color: 'amber',
+    maxLength: 1000,
+    hashtags: true,
+    imageRequired: false,
+    format: 'sns'
+  }
 }
 
 // 톤앤매너
 export const TONE_AND_MANNER = {
   FRIENDLY: 'friendly',
   PROFESSIONAL: 'professional',
-  HUMOROUS: 'humorous',
-  ELEGANT: 'elegant',
   CASUAL: 'casual',
-  TRENDY: 'trendy',
-}
-
-export const TONE_AND_MANNER_LABELS = {
-  [TONE_AND_MANNER.FRIENDLY]: '친근함',
-  [TONE_AND_MANNER.PROFESSIONAL]: '전문적',
-  [TONE_AND_MANNER.HUMOROUS]: '유머러스',
-  [TONE_AND_MANNER.ELEGANT]: '고급스러운',
-  [TONE_AND_MANNER.CASUAL]: '캐주얼',
-  [TONE_AND_MANNER.TRENDY]: '트렌디',
+  HUMOROUS: 'humorous'
 }
 
 // 감정 강도
 export const EMOTION_INTENSITY = {
-  CALM: 'calm',
-  NORMAL: 'normal',
-  ENTHUSIASTIC: 'enthusiastic',
-  EXCITING: 'exciting',
-}
-
-export const EMOTION_INTENSITY_LABELS = {
-  [EMOTION_INTENSITY.CALM]: '차분함',
-  [EMOTION_INTENSITY.NORMAL]: '보통',
-  [EMOTION_INTENSITY.ENTHUSIASTIC]: '열정적',
-  [EMOTION_INTENSITY.EXCITING]: '과장된',
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high'
 }
 
 // 프로모션 타입
 export const PROMOTION_TYPES = {
-  DISCOUNT: 'discount',
-  EVENT: 'event',
-  NEW_MENU: 'new_menu',
-  NONE: 'none',
+  DISCOUNT: 'DISCOUNT',
+  EVENT: 'EVENT',
+  NEW_PRODUCT: 'NEW_PRODUCT',
+  REVIEW: 'REVIEW'
 }
 
-export const PROMOTION_TYPE_LABELS = {
-  [PROMOTION_TYPES.DISCOUNT]: '할인 정보',
-  [PROMOTION_TYPES.EVENT]: '이벤트 정보',
-  [PROMOTION_TYPES.NEW_MENU]: '신메뉴 알림',
-  [PROMOTION_TYPES.NONE]: '없음',
-}
-
-// 이미지 스타일
+// 사진 스타일
 export const PHOTO_STYLES = {
   MODERN: 'modern',
-  CLASSIC: 'classic',
-  EMOTIONAL: 'emotional',
+  VINTAGE: 'vintage',
   MINIMALIST: 'minimalist',
+  COLORFUL: 'colorful',
+  BRIGHT: 'bright',
+  CALM: 'calm',
+  NATURAL: 'natural'
 }
 
-export const PHOTO_STYLE_LABELS = {
-  [PHOTO_STYLES.MODERN]: '모던',
-  [PHOTO_STYLES.CLASSIC]: '클래식',
-  [PHOTO_STYLES.EMOTIONAL]: '감성적',
-  [PHOTO_STYLES.MINIMALIST]: '미니멀',
+// 콘텐츠 상태
+export const CONTENT_STATUS = {
+  DRAFT: 'draft',
+  PUBLISHED: 'published',
+  ARCHIVED: 'archived'
 }
 
-// 파일 업로드 제한
-export const FILE_LIMITS = {
-  MAX_SIZE: 10 * 1024 * 1024, // 10MB
-  ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
-  ALLOWED_EXTENSIONS: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
+// 타겟 대상
+export const TARGET_TYPES = {
+  NEW_MENU: 'new_menu',
+  DISCOUNT: 'discount',
+  STORE: 'store',
+  EVENT: 'event'
+}
+
+// 타겟 대상 라벨
+export const TARGET_TYPE_LABELS = {
+  [TARGET_TYPES.NEW_MENU]: '신메뉴',
+  [TARGET_TYPES.DISCOUNT]: '할인 이벤트',
+  [TARGET_TYPES.STORE]: '매장 홍보',
+  [TARGET_TYPES.EVENT]: '일반 이벤트'
+}
+
+// 백엔드 플랫폼 매핑 (프론트엔드 -> 백엔드)
+export const BACKEND_PLATFORM_MAPPING = {
+  [PLATFORMS.INSTAGRAM]: 'INSTAGRAM',
+  [PLATFORMS.NAVER_BLOG]: 'NAVER_BLOG',
+  [PLATFORMS.FACEBOOK]: 'FACEBOOK',
+  [PLATFORMS.KAKAO_STORY]: 'KAKAO_STORY'
+}
+
+// 백엔드에서 프론트엔드로 매핑 (백엔드 -> 프론트엔드)
+export const FRONTEND_PLATFORM_MAPPING = {
+  'INSTAGRAM': PLATFORMS.INSTAGRAM,
+  'NAVER_BLOG': PLATFORMS.NAVER_BLOG,
+  'FACEBOOK': PLATFORMS.FACEBOOK,
+  'KAKAO_STORY': PLATFORMS.KAKAO_STORY
 }
 
 // API 응답 상태
 export const API_STATUS = {
   SUCCESS: 'success',
   ERROR: 'error',
-  LOADING: 'loading',
-  IDLE: 'idle',
+  LOADING: 'loading'
 }
 
-// 페이지네이션
-export const PAGINATION = {
-  DEFAULT_PAGE_SIZE: 20,
-  PAGE_SIZE_OPTIONS: [10, 20, 50, 100],
+// 페이지 크기
+export const PAGE_SIZES = {
+  SMALL: 10,
+  MEDIUM: 20,
+  LARGE: 50
+}
+
+// 정렬 방향
+export const SORT_DIRECTION = {
+  ASC: 'asc',
+  DESC: 'desc'
+}
+
+// 날짜 포맷
+export const DATE_FORMATS = {
+  DISPLAY: 'YYYY-MM-DD HH:mm',
+  API: 'YYYY-MM-DD',
+  FULL: 'YYYY-MM-DD HH:mm:ss'
+}
+
+// 파일 업로드 제한
+export const FILE_LIMITS = {
+  MAX_SIZE: 10485760, // 10MB
+  ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  MAX_FILES: 5
+}
+
+// 콘텐츠 생성 제한
+export const CONTENT_LIMITS = {
+  TITLE_MAX_LENGTH: 100,
+  DESCRIPTION_MAX_LENGTH: 500,
+  REQUIREMENTS_MAX_LENGTH: 1000,
+  MAX_HASHTAGS: 30
+}
+
+// 알림 타입
+export const NOTIFICATION_TYPES = {
+  SUCCESS: 'success',
+  ERROR: 'error',
+  WARNING: 'warning',
+  INFO: 'info'
 }
 
 // 로컬 스토리지 키
 export const STORAGE_KEYS = {
-  AUTH_TOKEN: 'auth_token',
-  USER_INFO: 'user_info',
-  APP_SETTINGS: 'app_settings',
-  CONTENT_FILTERS: 'content_filters',
-}
-
-// 시간 관련 상수
-export const TIME_FORMATS = {
-  DATE: 'YYYY-MM-DD',
-  DATETIME: 'YYYY-MM-DD HH:mm:ss',
-  TIME: 'HH:mm',
-}
-
-export const DATE_RANGES = {
-  TODAY: 'today',
-  WEEK: 'week',
-  MONTH: 'month',
-  QUARTER: 'quarter',
-  YEAR: 'year',
-  ALL: 'all',
-}
-
-export const DATE_RANGE_LABELS = {
-  [DATE_RANGES.TODAY]: '오늘',
-  [DATE_RANGES.WEEK]: '최근 1주일',
-  [DATE_RANGES.MONTH]: '최근 1개월',
-  [DATE_RANGES.QUARTER]: '최근 3개월',
-  [DATE_RANGES.YEAR]: '최근 1년',
-  [DATE_RANGES.ALL]: '전체',
+  ACCESS_TOKEN: 'accessToken',
+  REFRESH_TOKEN: 'refreshToken',
+  USER_INFO: 'userInfo',
+  THEME: 'theme',
+  LANGUAGE: 'language'
 }
