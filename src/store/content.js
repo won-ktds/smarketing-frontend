@@ -278,6 +278,146 @@ export const useContentStore = defineStore('content', () => {
   }
 
   /**
+   * 포스터 저장 - 수정된 버전
+   */
+  const savePoster = async (saveData) => {
+    loading.value = true
+    
+    try {
+      console.log('💾 [STORE] 포스터 저장 요청:', saveData)
+      
+      // 매장 ID 조회 (필요한 경우)
+      let storeId = saveData.storeId
+      if (!storeId) {
+        try {
+          storeId = await getStoreId()
+        } catch (error) {
+          console.warn('⚠️ 매장 ID 조회 실패, 기본값 사용:', error)
+          storeId = 1
+        }
+      }
+      
+      // ✅ PosterContentSaveRequest 구조에 맞게 데이터 변환 (contentId 처리 개선)
+      const requestData = {
+        // ✅ contentId 처리: 값이 있으면 사용, 없으면 임시 ID 생성
+        contentId: saveData.contentId || Date.now(),
+        storeId: storeId,
+        title: saveData.title || '',
+        
+        // ✅ content 필드에 실제 값 보장 (null이면 안됨)
+        content: saveData.content || saveData.title || '포스터 콘텐츠',
+        
+        // ✅ images 배열이 비어있지 않도록 보장
+        images: Array.isArray(saveData.images) ? saveData.images.filter(img => img) : [],
+        
+        status: saveData.status || 'PUBLISHED',
+        category: saveData.category || '이벤트',
+        requirement: saveData.requirement || '',
+        toneAndManner: saveData.toneAndManner || '친근함',
+        emotionIntensity: saveData.emotionIntensity || '보통',
+        eventName: saveData.eventName || '',
+        startDate: saveData.startDate,
+        endDate: saveData.endDate,
+        photoStyle: saveData.photoStyle || '밝고 화사한'
+      }
+      
+      // ✅ 필수 필드 검증
+      if (!requestData.title) {
+        throw new Error('제목은 필수입니다.')
+      }
+      if (!requestData.images || requestData.images.length === 0) {
+        throw new Error('이미지는 필수입니다.')
+      }
+      
+      console.log('📝 [STORE] 최종 저장 요청 데이터:', {
+        ...requestData,
+        images: `${requestData.images.length}개 이미지`
+      })
+      
+      const result = await contentService.savePoster(requestData)
+      
+      if (result.success) {
+        console.log('✅ [STORE] 포스터 저장 성공')
+        
+        // 목록 새로고침
+        await loadContents()
+        
+        return { success: true, message: '포스터가 저장되었습니다.' }
+      } else {
+        console.error('❌ [STORE] 포스터 저장 실패:', result.message)
+        return { success: false, error: result.message }
+      }
+    } catch (error) {
+      console.error('❌ [STORE] 포스터 저장 예외:', error)
+      return { success: false, error: '네트워크 오류가 발생했습니다.' }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * SNS 콘텐츠 저장
+   */
+  const saveSnsContent = async (saveData) => {
+    loading.value = true
+    
+    try {
+      console.log('💾 [STORE] SNS 콘텐츠 저장 요청:', saveData)
+      
+      // 매장 ID 조회 (필요한 경우)
+      let storeId = saveData.storeId
+      if (!storeId) {
+        try {
+          storeId = await getStoreId()
+        } catch (error) {
+          console.warn('⚠️ 매장 ID 조회 실패, 기본값 사용:', error)
+          storeId = 1
+        }
+      }
+      
+      // SnsContentSaveRequest 구조에 맞게 데이터 변환
+      const requestData = {
+        contentId: saveData.contentId || Date.now(), // 임시 ID 생성
+        storeId: storeId,
+        platform: saveData.platform || 'INSTAGRAM',
+        title: saveData.title || '',
+        content: saveData.content || '',
+        hashtags: saveData.hashtags || [],
+        images: saveData.images || [],
+        finalTitle: saveData.finalTitle || saveData.title,
+        finalContent: saveData.finalContent || saveData.content,
+        status: saveData.status || 'DRAFT',
+        category: saveData.category || '메뉴소개',
+        requirement: saveData.requirement || '',
+        toneAndManner: saveData.toneAndManner || '친근함',
+        emotionIntensity: saveData.emotionIntensity || '보통',
+        eventName: saveData.eventName || '',
+        startDate: saveData.startDate,
+        endDate: saveData.endDate
+      }
+      
+      const result = await contentService.saveSnsContent(requestData)
+      
+      if (result.success) {
+        console.log('✅ [STORE] SNS 콘텐츠 저장 성공')
+        
+        // 목록 새로고침
+        await loadContents()
+        
+        return { success: true, message: 'SNS 콘텐츠가 저장되었습니다.' }
+      } else {
+        console.error('❌ [STORE] SNS 콘텐츠 저장 실패:', result.message)
+        return { success: false, error: result.message }
+      }
+    } catch (error) {
+      console.error('❌ [STORE] SNS 콘텐츠 저장 예외:', error)
+      return { success: false, error: '네트워크 오류가 발생했습니다.' }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
    * fetchContentList를 실제 API 호출로 수정 (기존 호환성 유지)
    */
   const fetchContentList = async (requestFilters = {}) => {
@@ -343,7 +483,7 @@ export const useContentStore = defineStore('content', () => {
     }
   }
 
-  // ===== 콘텐츠 관리 기능들 (첫 번째 코드에서 추가) =====
+  // ===== 콘텐츠 관리 기능들 =====
   
   /**
    * 콘텐츠 수정
@@ -674,6 +814,8 @@ export const useContentStore = defineStore('content', () => {
     loadContents, // 새로 추가된 메서드 (매장 정보 조회 포함)
     generateContent,
     saveContent,
+    savePoster, // 포스터 전용 저장
+    saveSnsContent, // SNS 콘텐츠 전용 저장
     fetchContentList, // 기존 호환성 유지
     fetchOngoingContents,
     fetchContentDetail,

@@ -152,8 +152,22 @@
                     {{ getStatusText(content.status) }}
                   </v-chip>
                 </div>
+                
+                <!-- ✅ 포스터인 경우와 SNS인 경우 구분하여 미리보기 표시 -->
                 <div class="text-caption text-truncate grey--text" style="max-width: 400px;">
-                  {{ content.content ? content.content.substring(0, 100) + '...' : '' }}
+                  <div v-if="content.platform === 'POSTER' || content.platform === 'poster'">
+                    <div v-if="content.content && isImageUrl(content.content)" class="d-flex align-center">
+                      <v-icon size="16" color="primary" class="mr-1">mdi-image</v-icon>
+                      <span>포스터 이미지 생성됨</span>
+                    </div>
+                    <div v-else>
+                      {{ content.content ? content.content.substring(0, 100) + '...' : '포스터 콘텐츠' }}
+                    </div>
+                  </div>
+                  <!-- ✅ SNS인 경우 HTML 태그 제거하고 텍스트만 표시 -->
+                  <div v-else>
+                    {{ content.content ? getPlainTextPreview(content.content) : '' }}
+                  </div>
                 </div>
               </div>
             </td>
@@ -272,9 +286,61 @@
               </v-chip>
             </div>
             
+            <!-- ✅ 포스터인 경우 이미지로 표시, SNS인 경우 HTML 렌더링 -->
             <div class="mb-4">
               <div class="text-subtitle-2 text-grey-600 mb-1">내용</div>
-              <div class="text-body-1 content-preview">{{ selectedContent.content }}</div>
+              
+              <!-- ✅ 포스터인 경우 이미지로 표시 -->
+              <div v-if="selectedContent.platform === 'POSTER' || selectedContent.platform === 'poster'">
+                <v-img
+                  v-if="selectedContent.content && isImageUrl(selectedContent.content)"
+                  :src="selectedContent.content"
+                  :alt="selectedContent.title"
+                  cover
+                  class="rounded-lg elevation-2"
+                  style="max-width: 400px; aspect-ratio: 3/4; cursor: pointer;"
+                  @click="previewImage(selectedContent.content, selectedContent.title)"
+                  @error="handleImageError"
+                >
+                  <template v-slot:placeholder>
+                    <div class="d-flex align-center justify-center fill-height bg-grey-lighten-4">
+                      <v-progress-circular indeterminate color="primary" size="32" />
+                      <span class="ml-2 text-grey">이미지 로딩 중...</span>
+                    </div>
+                  </template>
+                  
+                  <template v-slot:error>
+                    <div class="d-flex flex-column align-center justify-center fill-height bg-grey-lighten-3">
+                      <v-icon size="32" color="grey" class="mb-2">mdi-image-broken</v-icon>
+                      <span class="text-caption text-grey">이미지를 불러올 수 없습니다</span>
+                      <span class="text-caption text-grey mt-1" style="word-break: break-all; max-width: 300px;">
+                        {{ selectedContent.content?.substring(0, 50) }}...
+                      </span>
+                    </div>
+                  </template>
+                </v-img>
+                
+                <div v-else class="d-flex flex-column align-center justify-center bg-grey-lighten-4 rounded-lg pa-8">
+                  <v-icon size="48" color="grey" class="mb-2">mdi-image-off</v-icon>
+                  <span class="text-body-2 text-grey">포스터 이미지가 없습니다</span>
+                  <span class="text-caption text-grey mt-1" v-if="selectedContent.content">
+                    URL: {{ selectedContent.content }}
+                  </span>
+                </div>
+              </div>
+              
+              <!-- ✅ SNS인 경우 HTML 렌더링으로 표시 -->
+              <div v-else>
+                <!-- HTML 콘텐츠가 있는 경우 렌더링하여 표시 -->
+                <div v-if="isHtmlContent(selectedContent.content)" 
+                     class="content-preview html-content" 
+                     v-html="selectedContent.content">
+                </div>
+                <!-- 일반 텍스트인 경우 그대로 표시 -->
+                <div v-else class="text-body-1 content-preview">
+                  {{ selectedContent.content }}
+                </div>
+              </div>
             </div>
             
             <div class="mb-4" v-if="selectedContent.hashtags && selectedContent.hashtags.length > 0">
@@ -664,7 +730,78 @@ const deleteSelectedItems = async () => {
   }
 }
 
-// 유틸리티 함수들
+// ✅ 유틸리티 함수들 추가
+/**
+ * URL이 이미지 URL인지 확인
+ */
+const isImageUrl = (url) => {
+  if (!url || typeof url !== 'string') return false
+  
+  // 이미지 확장자 체크
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg']
+  const lowerUrl = url.toLowerCase()
+  
+  // 확장자로 체크
+  if (imageExtensions.some(ext => lowerUrl.includes(ext))) {
+    return true
+  }
+  
+  // Blob URL 체크
+  if (url.startsWith('blob:') || url.startsWith('data:image/')) {
+    return true
+  }
+  
+  // Azure Blob Storage나 기타 클라우드 스토리지 URL 체크
+  if (url.includes('blob.core.windows.net') || 
+      url.includes('amazonaws.com') || 
+      url.includes('googleusercontent.com') ||
+      url.includes('cloudinary.com')) {
+    return true
+  }
+  
+  return false
+}
+
+/**
+ * ✅ HTML 콘텐츠인지 확인
+ */
+const isHtmlContent = (content) => {
+  if (!content || typeof content !== 'string') return false
+  
+  // HTML 태그가 포함되어 있는지 확인
+  const htmlTagRegex = /<[^>]+>/g
+  return htmlTagRegex.test(content)
+}
+
+/**
+ * ✅ HTML 태그를 제거하고 텍스트만 추출하여 미리보기용으로 반환
+ */
+const getPlainTextPreview = (content) => {
+  if (!content) return ''
+  
+  // HTML 태그 제거
+  const textContent = content.replace(/<[^>]*>/g, '').trim()
+  
+  // 100자로 제한하고 ... 추가
+  return textContent.length > 100 ? textContent.substring(0, 100) + '...' : textContent
+}
+
+/**
+ * 이미지 미리보기
+ */
+const previewImage = (imageUrl, title) => {
+  if (!imageUrl) return
+  window.open(imageUrl, '_blank')
+}
+
+/**
+ * 이미지 로딩 에러 처리
+ */
+const handleImageError = (event) => {
+  console.error('❌ 이미지 로딩 실패:', event.target?.src)
+}
+
+// 기존 유틸리티 함수들
 const getStatusColor = (status) => {
   const statusColors = {
     'DRAFT': 'orange',
@@ -782,5 +919,62 @@ onMounted(() => {
 
 .cursor-pointer {
   cursor: pointer;
+}
+
+/* ✅ HTML 콘텐츠 스타일링 */
+:deep(.html-content) {
+  font-family: 'Noto Sans KR', Arial, sans-serif;
+  line-height: 1.6;
+  padding: 20px;
+  max-width: 600px;
+}
+
+:deep(.html-content h1),
+:deep(.html-content h2),
+:deep(.html-content h3) {
+  margin: 0 0 10px 0;
+  font-weight: bold;
+}
+
+:deep(.html-content h3) {
+  font-size: 18px;
+  color: #1976d2;
+}
+
+:deep(.html-content p) {
+  margin: 0 0 10px 0;
+}
+
+:deep(.html-content div[style*="background"]) {
+  border-radius: 10px;
+  padding: 15px;
+  margin: 10px 0;
+}
+
+:deep(.html-content div[style*="border"]) {
+  border-radius: 8px;
+  padding: 20px;
+  margin: 10px 0;
+  border: 1px solid #e1e8ed;
+}
+
+:deep(.html-content img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin: 20px 0;
+}
+
+:deep(.html-content span[style*="#1DA1F2"]) {
+  color: #1976d2 !important;
+}
+
+:deep(.html-content span[style*="#1EC800"]) {
+  color: #4caf50 !important;
+}
+
+:deep(.html-content span[style*="#00B33C"]) {
+  color: #2e7d32 !important;
 }
 </style>

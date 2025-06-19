@@ -216,8 +216,8 @@ class ContentService {
     }
   }
 
-  /**
-   * ✅ multipart/form-data 형식으로 수정된 SNS 콘텐츠 생성
+ /**
+   * ✅ 완전한 SnsContentCreateRequest DTO에 맞춘 SNS 콘텐츠 생성
    * @param {Object} contentData - 콘텐츠 생성 데이터
    * @returns {Promise<Object>} 생성된 콘텐츠
    */
@@ -225,7 +225,7 @@ class ContentService {
     try {
       console.log('🤖 SNS 콘텐츠 생성 요청:', contentData)
       
-      // ✅ Java 백엔드 필수 필드 검증 (SnsContentCreateRequest 기준)
+      // ✅ 필수 필드 검증
       if (!contentData.storeId) {
         throw new Error('매장 ID는 필수입니다.')
       }
@@ -238,46 +238,80 @@ class ContentService {
         throw new Error('콘텐츠 제목은 필수입니다.')
       }
       
-      // ✅ FormData 생성 (multipart/form-data)
+      // ✅ FormData 생성
       const formData = new FormData()
       
-      // ✅ request JSON 부분 구성 (Java SnsContentCreateRequest DTO에 맞춤)
+      // ✅ 완전한 SnsContentCreateRequest DTO에 맞춘 데이터 구성
       const requestData = {
-        storeId: contentData.storeId || 1,
+        // ========== 기본 정보 ==========
+        storeId: parseInt(contentData.storeId),
         storeName: contentData.storeName || '샘플 매장',
         storeType: contentData.storeType || '음식점',
         platform: this.normalizePlatform(contentData.platform),
-        title: contentData.title,
+        title: String(contentData.title).trim(),
+        
+        // ========== 콘텐츠 생성 조건 ==========
         category: contentData.category || '메뉴소개',
         requirement: contentData.requirement || contentData.requirements || `${contentData.title}에 대한 SNS 게시물을 만들어주세요`,
         target: contentData.target || contentData.targetAudience || '일반고객',
-        contentType: contentData.contentType || 'sns',
-        eventName: contentData.eventName || null,
+        toneAndManner: contentData.toneAndManner || '친근함',
+        emotionIntensity: contentData.emotionIntensity || contentData.emotionalIntensity || '보통',
+        
+        // ========== 이벤트 정보 ==========
+        eventName: contentData.eventName || '',
         startDate: this.convertToJavaDate(contentData.startDate),
-        endDate: this.convertToJavaDate(contentData.endDate)
+        endDate: this.convertToJavaDate(contentData.endDate),
+        
+        // ========== 미디어 정보 ==========
+        images: [], // 파일로 별도 전송
+        photoStyle: contentData.photoStyle || '밝고 화사한',
+        
+        // ========== 추가 옵션 ==========
+        includeHashtags: contentData.includeHashtags !== false,
+        includeEmojis: contentData.includeEmojis !== false,
+        includeCallToAction: contentData.includeCallToAction !== false,
+        includeLocation: contentData.includeLocation || false,
+        
+        // ========== 플랫폼별 옵션 ==========
+        forInstagramStory: contentData.forInstagramStory || false,
+        forNaverBlogPost: contentData.forNaverBlogPost || false,
+        
+        // ========== AI 생성 옵션 ==========
+        alternativeTitleCount: contentData.alternativeTitleCount || 3,
+        alternativeHashtagSetCount: contentData.alternativeHashtagSetCount || 2,
+        preferredAiModel: contentData.preferredAiModel || 'gpt-4-turbo',
+        
+        // ========== 검증 플래그 ==========
+        validForPlatform: true,
+        validEventDates: true
       }
       
-      // null 값 제거
+      // ✅ null/undefined 값 정리
       Object.keys(requestData).forEach(key => {
         if (requestData[key] === null || requestData[key] === undefined) {
           delete requestData[key]
         }
+        // 빈 문자열도 제거 (Boolean과 Number 제외)
+        if (typeof requestData[key] === 'string' && requestData[key].trim() === '') {
+          delete requestData[key]
+        }
       })
       
-      console.log('📝 [API] Java 백엔드용 SNS 요청 데이터:', requestData)
+      console.log('📝 [API] 완전한 SNS 요청 데이터:', requestData)
       
-      // ✅ request를 JSON 문자열로 FormData에 추가
+      // ✅ FormData에 JSON 추가
       formData.append('request', JSON.stringify(requestData))
       
-      // ✅ 이미지 파일들을 FormData에 추가 (SNS는 선택적)
-      if (contentData.images && contentData.images.length > 0) {
-        // Base64 이미지를 Blob으로 변환하여 추가
+      // ✅ 이미지 파일 처리
+      let imageCount = 0
+      if (contentData.images && Array.isArray(contentData.images) && contentData.images.length > 0) {
         for (let i = 0; i < contentData.images.length; i++) {
           const imageData = contentData.images[i]
           if (typeof imageData === 'string' && imageData.startsWith('data:image/')) {
             try {
               const blob = this.base64ToBlob(imageData)
               formData.append('files', blob, `image_${i}.jpg`)
+              imageCount++
             } catch (error) {
               console.warn(`⚠️ 이미지 ${i} 변환 실패:`, error)
             }
@@ -285,9 +319,19 @@ class ContentService {
         }
       }
       
-      console.log('📁 [API] FormData 구성 완료')
+      console.log(`📁 [API] FormData 구성 완료 (이미지 ${imageCount}개)`)
       
-      // ✅ multipart/form-data로 Java 백엔드 API 호출
+      // ✅ 디버깅을 위한 FormData 내용 출력
+      console.log('📋 [DEBUG] FormData 항목들:')
+      for (let [key, value] of formData.entries()) {
+        if (value instanceof Blob) {
+          console.log(`  ${key}: Blob (${value.size} bytes, ${value.type})`)
+        } else {
+          console.log(`  ${key}:`, value)
+        }
+      }
+      
+      // ✅ API 호출
       const response = await contentApi.post('/sns/generate', formData, {
         timeout: 30000,
         headers: {
@@ -297,13 +341,19 @@ class ContentService {
 
       console.log('✅ [API] SNS 콘텐츠 생성 응답:', response.data)
       
-      // ✅ Java 백엔드 ApiResponse 구조에 맞춰 처리
-      if (response.data && response.data.success && response.data.data) {
+      // ✅ 응답 처리
+      if (response.data?.success && response.data?.data) {
         return formatSuccessResponse({
-          content: response.data.data.content,
-          hashtags: response.data.data.hashtags || []
+          content: response.data.data.content || '',
+          hashtags: response.data.data.hashtags || [],
+          contentId: response.data.data.contentId,
+          platform: response.data.data.platform,
+          title: response.data.data.title,
+          alternativeTitles: response.data.data.alternativeTitles || [],
+          alternativeHashtagSets: response.data.data.alternativeHashtagSets || []
         }, 'SNS 게시물이 생성되었습니다.')
-      } else if (response.data && response.data.status === 200 && response.data.data) {
+      } else if (response.data?.data?.content) {
+        // success 필드가 없는 경우도 처리
         return formatSuccessResponse({
           content: response.data.data.content,
           hashtags: response.data.data.hashtags || []
@@ -315,18 +365,32 @@ class ContentService {
     } catch (error) {
       console.error('❌ [API] SNS 콘텐츠 생성 실패:', error)
       
-      if (error.response?.status === 400) {
-        const backendMessage = error.response.data?.message || '요청 데이터가 잘못되었습니다.'
-        return {
-          success: false,
-          message: backendMessage,
-          error: error.response.data
+      // ✅ 상세한 에러 로깅
+      if (error.response) {
+        console.error('❌ [DEBUG] HTTP Status:', error.response.status)
+        console.error('❌ [DEBUG] Response Headers:', error.response.headers)
+        console.error('❌ [DEBUG] Response Data:', error.response.data)
+        
+        if (error.response.status === 400) {
+          const backendMessage = error.response.data?.message || '요청 데이터가 잘못되었습니다.'
+          return {
+            success: false,
+            message: `요청 검증 실패: ${backendMessage}`,
+            error: error.response.data
+          }
+        } else if (error.response.status === 500) {
+          return {
+            success: false,
+            message: 'AI 서비스에서 콘텐츠 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
+            error: error.response.data
+          }
         }
-      } else if (error.response?.status === 500) {
+      } else if (error.request) {
+        console.error('❌ [DEBUG] Request timeout or network error')
         return {
           success: false,
-          message: 'AI 서비스에서 콘텐츠 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.',
-          error: error.response.data
+          message: '서버에 연결할 수 없습니다. 네트워크 연결을 확인해 주세요.',
+          error: 'NETWORK_ERROR'
         }
       }
       
@@ -412,7 +476,7 @@ class ContentService {
       
       // ✅ multipart/form-data로 Java 백엔드 API 호출
       const response = await contentApi.post('/poster/generate', formData, {
-        timeout: 60000,
+        timeout: 0,
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -545,67 +609,95 @@ class ContentService {
    * @returns {Promise<Object>} 저장 결과
    */
   async saveSnsContent(saveData) {
-    try {
-      const requestData = {}
-      
-      if (saveData.contentId) requestData.contentId = saveData.contentId
-      if (saveData.storeId !== undefined) requestData.storeId = saveData.storeId
-      if (saveData.platform) requestData.platform = saveData.platform
-      if (saveData.title) requestData.title = saveData.title
-      if (saveData.content) requestData.content = saveData.content
-      if (saveData.hashtags) requestData.hashtags = saveData.hashtags
-      if (saveData.images) requestData.images = saveData.images
-      if (saveData.finalTitle) requestData.finalTitle = saveData.finalTitle
-      if (saveData.finalContent) requestData.finalContent = saveData.finalContent
-      if (saveData.status) requestData.status = saveData.status
-      if (saveData.category) requestData.category = saveData.category
-      if (saveData.requirement) requestData.requirement = saveData.requirement
-      if (saveData.eventName) requestData.eventName = saveData.eventName
-      if (saveData.startDate) requestData.startDate = saveData.startDate
-      if (saveData.endDate) requestData.endDate = saveData.endDate
-      if (saveData.promotionalType) requestData.promotionalType = saveData.promotionalType
-      if (saveData.eventDate) requestData.eventDate = saveData.eventDate
-      
-      const response = await contentApi.post('/sns/save', requestData)
-      return formatSuccessResponse(response.data.data, 'SNS 게시물이 저장되었습니다.')
-    } catch (error) {
-      return handleApiError(error)
+  try {
+    const requestData = {}
+    
+    // ❌ contentId 제거 (백엔드 DTO에 없음)
+    // if (saveData.contentId) requestData.contentId = saveData.contentId
+    
+    // ✅ 필수 필드들
+    if (saveData.storeId !== undefined) requestData.storeId = saveData.storeId
+    
+    // ✅ contentType 필수 필드 추가 - enum 값에 맞게
+    requestData.contentType = 'SNS' // 첫 번째 enum 버전에 맞춤
+    
+    // ✅ platform 필수 필드 보장
+    if (saveData.platform) {
+      requestData.platform = saveData.platform
+    } else {
+      requestData.platform = 'INSTAGRAM' // 기본값
     }
+    
+    // 선택적 필드들
+    if (saveData.title) requestData.title = saveData.title
+    if (saveData.content) requestData.content = saveData.content
+    if (saveData.hashtags) requestData.hashtags = saveData.hashtags
+    if (saveData.images) requestData.images = saveData.images
+    if (saveData.finalTitle) requestData.finalTitle = saveData.finalTitle
+    if (saveData.finalContent) requestData.finalContent = saveData.finalContent
+    if (saveData.status) requestData.status = saveData.status
+    if (saveData.category) requestData.category = saveData.category
+    if (saveData.requirement) requestData.requirement = saveData.requirement
+    if (saveData.toneAndManner) requestData.toneAndManner = saveData.toneAndManner
+    if (saveData.emotionIntensity || saveData.emotionalIntensity) {
+      requestData.emotionIntensity = saveData.emotionIntensity || saveData.emotionalIntensity
+    }
+    if (saveData.eventName) requestData.eventName = saveData.eventName
+    if (saveData.startDate) requestData.startDate = saveData.startDate
+    if (saveData.endDate) requestData.endDate = saveData.endDate
+    if (saveData.promotionalType) requestData.promotionalType = saveData.promotionalType
+    if (saveData.eventDate) requestData.eventDate = saveData.eventDate
+    
+    console.log('📤 [API] SNS 저장 요청 데이터:', requestData)
+    
+    const response = await contentApi.post('/sns/save', requestData)
+    return formatSuccessResponse(response.data.data, 'SNS 게시물이 저장되었습니다.')
+  } catch (error) {
+    console.error('❌ [API] SNS 저장 실패:', error)
+    return handleApiError(error)
   }
+}
 
   /**
-   * 포스터 저장 (CON-015: 포스터 저장)
+   * 포스터 저장 (CON-015: 포스터 저장) - 수정된 버전
    * @param {Object} saveData - 저장할 포스터 데이터
    * @returns {Promise<Object>} 저장 결과
    */
   async savePoster(saveData) {
-    try {
-      const requestData = {}
-      
-      if (saveData.contentId) requestData.contentId = saveData.contentId
-      if (saveData.storeId !== undefined) requestData.storeId = saveData.storeId
-      if (saveData.title) requestData.title = saveData.title
-      if (saveData.content) requestData.content = saveData.content
-      if (saveData.images) requestData.images = saveData.images
-      if (saveData.status) requestData.status = saveData.status
-      if (saveData.category) requestData.category = saveData.category
-      if (saveData.requirement) requestData.requirement = saveData.requirement
-      if (saveData.eventName) requestData.eventName = saveData.eventName
-      if (saveData.startDate) requestData.startDate = saveData.startDate
-      if (saveData.endDate) requestData.endDate = saveData.endDate
-      if (saveData.photoStyle) requestData.photoStyle = saveData.photoStyle
-      if (saveData.targetAudience) requestData.targetAudience = saveData.targetAudience
-      if (saveData.promotionType) requestData.promotionType = saveData.promotionType
-      if (saveData.imageStyle) requestData.imageStyle = saveData.imageStyle
-      if (saveData.promotionStartDate) requestData.promotionStartDate = saveData.promotionStartDate
-      if (saveData.promotionEndDate) requestData.promotionEndDate = saveData.promotionEndDate
-      
-      const response = await contentApi.post('/poster/save', requestData)
-      return formatSuccessResponse(response.data.data, '포스터가 저장되었습니다.')
-    } catch (error) {
-      return handleApiError(error)
-    }
+  try {
+    const requestData = {}
+    
+    // ❌ contentId 제거 (백엔드 DTO에 없음)
+    // if (saveData.contentId) requestData.contentId = saveData.contentId
+    
+    if (saveData.storeId !== undefined) requestData.storeId = saveData.storeId
+    if (saveData.title) requestData.title = saveData.title
+    if (saveData.content) requestData.content = saveData.content
+    if (saveData.images) requestData.images = saveData.images
+    if (saveData.status) requestData.status = saveData.status
+    if (saveData.category) requestData.category = saveData.category
+    if (saveData.requirement) requestData.requirement = saveData.requirement
+    if (saveData.toneAndManner) requestData.toneAndManner = saveData.toneAndManner
+    if (saveData.emotionIntensity) requestData.emotionIntensity = saveData.emotionIntensity
+    if (saveData.eventName) requestData.eventName = saveData.eventName
+    if (saveData.startDate) requestData.startDate = saveData.startDate
+    if (saveData.endDate) requestData.endDate = saveData.endDate
+    if (saveData.photoStyle) requestData.photoStyle = saveData.photoStyle
+    if (saveData.targetAudience) requestData.targetAudience = saveData.targetAudience
+    if (saveData.promotionType) requestData.promotionType = saveData.promotionType
+    if (saveData.imageStyle) requestData.imageStyle = saveData.imageStyle
+    if (saveData.promotionStartDate) requestData.promotionStartDate = saveData.promotionStartDate
+    if (saveData.promotionEndDate) requestData.promotionEndDate = saveData.promotionEndDate
+    
+    console.log('📤 [API] 포스터 저장 요청 데이터:', requestData)
+    
+    const response = await contentApi.post('/poster/save', requestData)
+    return formatSuccessResponse(response.data.data, '포스터가 저장되었습니다.')
+  } catch (error) {
+    console.error('❌ [API] 포스터 저장 실패:', error)
+    return handleApiError(error)
   }
+}
 
   /**
    * ✅ 콘텐츠 저장 (통합)
@@ -613,12 +705,24 @@ class ContentService {
    * @returns {Promise<Object>} 저장 결과
    */
   async saveContent(saveData) {
-    if (saveData.contentType === 'poster' || saveData.type === 'poster') {
-      return await this.savePoster(saveData)
-    } else {
+    try {
+    console.log('💾 [API] 콘텐츠 저장 요청:', saveData)
+    
+    // ✅ 콘텐츠 타입에 따라 다른 API 호출
+    if (saveData.contentType === 'SNS' || saveData.platform) {
+      // SNS 콘텐츠 저장
+      console.log('📱 [API] SNS 콘텐츠 저장 API 호출')
       return await this.saveSnsContent(saveData)
+    } else {
+      // 포스터 콘텐츠 저장
+      console.log('🖼️ [API] 포스터 콘텐츠 저장 API 호출')
+      return await this.savePoster(saveData)
     }
+  } catch (error) {
+    console.error('❌ [API] 콘텐츠 저장 실패:', error)
+    return handleApiError(error)
   }
+}
 
   /**
    * ✅ 진행 중인 콘텐츠 조회 (첫 번째 코드에서 추가)

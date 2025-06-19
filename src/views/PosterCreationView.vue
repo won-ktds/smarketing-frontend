@@ -167,7 +167,7 @@ const generatePoster = async (formData) => {
 }
 
 /**
- * 포스터 저장
+ * 포스터 저장 - 수정된 버전
  */
 const savePoster = async () => {
   if (!generatedPoster.value) {
@@ -181,12 +181,22 @@ const savePoster = async () => {
     loadingMessage.value = '포스터 저장 중...'
     loadingSubMessage.value = '잠시만 기다려주세요'
 
+    // ✅ 생성된 포스터의 실제 데이터를 사용하고 contentId 처리 개선
     const result = await posterStore.savePoster({
-      contentId: generatedPoster.value.contentId,
+      // ✅ contentId: 임시 ID 사용 (백엔드에서 @NotNull이므로)
+      contentId: generatedPoster.value.contentId || Date.now(), // 임시 ID 생성
       storeId: authStore.currentStore?.id || 1,
       title: posterForm.value.title,
-      content: generatedPoster.value.content,
-      images: [generatedPoster.value.posterImage],
+      
+      // ✅ 생성된 포스터의 실제 콘텐츠 정보 사용
+      content: generatedPoster.value.content || generatedPoster.value.description || posterForm.value.title,
+      
+      // ✅ 원본 이미지와 생성된 포스터 이미지 모두 포함
+      images: [
+        ...posterForm.value.images, // 원본 업로드 이미지들
+        generatedPoster.value.posterImage || generatedPoster.value.imageUrl // 생성된 포스터 이미지
+      ].filter(img => img), // null/undefined 제거
+      
       status: 'PUBLISHED',
       category: posterForm.value.category,
       requirement: posterForm.value.requirement,
