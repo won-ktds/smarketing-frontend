@@ -1,3 +1,5 @@
+//* src/views/ContentCreationView.vue - 수정된 완전한 파일
+
 <template>
   <v-container fluid class="pa-0" style="height: 100vh; overflow: hidden;">
     <!-- 책자 형식 레이아웃 -->
@@ -205,7 +207,7 @@
                   <!-- 요구사항 -->
                   <v-textarea
                     v-model="formData.requirements"
-                    label="구체적인 요구사항 (선택사항)"
+                    label="구체적인 요구사항"
                     variant="outlined"
                     rows="3"
                     density="compact"
@@ -230,7 +232,7 @@
                     multiple
                     accept="image/*"
                     prepend-icon="mdi-camera"
-                    @change="handleFileUpload"
+                    @update:model-value="handleFileUpload"
                     density="compact"
                     :rules="selectedType === 'poster' ? imageRequiredRules : []"
                   />
@@ -270,7 +272,7 @@
                   <v-btn
                     color="primary"
                     size="large"
-                    :disabled="!formValid || remainingGenerations <= 0 || contentStore.generating"
+                    :disabled="!canGenerate || remainingGenerations <= 0 || contentStore.generating"
                     :loading="contentStore.generating"
                     @click="generateContent"
                     class="px-8"
@@ -386,14 +388,50 @@
                   
                   <!-- 콘텐츠 내용 -->
                   <div class="text-body-2 mb-3" style="line-height: 1.6;">
-                    <div v-if="isHtmlContent(currentVersion.content)" 
-                         class="html-content preview-content">
-                      <div v-html="truncateHtmlContent(currentVersion.content, 200)"></div>
-                      <div v-if="currentVersion.content.length > 500" class="text-caption text-grey mt-2">
-                        ... 더 보려면 '자세히 보기'를 클릭하세요
+                    <!-- ✅ 포스터인 경우 이미지로 표시 -->
+                    <div v-if="currentVersion.contentType === 'poster' || currentVersion.type === 'poster'">
+                      <v-img
+                        v-if="currentVersion.posterImage || currentVersion.content"
+                        :src="currentVersion.posterImage || currentVersion.content"
+                        :alt="currentVersion.title"
+                        cover
+                        class="rounded-lg elevation-2 mb-3"
+                        style="max-width: 100%; max-height: 300px; aspect-ratio: 3/4;"
+                        @click="previewImage(currentVersion.posterImage || currentVersion.content, currentVersion.title)"
+                        @error="handleImageError"
+                      >
+                        <template v-slot:placeholder>
+                          <div class="d-flex align-center justify-center fill-height bg-grey-lighten-4">
+                            <v-progress-circular indeterminate color="primary" size="32" />
+                            <span class="ml-2 text-grey">이미지 로딩 중...</span>
+                          </div>
+                        </template>
+                        
+                        <template v-slot:error>
+                          <div class="d-flex flex-column align-center justify-center fill-height bg-grey-lighten-3">
+                            <v-icon size="32" color="grey" class="mb-2">mdi-image-broken</v-icon>
+                            <span class="text-caption text-grey">이미지를 불러올 수 없습니다</span>
+                          </div>
+                        </template>
+                      </v-img>
+                      
+                      <div v-else class="d-flex flex-column align-center justify-center bg-grey-lighten-4 rounded-lg pa-8">
+                        <v-icon size="48" color="grey" class="mb-2">mdi-image-off</v-icon>
+                        <span class="text-body-2 text-grey">포스터 이미지가 없습니다</span>
                       </div>
                     </div>
-                    <div v-else>{{ truncateText(currentVersion.content, 150) }}</div>
+                    
+                    <!-- ✅ SNS인 경우 기존 텍스트 표시 -->
+                    <div v-else>
+                      <div v-if="isHtmlContent(currentVersion.content)" 
+                           class="html-content preview-content">
+                        <div v-html="truncateHtmlContent(currentVersion.content, 200)"></div>
+                        <div v-if="currentVersion.content.length > 500" class="text-caption text-grey mt-2">
+                          ... 더 보려면 '자세히 보기'를 클릭하세요
+                        </div>
+                      </div>
+                      <div v-else>{{ truncateText(currentVersion.content, 150) }}</div>
+                    </div>
                   </div>
                   
                   <!-- 해시태그 -->
@@ -466,18 +504,61 @@
         <v-divider />
         
         <v-card-text class="pa-4" style="max-height: 500px;">
-          <!-- 전체 콘텐츠 -->
+          <!-- ✅ 포스터인 경우 이미지 표시, SNS인 경우 텍스트 표시 -->
           <div class="mb-4">
             <h4 class="text-h6 mb-2">콘텐츠</h4>
-            <div v-if="isHtmlContent(currentVersion.content)" 
-                 class="pa-3 bg-grey-lighten-5 rounded html-content" 
-                 style="line-height: 1.6;"
-                 v-html="currentVersion.content">
+            
+            <!-- ✅ 포스터인 경우 이미지로 표시 -->
+            <div v-if="currentVersion.contentType === 'poster' || currentVersion.type === 'poster'">
+              <v-img
+                v-if="currentVersion.posterImage || currentVersion.content"
+                :src="currentVersion.posterImage || currentVersion.content"
+                :alt="currentVersion.title"
+                cover
+                class="rounded-lg elevation-2"
+                style="max-width: 400px; aspect-ratio: 3/4; cursor: pointer;"
+                @click="previewImage(currentVersion.posterImage || currentVersion.content, currentVersion.title)"
+                @error="handleImageError"
+              >
+                <template v-slot:placeholder>
+                  <div class="d-flex align-center justify-center fill-height bg-grey-lighten-4">
+                    <v-progress-circular indeterminate color="primary" size="32" />
+                    <span class="ml-2 text-grey">이미지 로딩 중...</span>
+                  </div>
+                </template>
+                
+                <template v-slot:error>
+                  <div class="d-flex flex-column align-center justify-center fill-height bg-grey-lighten-3">
+                    <v-icon size="32" color="grey" class="mb-2">mdi-image-broken</v-icon>
+                    <span class="text-caption text-grey">이미지를 불러올 수 없습니다</span>
+                    <span class="text-caption text-grey mt-1" style="word-break: break-all; max-width: 200px;">
+                      {{ (currentVersion.posterImage || currentVersion.content)?.substring(0, 50) }}...
+                    </span>
+                  </div>
+                </template>
+              </v-img>
+              
+              <div v-else class="d-flex flex-column align-center justify-center bg-grey-lighten-4 rounded-lg pa-8">
+                <v-icon size="48" color="grey" class="mb-2">mdi-image-off</v-icon>
+                <span class="text-body-2 text-grey">포스터 이미지가 없습니다</span>
+                <span class="text-caption text-grey mt-1" v-if="currentVersion.posterImage || currentVersion.content">
+                  URL: {{ currentVersion.posterImage || currentVersion.content }}
+                </span>
+              </div>
             </div>
-            <div v-else 
-                 class="text-body-2 pa-3 bg-grey-lighten-5 rounded" 
-                 style="white-space: pre-wrap; line-height: 1.6;">
-              {{ currentVersion.content }}
+            
+            <!-- ✅ SNS인 경우 기존 텍스트 표시 -->
+            <div v-else>
+              <div v-if="isHtmlContent(currentVersion.content)" 
+                   class="pa-3 bg-grey-lighten-5 rounded html-content" 
+                   style="line-height: 1.6;"
+                   v-html="currentVersion.content">
+              </div>
+              <div v-else 
+                   class="text-body-2 pa-3 bg-grey-lighten-5 rounded" 
+                   style="white-space: pre-wrap; line-height: 1.6;">
+                {{ currentVersion.content }}
+              </div>
             </div>
           </div>
           
@@ -583,12 +664,12 @@ const router = useRouter()
 const contentStore = useContentStore()
 const appStore = useAppStore()
 
-// 반응형 데이터
+// ✅ 반응형 데이터 - isGenerating 추가
 const selectedType = ref('sns')
-const formValid = ref(false)
 const uploadedFiles = ref([])
 const previewImages = ref([])
 const isPublishing = ref(false)
+const isGenerating = ref(false) // ✅ 추가
 const publishingIndex = ref(-1)
 const showDetailDialog = ref(false)
 const selectedVersion = ref(0)
@@ -603,14 +684,28 @@ const formData = ref({
   eventName: '',
   startDate: '',
   endDate: '',
-  requirements: '',
+  content: '',
+  hashtags: [],
+  category: '기타',
+  targetAge: '20대',
   promotionStartDate: '',
-  promotionEndDate: ''
+  promotionEndDate: '',
+  requirements: '',
+  toneAndManner: '친근함',
+  emotionIntensity: '보통',
+  imageStyle: '모던',
+  promotionType: '할인 정보',
+  photoStyle: '밝고 화사한'
 })
 
-// AI 옵션 - 타겟 연령층만
+// AI 옵션
 const aiOptions = ref({
-  targetAge: '20대'
+  toneAndManner: 'friendly',
+  promotion: 'general',
+  emotionIntensity: 'normal',
+  photoStyle: '밝고 화사한',
+  imageStyle: '모던',
+  targetAge: '20대',
 })
 
 // 상수 정의
@@ -639,10 +734,9 @@ const platformOptions = [
 ]
 
 const targetTypes = [
-  { title: '신메뉴', value: 'new_menu' },
-  { title: '할인 이벤트', value: 'discount' },
-  { title: '매장 홍보', value: 'store' },
-  { title: '일반 이벤트', value: 'event' }
+  { title: '메뉴', value: 'menu' },
+  { title: '매장', value: 'store' },
+  { title: '이벤트', value: 'event' },
 ]
 
 // 타겟 연령층 옵션
@@ -713,7 +807,68 @@ const promotionEndDateRules = [
   }
 ]
 
-// Computed
+// ✅ Computed 속성들
+const formValid = computed(() => {
+  // 기본 필수 필드 검증
+  if (!formData.value.title || !formData.value.targetType) {
+    return false
+  }
+  
+  // SNS 타입인 경우 플랫폼 필수
+  if (selectedType.value === 'sns' && !formData.value.platform) {
+    return false
+  }
+  
+  // 이벤트 타입인 경우 추가 검증
+  if (formData.value.targetType === 'event') {
+    if (!formData.value.eventName || !formData.value.startDate || !formData.value.endDate) {
+      return false
+    }
+  }
+  
+  // 포스터 타입인 경우 추가 검증
+  if (selectedType.value === 'poster') {
+    if (!formData.value.promotionStartDate || !formData.value.promotionEndDate) {
+      return false
+    }
+    // 포스터는 이미지 필수
+    if (!previewImages.value || previewImages.value.length === 0) {
+      return false
+    }
+  }
+  
+  return true
+})
+
+const canGenerate = computed(() => {
+  try {
+    // 기본 조건들 확인
+    if (!formValid.value) return false
+    if (!selectedType.value) return false
+    if (!formData.value.title) return false
+    
+    // SNS 타입인 경우 플랫폼 필수
+    if (selectedType.value === 'sns' && !formData.value.platform) return false
+    
+    // 포스터 타입인 경우 이미지 필수 및 홍보 기간 필수
+    if (selectedType.value === 'poster') {
+      if (!previewImages.value || previewImages.value.length === 0) return false
+      if (!formData.value.promotionStartDate || !formData.value.promotionEndDate) return false
+    }
+    
+    // 이벤트 타입인 경우 추가 조건들
+    if (formData.value.targetType === 'event') {
+      if (!formData.value.eventName) return false
+      if (!formData.value.startDate || !formData.value.endDate) return false
+    }
+    
+    return true
+  } catch (error) {
+    console.error('❌ canGenerate computed 에러:', error)
+    return false
+  }
+})
+
 const currentVersion = computed(() => {
   return generatedVersions.value[selectedVersion.value] || null
 })
@@ -725,38 +880,76 @@ const selectContentType = (type) => {
 }
 
 const handleFileUpload = (files) => {
-  console.log('📁 파일 업로드 시작:', files)
+  console.log('📁 파일 업로드 이벤트:', files)
   
   // 파일이 없는 경우 처리
-  if (!files || files.length === 0) {
-    console.log('파일이 선택되지 않음')
+  if (!files || (Array.isArray(files) && files.length === 0)) {
+    console.log('📁 파일이 없음 - 기존 이미지 유지')
     return
   }
-
-  // FileList를 배열로 변환
-  const fileArray = Array.from(files)
-  console.log('📁 변환된 파일 배열:', fileArray)
-
-  // 기존 이미지 초기화
+  
+  // 파일 배열로 변환
+  let fileArray = []
+  if (files instanceof FileList) {
+    fileArray = Array.from(files)
+  } else if (Array.isArray(files)) {
+    fileArray = files
+  } else {
+    console.warn('⚠️ 파일 형태를 인식할 수 없음:', files)
+    return
+  }
+  
+  console.log('📁 처리할 파일 개수:', fileArray.length)
+  
+  // 기존 이미지 완전히 초기화 (중복 방지)
   previewImages.value = []
   
+  // 각 파일 개별 처리
   fileArray.forEach((file, index) => {
     if (file && file.type && file.type.startsWith('image/')) {
       const reader = new FileReader()
+      
       reader.onload = (e) => {
-        previewImages.value.push({
-          file,
-          url: e.target.result
-        })
+        console.log(`📁 파일 ${index + 1} 읽기 완료: ${file.name}`)
+        
+        // 중복 방지를 위해 기존에 같은 이름의 파일이 있는지 확인
+        const existingIndex = previewImages.value.findIndex(img => img.name === file.name && img.size === file.size)
+        
+        if (existingIndex === -1) {
+          // 새로운 파일이면 추가
+          previewImages.value.push({
+            file: file,
+            url: e.target.result,
+            name: file.name,
+            size: file.size
+          })
+          console.log(`✅ 파일 추가됨: ${file.name}, 현재 총 ${previewImages.value.length}개`)
+        } else {
+          console.log(`⚠️ 중복 파일 무시됨: ${file.name}`)
+        }
       }
+      
+      reader.onerror = (error) => {
+        console.error(`❌ 파일 ${index + 1} 읽기 실패:`, error)
+      }
+      
       reader.readAsDataURL(file)
+    } else {
+      console.warn(`⚠️ 이미지가 아닌 파일 건너뜀: ${file?.name}`)
     }
   })
 }
 
 const removeImage = (index) => {
+  console.log('🗑️ 이미지 삭제:', index)
   previewImages.value.splice(index, 1)
-  uploadedFiles.value.splice(index, 1)
+  
+  // 업로드된 파일 목록도 업데이트
+  if (uploadedFiles.value && uploadedFiles.value.length > index) {
+    const newFiles = Array.from(uploadedFiles.value)
+    newFiles.splice(index, 1)
+    uploadedFiles.value = newFiles
+  }
 }
 
 const generateContent = async () => {
@@ -770,208 +963,73 @@ const generateContent = async () => {
     return
   }
 
+  isGenerating.value = true
+
   try {
-    console.log(`🎯 [UI] ${selectedType.value.toUpperCase()} 콘텐츠 생성 요청 시작`)
+    console.log('🚀 [UI] 콘텐츠 생성 시작')
+    console.log('📋 [UI] 폼 데이터:', formData.value)
+    console.log('📁 [UI] 이미지 데이터:', previewImages.value)
     
-    // ✅ 이미지 상태 상세 로깅
-    console.log('📁 [UI] 현재 이미지 상태:')
-    console.log('  - previewImages.value:', previewImages.value)
-    console.log('  - previewImages 타입:', typeof previewImages.value)
-    console.log('  - previewImages 배열 여부:', Array.isArray(previewImages.value))
-    console.log('  - previewImages 길이:', previewImages.value?.length)
-    
-    if (previewImages.value && Array.isArray(previewImages.value)) {
-      previewImages.value.forEach((img, index) => {
-        console.log(`  - 이미지 ${index + 1}:`, {
-          exists: !!img,
-          hasUrl: !!img?.url,
-          urlType: typeof img?.url,
-          urlLength: img?.url?.length,
-          urlPreview: img?.url?.substring(0, 50)
-        })
-      })
-    }
-    
-    // ✅ 실제 매장 ID 가져오기
-    let actualStoreId = 1
+    // ✅ 매장 ID 가져오기
+    let storeId = 1 // 기본값
     
     try {
+      // localStorage에서 매장 정보 조회 시도
       const storeInfo = JSON.parse(localStorage.getItem('storeInfo') || '{}')
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
       
       if (storeInfo.storeId) {
-        actualStoreId = storeInfo.storeId
+        storeId = storeInfo.storeId
       } else if (userInfo.storeId) {
-        actualStoreId = userInfo.storeId
+        storeId = userInfo.storeId
+      } else {
+        console.warn('⚠️ localStorage에서 매장 ID를 찾을 수 없음, 기본값 사용:', storeId)
       }
     } catch (error) {
-      console.warn('⚠️ [UI] 매장 정보 파싱 실패, 기본값 사용:', actualStoreId)
+      console.warn('⚠️ 매장 정보 파싱 실패, 기본값 사용:', storeId)
     }
     
-    // ✅ 이미지 처리 함수 개선 (더 관대한 조건)
-    const processImages = () => {
-      const images = []
-      
-      console.log('📁 [UI] 이미지 처리 시작...')
-      
-      // previewImages가 존재하고 배열인지 확인
-      if (!previewImages.value) {
-        console.log('📁 [UI] previewImages.value가 null/undefined')
-        return images
-      }
-      
-      if (!Array.isArray(previewImages.value)) {
-        console.log('📁 [UI] previewImages.value가 배열이 아님:', typeof previewImages.value)
-        return images
-      }
-      
-      if (previewImages.value.length === 0) {
-        console.log('📁 [UI] previewImages.value가 빈 배열')
-        return images
-      }
-      
-      // 각 이미지 처리 (조건 완화)
-      previewImages.value.forEach((img, index) => {
-        console.log(`📁 [UI] 이미지 ${index + 1} 처리:`)
-        console.log('  - img 존재:', !!img)
-        console.log('  - img 타입:', typeof img)
-        
-        if (!img) {
-          console.log('  - 결과: null/undefined, 건너뜀')
-          return
-        }
-        
-        let imageUrl = null
-        
-        // 이미지 URL 추출 (여러 형태 지원)
-        if (typeof img === 'string') {
-          // 직접 문자열인 경우
-          imageUrl = img
-          console.log('  - 문자열 이미지:', imageUrl.substring(0, 50))
-        } else if (img.url && typeof img.url === 'string') {
-          // 객체에 url 속성이 있는 경우
-          imageUrl = img.url
-          console.log('  - 객체 이미지 URL:', imageUrl.substring(0, 50))
-        } else if (img.src && typeof img.src === 'string') {
-          // 객체에 src 속성이 있는 경우
-          imageUrl = img.src
-          console.log('  - 객체 이미지 SRC:', imageUrl.substring(0, 50))
-        } else {
-          console.log('  - 알 수 없는 이미지 형태:', Object.keys(img))
-          return
-        }
-        
-        // ✅ URL 유효성 검사 (조건 완화)
-        if (imageUrl && typeof imageUrl === 'string' && imageUrl.length > 20) {
-          // Base64 또는 HTTP URL 확인
-          if (imageUrl.startsWith('data:image/') || 
-              imageUrl.startsWith('http') || 
-              imageUrl.startsWith('blob:') ||
-              imageUrl.startsWith('//')) {
-            
-            images.push(imageUrl)
-            console.log(`  - 결과: 유효한 이미지 추가 (${Math.round(imageUrl.length / 1024)}KB)`)
-          } else {
-            console.log('  - 결과: 유효하지 않은 형식, 건너뜀')
-          }
-        } else {
-          console.log('  - 결과: URL이 너무 짧거나 유효하지 않음, 건너뜀')
-        }
-      })
-      
-      console.log(`📁 [UI] 이미지 처리 완료: ${images.length}개 유효 이미지`)
-      return images
+    console.log('🏪 [UI] 사용할 매장 ID:', storeId)
+    
+    // ✅ Base64 이미지 URL 추출
+    const imageUrls = previewImages.value?.map(img => img.url).filter(url => url) || []
+    console.log('📁 [UI] 추출된 이미지 URL들:', imageUrls)
+    
+    // ✅ 포스터 타입의 경우 이미지 필수 검증
+    if (selectedType.value === 'poster' && imageUrls.length === 0) {
+      throw new Error('포스터 생성을 위해 최소 1개의 이미지가 필요합니다.')
     }
-    
-    // ✅ 이미지 처리 실행
-    const processedImages = processImages()
-    
-    // ✅ 기본 contentData 객체 생성
-    let contentData = {
-      storeId: actualStoreId,
-      title: (formData.value.title || '').trim(),
+
+    // ✅ 콘텐츠 생성 데이터 구성
+    const contentData = {
+      title: formData.value.title,
+      platform: formData.value.platform || (selectedType.value === 'poster' ? 'POSTER' : 'INSTAGRAM'),
       contentType: selectedType.value,
       type: selectedType.value,
-      images: processedImages, // ✅ 처리된 이미지 배열
-      category: '기타',
-      platform: '',
-      targetAudience: '',
-      requirements: formData.value.requirements || '',
-      eventName: formData.value.eventName || '',
-      startDate: formData.value.startDate || '',
-      endDate: formData.value.endDate || '',
-      targetAge: (aiOptions.value && aiOptions.value.targetAge) ? aiOptions.value.targetAge : '20대'
+      category: getCategory(formData.value.targetType),
+      requirement: formData.value.requirements || `${formData.value.title}에 대한 ${selectedType.value === 'poster' ? '포스터' : 'SNS 게시물'}를 만들어주세요`,
+      targetType: formData.value.targetType,
+      targetAudience: formData.value.targetType,
+      eventName: formData.value.eventName,
+      eventDate: formData.value.eventDate,
+      startDate: formData.value.startDate,
+      endDate: formData.value.endDate,
+      toneAndManner: formData.value.toneAndManner || '친근함',
+      emotionIntensity: formData.value.emotionIntensity || '보통',
+      images: imageUrls, // ✅ Base64 이미지 URL 배열
+      storeId: storeId // ✅ 매장 ID 추가
     }
-    
-    // ✅ 타입별 처리
+
+    // ✅ 포스터 전용 필드 추가
     if (selectedType.value === 'poster') {
-      console.log('🎯 [UI] 포스터 생성 데이터 구성')
-      console.log('📁 [UI] 포스터용 이미지 체크:', {
-        processedImagesCount: processedImages.length,
-        previewImagesCount: previewImages.value?.length || 0,
-        hasImages: processedImages.length > 0
-      })
-      
-      // ✅ 포스터 이미지 체크 (상세 로깅)
-      if (processedImages.length === 0) {
-        console.error('❌ [UI] 포스터 이미지 없음!')
-        console.error('❌ [UI] previewImages 상태:', {
-          exists: !!previewImages.value,
-          isArray: Array.isArray(previewImages.value),
-          length: previewImages.value?.length,
-          content: previewImages.value
-        })
-        
-        appStore.showSnackbar('포스터 생성을 위해 최소 1개의 이미지를 업로드해 주세요.', 'warning')
-        return
-      }
-      
-      contentData.targetAudience = formData.value.targetType || 'menu'
-      contentData.category = getCategory(formData.value.targetType)
-      
-      if (formData.value.promotionStartDate) {
-        contentData.promotionStartDate = formData.value.promotionStartDate
-      }
-      if (formData.value.promotionEndDate) {
-        contentData.promotionEndDate = formData.value.promotionEndDate
-      }
-      
-    } else {
-      console.log('🎯 [UI] SNS 생성 데이터 구성')
-      
-      if (!formData.value.platform) {
-        appStore.showSnackbar('플랫폼을 선택해주세요.', 'warning')
-        return
-      }
-      
-      contentData.platform = formData.value.platform
-      contentData.targetType = formData.value.targetType || 'new_menu'
-      contentData.category = getCategory(formData.value.targetType)
+      contentData.promotionStartDate = formData.value.promotionStartDate
+      contentData.promotionEndDate = formData.value.promotionEndDate
+      contentData.imageStyle = formData.value.imageStyle || '모던'
+      contentData.promotionType = formData.value.promotionType
+      contentData.photoStyle = formData.value.photoStyle || '밝고 화사한'
     }
 
-    // ✅ 최종 검증 및 로깅
-    console.log('📤 [UI] 최종 contentData:', {
-      type: contentData.type,
-      title: contentData.title,
-      platform: contentData.platform,
-      category: contentData.category,
-      storeId: contentData.storeId,
-      imageCount: contentData.images.length,
-      firstImagePreview: contentData.images[0]?.substring(0, 50)
-    })
-
-    // ✅ 필수 필드 최종 체크
-    if (!contentData.title) {
-      throw new Error('제목을 입력해주세요.')
-    }
-    
-    if (selectedType.value === 'sns' && !contentData.platform) {
-      throw new Error('플랫폼을 선택해주세요.')
-    }
-    
-    if (selectedType.value === 'poster' && contentData.images.length === 0) {
-      throw new Error('포스터 생성을 위해서는 최소 1개의 이미지가 필요합니다.')
-    }
+    console.log('📤 [UI] 생성 요청 데이터:', contentData)
 
     // ✅ contentData 무결성 체크
     if (!contentData || typeof contentData !== 'object') {
@@ -991,31 +1049,47 @@ const generateContent = async () => {
       throw new Error(generated?.message || '콘텐츠 생성에 실패했습니다.')
     }
 
-    let finalContent = generated.content || generated.data?.content || ''
+    // ✅ 포스터 생성 결과 처리 개선
+    let finalContent = ''
+    let posterImageUrl = ''
     
-    // SNS용 이미지 추가
-    if (selectedType.value === 'sns' && contentData.images && contentData.images.length > 0) {
-      const imageHtml = contentData.images.map(imageUrl => 
-        `<div style="margin-bottom: 15px; text-align: center;">
-          <img src="${imageUrl}" style="width: 100%; max-width: 400px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" />
-         </div>`
-      ).join('')
+    if (selectedType.value === 'poster') {
+      // 포스터의 경우 generated.data에서 이미지 URL 추출
+      posterImageUrl = generated.data?.posterImage || generated.data?.content || generated.content || ''
+      finalContent = posterImageUrl // content 필드에 이미지 URL 저장
       
-      if (isHtmlContent(finalContent)) {
-        finalContent = imageHtml + finalContent
-      } else {
-        finalContent = imageHtml + `<div style="padding: 15px; font-family: 'Noto Sans KR', Arial, sans-serif; line-height: 1.6;">${finalContent.replace(/\n/g, '<br>')}</div>`
+      console.log('🖼️ [UI] 포스터 이미지 URL:', posterImageUrl)
+    } else {
+      // SNS의 경우 기존 로직 유지
+      finalContent = generated.content || generated.data?.content || ''
+      
+      // SNS용 이미지 추가
+      if (contentData.images && contentData.images.length > 0) {
+        const imageHtml = contentData.images.map(imageUrl => 
+          `<div style="margin-bottom: 15px; text-align: center;">
+            <img src="${imageUrl}" style="width: 100%; max-width: 400px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" />
+           </div>`
+        ).join('')
+        
+        if (isHtmlContent(finalContent)) {
+          finalContent = imageHtml + finalContent
+        } else {
+          finalContent = imageHtml + `<div style="padding: 15px; font-family: 'Noto Sans KR', Arial, sans-serif; line-height: 1.6;">${finalContent.replace(/\n/g, '<br>')}</div>`
+        }
       }
     }
     
+    // ✅ 생성된 콘텐츠 객체에 이미지 정보 포함
     const newContent = {
       id: Date.now() + Math.random(),
       ...contentData,
       content: finalContent,
+      posterImage: posterImageUrl, // 포스터 이미지 URL 별도 저장
       hashtags: generated.hashtags || generated.data?.hashtags || [],
       createdAt: new Date(),
       status: 'draft',
-      uploadedImages: previewImages.value || [],
+      uploadedImages: previewImages.value || [], // ✅ 업로드된 이미지 정보 보존
+      images: imageUrls, // ✅ Base64 URL 보존
       platform: contentData.platform || 'POSTER'
     }
 
@@ -1029,6 +1103,8 @@ const generateContent = async () => {
     console.error('❌ [UI] 콘텐츠 생성 실패:', error)
     console.error('❌ [UI] 에러 스택:', error.stack)
     appStore.showSnackbar(error.message || '콘텐츠 생성 중 오류가 발생했습니다.', 'error')
+  } finally {
+    isGenerating.value = false
   }
 }
 
@@ -1037,7 +1113,9 @@ const getCategory = (targetType) => {
     'new_menu': '메뉴소개',
     'discount': '이벤트',
     'store': '인테리어',
-    'event': '이벤트'
+    'event': '이벤트',
+    'menu': '메뉴소개',
+    'service': '서비스'
   }
   return mapping[targetType] || '기타'
 }
@@ -1053,16 +1131,140 @@ const saveVersion = async (index) => {
   try {
     const version = generatedVersions.value[index]
     
-    await contentStore.saveContent({
-      title: version.title,
-      content: version.content,
-      hashtags: version.hashtags,
-      platform: version.platform,
-      category: getCategory(version.targetType),
-      eventName: version.eventName,
-      eventDate: version.eventDate,
-      status: 'PUBLISHED'
-    })
+    console.log('💾 [UI] 저장할 버전 데이터:', version)
+    
+    // ✅ 매장 ID 가져오기
+    let storeId = 1 // 기본값
+    
+    try {
+      const storeInfo = JSON.parse(localStorage.getItem('storeInfo') || '{}')
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+      
+      if (storeInfo.storeId) {
+        storeId = storeInfo.storeId
+      } else if (userInfo.storeId) {
+        storeId = userInfo.storeId
+      } else {
+        console.warn('⚠️ localStorage에서 매장 ID를 찾을 수 없음, 기본값 사용:', storeId)
+      }
+    } catch (error) {
+      console.warn('⚠️ 매장 정보 파싱 실패, 기본값 사용:', storeId)
+    }
+    
+    console.log('🏪 [UI] 사용할 매장 ID:', storeId)
+    
+    // ✅ 이미지 데이터 준비
+    let imageUrls = []
+    
+    // 포스터의 경우 생성된 포스터 이미지 URL과 업로드된 이미지들을 포함
+    if (selectedType.value === 'poster') {
+      // 1. 생성된 포스터 이미지 URL 추가
+      if (version.posterImage) {
+        imageUrls.push(version.posterImage)
+        console.log('💾 [UI] 생성된 포스터 이미지:', version.posterImage)
+      }
+      
+      // 2. previewImages에서 원본 이미지 URL 추가
+      if (previewImages.value && previewImages.value.length > 0) {
+        const originalImages = previewImages.value.map(img => img.url).filter(url => url)
+        imageUrls = [...imageUrls, ...originalImages]
+        console.log('💾 [UI] 원본 이미지들:', originalImages)
+      }
+      
+      // 3. version에 저장된 이미지도 확인
+      if (version.uploadedImages && version.uploadedImages.length > 0) {
+        const versionImages = version.uploadedImages.map(img => img.url).filter(url => url)
+        imageUrls = [...imageUrls, ...versionImages]
+      }
+      
+      // 4. version.images도 확인
+      if (version.images && Array.isArray(version.images) && version.images.length > 0) {
+        imageUrls = [...imageUrls, ...version.images]
+      }
+      
+      // 중복 제거
+      imageUrls = [...new Set(imageUrls)]
+      
+      console.log('💾 [UI] 포스터 최종 이미지 URL들:', imageUrls)
+      
+      // 이미지가 없으면 에러
+      if (!imageUrls || imageUrls.length === 0) {
+        throw new Error('포스터 저장을 위해 최소 1개의 이미지가 필요합니다.')
+      }
+    } else {
+      // SNS의 경우 선택적으로 이미지 포함
+      if (previewImages.value && previewImages.value.length > 0) {
+        imageUrls = previewImages.value.map(img => img.url).filter(url => url)
+      }
+      if (version.images && Array.isArray(version.images)) {
+        imageUrls = [...new Set([...imageUrls, ...version.images])]
+      }
+    }
+    
+    console.log('💾 [UI] 최종 이미지 URL들:', imageUrls)
+    
+    // ✅ 저장 데이터 구성 - 타입에 따라 다르게 처리
+    let saveData
+    
+    if (selectedType.value === 'poster') {
+      // 포스터용 데이터 구성 (PosterContentSaveRequest에 맞춤)
+      saveData = {
+        // 매장 ID 
+        storeId: storeId,
+        
+        // 기본 콘텐츠 정보 - 포스터는 content에 이미지 URL 저장
+        title: version.title,
+        content: version.posterImage || version.content, // 포스터 이미지 URL을 content에 저장
+        images: imageUrls, // 모든 관련 이미지들
+        
+        // 분류 정보
+        category: getCategory(version.targetType || formData.value.targetType),
+        requirement: formData.value.requirements || `${version.title}에 대한 포스터를 만들어주세요`,
+        
+        // 이벤트 정보
+        eventName: version.eventName || formData.value.eventName,
+        startDate: formData.value.startDate,
+        endDate: formData.value.endDate,
+        
+        // 스타일 정보
+        photoStyle: formData.value.photoStyle || '밝고 화사한'
+      }
+    } else {
+      // SNS용 데이터 구성 (SnsContentSaveRequest에 맞춤)
+      saveData = {
+        // 매장 ID 
+        storeId: storeId,
+        
+        // 필수 필드들
+        contentType: 'SNS',
+        platform: version.platform || formData.value.platform || 'INSTAGRAM',
+        
+        // 기본 콘텐츠 정보
+        title: version.title,
+        content: version.content,
+        hashtags: version.hashtags || [],
+        images: imageUrls,
+        
+        // 분류 정보
+        category: getCategory(version.targetType || formData.value.targetType),
+        requirement: formData.value.requirements || `${version.title}에 대한 SNS 게시물을 만들어주세요`,
+        toneAndManner: formData.value.toneAndManner || '친근함',
+        emotionIntensity: formData.value.emotionIntensity || '보통',
+        
+        // 이벤트 정보
+        eventName: version.eventName || formData.value.eventName,
+        startDate: formData.value.startDate,
+        endDate: formData.value.endDate,
+        
+        // 상태 정보
+        status: 'PUBLISHED'
+      }
+    }
+    
+    console.log('💾 [UI] 최종 저장 데이터:', saveData)
+    
+    // ✅ 저장 실행
+    await contentStore.saveContent(saveData)
     
     version.status = 'published'
     version.publishedAt = new Date()
@@ -1127,7 +1329,8 @@ const getPlatformIcon = (platform) => {
     'INSTAGRAM': 'mdi-instagram',
     'NAVER_BLOG': 'mdi-web',
     'FACEBOOK': 'mdi-facebook',
-    'KAKAO_STORY': 'mdi-chat'
+    'KAKAO_STORY': 'mdi-chat',
+    'POSTER': 'mdi-image'
   }
   return icons[platform] || 'mdi-web'
 }
@@ -1141,7 +1344,8 @@ const getPlatformColor = (platform) => {
     'INSTAGRAM': 'pink',
     'NAVER_BLOG': 'green',
     'FACEBOOK': 'blue',
-    'KAKAO_STORY': 'amber'
+    'KAKAO_STORY': 'amber',
+    'POSTER': 'orange'
   }
   return colors[platform] || 'grey'
 }
@@ -1155,7 +1359,8 @@ const getPlatformLabel = (platform) => {
     'INSTAGRAM': '인스타그램',
     'NAVER_BLOG': '네이버 블로그',
     'FACEBOOK': '페이스북',
-    'KAKAO_STORY': '카카오스토리'
+    'KAKAO_STORY': '카카오스토리',
+    'POSTER': '포스터'
   }
   return labels[platform] || platform
 }
@@ -1226,6 +1431,15 @@ const truncateHtmlContent = (html, maxLength) => {
   }
   
   return `<div style="padding: 10px; font-family: 'Noto Sans KR', Arial, sans-serif;">${truncateText(textContent, maxLength)}</div>`
+}
+
+const previewImage = (imageUrl, title) => {
+  if (!imageUrl) return
+  window.open(imageUrl, '_blank')
+}
+
+const handleImageError = (event) => {
+  console.error('❌ 이미지 로딩 실패:', event.target?.src)
 }
 
 // 라이프사이클
@@ -1314,3 +1528,4 @@ onMounted(() => {
   pointer-events: none;
 }
 </style>
+    

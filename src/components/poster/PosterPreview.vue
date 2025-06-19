@@ -28,43 +28,58 @@
     <div v-else class="poster-result">
       <!-- 포스터 이미지 -->
       <div class="poster-image-container mb-4">
+        <!-- ✅ 이미지 URL 유효성 검사 후 렌더링 -->
         <v-img
-          :src="posterData.posterImage || '/images/placeholder-poster.jpg'"
+          v-if="getPosterImageUrl()"
+          :src="getPosterImageUrl()"
           :alt="posterData.title"
           cover
-          class="rounded-lg elevation-4"
-          style="aspect-ratio: 3/4; max-height: 400px;"
+          class="rounded-lg elevation-4 poster-image"
+          style="aspect-ratio: 3/4; max-height: 400px; width: 100%;"
         >
           <template v-slot:placeholder>
             <div class="d-flex align-center justify-center fill-height">
-              <v-progress-circular indeterminate />
+              <v-progress-circular indeterminate color="primary" />
+              <span class="ml-2">이미지 로딩 중...</span>
             </div>
           </template>
           
           <template v-slot:error>
-            <div class="d-flex align-center justify-center fill-height bg-grey-lighten-3">
-              <v-icon size="48" color="grey">mdi-image-broken</v-icon>
+            <div class="d-flex flex-column align-center justify-center fill-height bg-grey-lighten-3">
+              <v-icon size="48" color="grey" class="mb-2">mdi-image-broken</v-icon>
+              <span class="text-body-2 text-grey">이미지를 불러올 수 없습니다</span>
+              <span class="text-caption text-grey mt-1">{{ getPosterImageUrl() }}</span>
             </div>
           </template>
         </v-img>
 
+        <!-- ✅ 이미지가 없거나 유효하지 않은 경우 -->
+        <div v-else class="d-flex flex-column align-center justify-center fill-height bg-grey-lighten-4 rounded-lg" style="aspect-ratio: 3/4; max-height: 400px;">
+          <v-icon size="48" color="grey" class="mb-2">mdi-image-off</v-icon>
+          <span class="text-body-2 text-grey">포스터 이미지가 없습니다</span>
+          <span class="text-caption text-grey mt-1" v-if="posterData.posterImage">
+            URL: {{ posterData.posterImage }}
+          </span>
+        </div>
+
         <!-- 이미지 액션 버튼 -->
-        <div class="image-actions mt-3">
+        <div class="image-actions mt-4 d-flex gap-2 justify-center">
           <v-btn
-            size="small"
+            color="primary"
             variant="outlined"
             prepend-icon="mdi-download"
             @click="downloadPoster"
-            class="mr-2"
+            :disabled="!getPosterImageUrl()"
           >
             다운로드
           </v-btn>
           
           <v-btn
-            size="small"
+            color="secondary"
             variant="outlined"
             prepend-icon="mdi-share-variant"
             @click="sharePoster"
+            :disabled="!getPosterImageUrl()"
           >
             공유
           </v-btn>
@@ -72,97 +87,95 @@
       </div>
 
       <!-- 포스터 정보 -->
-      <v-card variant="outlined" class="mb-4">
+      <v-card class="mb-4" variant="outlined">
         <v-card-title class="text-h6">
-          {{ posterData.title }}
+          {{ posterData.title || '제목 없음' }}
         </v-card-title>
         
         <v-card-text>
-          <div v-if="posterData.content" class="mb-3">
-            <div class="text-subtitle-2 mb-1">포스터 내용:</div>
-            <div class="text-body-2">{{ posterData.content }}</div>
-          </div>
+          <div class="poster-details">
+            <div v-if="posterData.targetAudience" class="detail-item mb-2">
+              <v-icon class="mr-2" size="small">mdi-target</v-icon>
+              <span class="text-body-2">
+                <strong>홍보 대상:</strong> {{ posterData.targetAudience }}
+              </span>
+            </div>
+            
+            <div v-if="posterData.imageStyle" class="detail-item mb-2">
+              <v-icon class="mr-2" size="small">mdi-palette</v-icon>
+              <span class="text-body-2">
+                <strong>이미지 스타일:</strong> {{ posterData.imageStyle }}
+              </span>
+            </div>
+            
+            <div v-if="posterData.category" class="detail-item mb-2">
+              <v-icon class="mr-2" size="small">mdi-tag</v-icon>
+              <span class="text-body-2">
+                <strong>카테고리:</strong> {{ posterData.category }}
+              </span>
+            </div>
+            
+            <div v-if="posterData.promotionStartDate" class="detail-item mb-2">
+              <v-icon class="mr-2" size="small">mdi-calendar-start</v-icon>
+              <span class="text-body-2">
+                <strong>홍보 기간:</strong> 
+                {{ formatDate(posterData.promotionStartDate) }} 
+                <span v-if="posterData.promotionEndDate">
+                  ~ {{ formatDate(posterData.promotionEndDate) }}
+                </span>
+              </span>
+            </div>
 
-          <div class="d-flex align-center mb-2">
-            <v-chip
-              :color="getStatusColor(posterData.status)"
-              size="small"
-              class="mr-2"
-            >
-              {{ getStatusText(posterData.status) }}
-            </v-chip>
-            <v-chip
-              color="primary"
-              size="small"
-              variant="outlined"
-            >
-              {{ posterData.contentType }}
-            </v-chip>
-          </div>
-
-          <div v-if="posterData.imageStyle" class="text-caption text-grey-600">
-            스타일: {{ posterData.imageStyle }}
+            <div v-if="posterData.status" class="detail-item">
+              <v-chip 
+                :color="getStatusColor(posterData.status)" 
+                size="small"
+                variant="flat"
+              >
+                {{ getStatusText(posterData.status) }}
+              </v-chip>
+            </div>
           </div>
         </v-card-text>
       </v-card>
 
-      <!-- 포스터 사이즈 옵션 -->
+      <!-- 다양한 사이즈 포스터 (있는 경우) -->
       <v-card v-if="posterData.posterSizes && Object.keys(posterData.posterSizes).length > 0" variant="outlined">
-        <v-card-title class="text-subtitle-1">
+        <v-card-title class="text-h6">
           <v-icon class="mr-2">mdi-resize</v-icon>
           다양한 사이즈
         </v-card-title>
         
         <v-card-text>
           <div class="d-flex flex-wrap gap-2">
-            <v-chip
+            <v-btn
               v-for="(url, size) in posterData.posterSizes"
               :key="size"
+              variant="outlined"
+              size="small"
               @click="viewPosterSize(size, url)"
               class="cursor-pointer"
-              variant="outlined"
             >
               {{ size }}
-            </v-chip>
+            </v-btn>
           </div>
         </v-card-text>
       </v-card>
-
-      <!-- 원본 이미지들 -->
-      <div v-if="posterData.originalImages && posterData.originalImages.length > 0" class="mt-4">
-        <div class="text-subtitle-2 mb-2">사용된 원본 이미지:</div>
-        <v-row>
-          <v-col
-            v-for="(image, index) in posterData.originalImages"
-            :key="index"
-            cols="6"
-            sm="4"
-          >
-            <v-img
-              :src="image"
-              :alt="`원본 이미지 ${index + 1}`"
-              cover
-              height="80"
-              class="rounded"
-            />
-          </v-col>
-        </v-row>
-      </div>
     </div>
 
-    <!-- 포스터 사이즈 보기 다이얼로그 -->
-    <v-dialog v-model="showSizeDialog" max-width="600">
+    <!-- 사이즈별 포스터 보기 다이얼로그 -->
+    <v-dialog v-model="showSizeDialog" max-width="600px">
       <v-card>
         <v-card-title>
-          포스터 사이즈: {{ selectedSize }}
+          {{ selectedSize }} 포스터
         </v-card-title>
         
-        <v-card-text class="text-center">
+        <v-card-text>
           <v-img
             :src="selectedSizeUrl"
-            :alt="`포스터 ${selectedSize}`"
-            contain
-            max-height="400"
+            cover
+            class="rounded-lg"
+            style="max-height: 500px;"
           />
         </v-card-text>
         
@@ -185,7 +198,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 /**
  * 포스터 미리보기 컴포넌트
@@ -212,6 +225,38 @@ const selectedSize = ref('')
 const selectedSizeUrl = ref('')
 
 /**
+ * ✅ 포스터 이미지 URL 검증 및 반환
+ */
+const getPosterImageUrl = () => {
+  if (!props.posterData) return null
+  
+  const posterImage = props.posterData.posterImage
+  
+  // 디버깅을 위한 로그
+  console.log('🖼️ [PosterPreview] 이미지 URL 검증:', {
+    posterImage,
+    type: typeof posterImage,
+    length: posterImage?.length,
+    isString: typeof posterImage === 'string',
+    isValidUrl: posterImage && typeof posterImage === 'string' && posterImage.length > 10
+  })
+  
+  // URL 유효성 검사
+  if (posterImage && typeof posterImage === 'string' && posterImage.length > 10) {
+    // HTTP(S) URL 또는 Data URL 확인
+    if (posterImage.startsWith('http') || 
+        posterImage.startsWith('data:image/') || 
+        posterImage.startsWith('blob:') ||
+        posterImage.startsWith('//')) {
+      return posterImage
+    }
+  }
+  
+  console.warn('⚠️ [PosterPreview] 유효하지 않은 이미지 URL:', posterImage)
+  return null
+}
+
+/**
  * 상태 색상 반환
  */
 const getStatusColor = (status) => {
@@ -236,42 +281,83 @@ const getStatusText = (status) => {
 }
 
 /**
- * 포스터 다운로드
+ * 날짜 포맷팅
  */
-const downloadPoster = () => {
-  if (!props.posterData?.posterImage) return
-
-  const link = document.createElement('a')
-  link.href = props.posterData.posterImage
-  link.download = `${props.posterData.title || '포스터'}.jpg`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  } catch (error) {
+    return dateString
+  }
 }
 
 /**
- * 포스터 공유
+ * ✅ 포스터 다운로드 - URL 검증 추가
+ */
+const downloadPoster = () => {
+  const imageUrl = getPosterImageUrl()
+  if (!imageUrl) {
+    console.error('❌ [PosterPreview] 다운로드할 이미지 URL이 없습니다')
+    return
+  }
+
+  console.log('📥 [PosterPreview] 포스터 다운로드 시도:', imageUrl)
+
+  try {
+    const link = document.createElement('a')
+    link.href = imageUrl
+    link.download = `${props.posterData.title || '포스터'}.jpg`
+    link.target = '_blank' // 새 탭에서 열기
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    console.log('✅ [PosterPreview] 다운로드 링크 클릭 완료')
+  } catch (error) {
+    console.error('❌ [PosterPreview] 다운로드 실패:', error)
+  }
+}
+
+/**
+ * ✅ 포스터 공유 - URL 검증 추가
  */
 const sharePoster = async () => {
-  if (!props.posterData?.posterImage) return
+  const imageUrl = getPosterImageUrl()
+  if (!imageUrl) {
+    console.error('❌ [PosterPreview] 공유할 이미지 URL이 없습니다')
+    return
+  }
+
+  console.log('🔗 [PosterPreview] 포스터 공유 시도:', imageUrl)
 
   if (navigator.share) {
     try {
       await navigator.share({
-        title: props.posterData.title,
+        title: props.posterData.title || '생성된 포스터',
         text: '생성된 홍보 포스터를 확인해보세요!',
-        url: props.posterData.posterImage
+        url: imageUrl
       })
+      console.log('✅ [PosterPreview] 공유 완료')
     } catch (error) {
-      console.log('공유 취소됨')
+      if (error.name !== 'AbortError') {
+        console.error('❌ [PosterPreview] 공유 실패:', error)
+      }
     }
   } else {
     // 클립보드에 URL 복사
     try {
-      await navigator.clipboard.writeText(props.posterData.posterImage)
-      // 성공 알림 표시 (부모 컴포넌트에서 처리)
+      await navigator.clipboard.writeText(imageUrl)
+      console.log('✅ [PosterPreview] 클립보드 복사 완료')
+      // 성공 알림은 부모 컴포넌트에서 처리
     } catch (error) {
-      console.error('클립보드 복사 실패:', error)
+      console.error('❌ [PosterPreview] 클립보드 복사 실패:', error)
     }
   }
 }
@@ -289,9 +375,12 @@ const viewPosterSize = (size, url) => {
  * 선택된 사이즈 포스터 다운로드
  */
 const downloadSelectedSize = () => {
+  if (!selectedSizeUrl.value) return
+  
   const link = document.createElement('a')
   link.href = selectedSizeUrl.value
   link.download = `${props.posterData.title || '포스터'}_${selectedSize.value}.jpg`
+  link.target = '_blank'
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
@@ -307,12 +396,50 @@ const downloadSelectedSize = () => {
   position: relative;
 }
 
+.poster-image {
+  border: 1px solid #e0e0e0;
+}
+
 .image-actions {
   display: flex;
   justify-content: center;
 }
 
+.detail-item {
+  display: flex;
+  align-items: center;
+}
+
 .cursor-pointer {
   cursor: pointer;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.gap-3 {
+  gap: 12px;
+}
+
+/* 호버 효과 */
+.v-btn:hover {
+  transform: translateY(-1px);
+  transition: transform 0.2s ease;
+}
+
+/* 이미지 로딩 애니메이션 */
+.v-img {
+  transition: opacity 0.3s ease;
+}
+
+/* 상세 정보 스타일링 */
+.poster-details .detail-item {
+  padding: 4px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.poster-details .detail-item:last-child {
+  border-bottom: none;
 }
 </style>

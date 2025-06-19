@@ -252,12 +252,7 @@
               <div v-else-if="aiRecommendation" class="ai-recommendation-content">
                 <!-- 추천 제목 -->
                 <div class="recommendation-header mb-4">
-                  <div class="d-flex align-center mb-2">
-                    <span class="recommendation-emoji mr-2">{{ aiRecommendation.emoji }}</span>
-                    <h4 class="text-h6 font-weight-bold text-primary">
-                      {{ aiRecommendation.title }}
-                    </h4>
-                  </div>
+ 
                 </div>
 
                 <!-- 스크롤 가능한 콘텐츠 영역 -->
