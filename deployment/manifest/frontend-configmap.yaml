@@ -15,7 +15,7 @@ data:
       MENU_URL: 'http://${ingress_host}/api/menu',
       SALES_URL: 'http://${ingress_host}/api/sales',
       CONTENT_URL: 'http://${ingress_host}/api/content',
-      RECOMMEND_URL: 'http://${ingress_host}/api/recommend',
+      RECOMMEND_URL: 'http://${ingress_host}/api/recommendations',
       
       // Gateway URL (production environment)
       GATEWAY_URL: 'http://${ingress_host}',
