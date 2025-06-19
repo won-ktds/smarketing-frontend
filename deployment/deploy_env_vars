@@ -1,0 +1,68 @@
+# deployment/deploy_env_vars
+# smarketing-frontend 배포 환경변수 설정
+# 이 파일을 실제 환경에 맞게 수정하세요
+
+# Container Registry 설정
+registry=acrdigitalgarage02.azurecr.io
+image_org=smarketing
+
+# Kubernetes 설정
+namespace=smarketing
+replicas=1
+export_port=18080
+
+# Gateway/Ingress 설정 (⭐ smarketing-backend와 동일한 IP 사용)
+ingress_host=smarketing.20.249.184.228.nip.io
+
+# 리소스 설정 (프론트엔드에 맞게 조정)
+resources_requests_cpu=128m    # 프론트엔드는 CPU 사용량이 적음
+resources_requests_memory=128Mi # 메모리도 적게 사용
+resources_limits_cpu=512m      # 제한도 낮게 설정
+resources_limits_memory=512Mi
+
+# API URLs (⭐ smarketing-backend ingress를 통해 라우팅)
+# 백엔드 서비스별 API 경로들
+auth_url=http://smarketing.20.249.184.228.nip.io/api/auth
+member_url=http://smarketing.20.249.184.228.nip.io/api/member
+store_url=http://smarketing.20.249.184.228.nip.io/api/store
+menu_url=http://smarketing.20.249.184.228.nip.io/api/menu
+sales_url=http://smarketing.20.249.184.228.nip.io/api/sales
+content_url=http://smarketing.20.249.184.228.nip.io/api/content
+recommend_url=http://smarketing.20.249.184.228.nip.io/api/recommend
+
+# Frontend 이미지 경로 설정
+smarketing_frontend_image_path=${registry}/${image_org}/smarketing-frontend:latest
+
+# GitHub 설정
+github_org=won-ktds
+teamid=smarketing
+
+# 환경 플래그
+environment=production
+debug_mode=false
+
+# SSL/TLS 설정 (필요시)
+ssl_enabled=false
+ssl_redirect=false
+
+# 로깅 레벨
+log_level=info
+
+# 헬스체크 설정
+health_check_path=/health
+health_check_interval=30s
+health_check_timeout=5s
+health_check_retries=3
+
+# 보안 설정
+security_headers_enabled=true
+cors_enabled=true
+allowed_origins=*
+
+# 캐시 설정
+static_cache_enabled=true
+static_cache_duration=1y
+
+# 압축 설정
+gzip_enabled=true
+gzip_compression_level=6

@@ -1,0 +1,136 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: podman
+    image: quay.io/podman/stable:latest
+    command:
+    - cat
+    tty: true
+    securityContext:
+      privileged: true
+  - name: git
+    image: alpine/git:latest
+    command:
+    - cat
+    tty: true
+"""
+        }
+    }
+    
+    environment {
+        imageTag = sh(script: "echo ${BUILD_NUMBER}", returnStdout: true).trim()
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Load Deploy Variables') {
+            steps {
+                script {
+                    // deploy_env_vars 파일에서 환경변수 로드
+                    if (fileExists('deploy_env_vars')) {
+                        def envVars = readFile('deploy_env_vars').trim()
+                        envVars.split('\n').each { line ->
+                            if (line.contains('=')) {
+                                def (key, value) = line.split('=', 2)
+                                env."${key}" = value
+                                echo "Loaded: ${key} = ${value}"
+                            }
+                        }
+                    } else {
+                        error "deploy_env_vars 파일이 없습니다!"
+                    }
+                    
+                    // 이미지 경로 설정
+                    env.imagePath = "${env.REGISTRY}/${env.IMAGE_ORG}/smarketing-frontend:${imageTag}"
+                    echo "Image Path: ${env.imagePath}"
+                }
+            }
+        }
+        
+        stage('Build & Push Image') {
+            steps {
+                container('podman') {
+                    script {
+                        sh """
+                            podman build \\
+                                --build-arg PROJECT_FOLDER="." \\
+                                --build-arg REACT_APP_AUTH_URL="${env.AUTH_URL}" \\
+                                --build-arg REACT_APP_MEMBER_URL="${env.MEMBER_URL}" \\
+                                --build-arg REACT_APP_STORE_URL="${env.STORE_URL}" \\
+                                --build-arg REACT_APP_CONTENT_URL="${env.CONTENT_URL}" \\
+                                --build-arg REACT_APP_RECOMMEND_URL="${env.RECOMMEND_URL}" \\
+                                --build-arg BUILD_FOLDER="deployment/container" \\
+                                --build-arg EXPORT_PORT="${env.EXPORT_PORT}" \\
+                                -f deployment/container/Dockerfile-smarketing-frontend \\
+                                -t ${env.imagePath} .
+                            
+                            podman push ${env.imagePath}
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Update Manifest Repository') {
+            steps {
+                container('git') {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'github-credentials-${env.TEAMID}',
+                        usernameVariable: 'GIT_USERNAME',
+                        passwordVariable: 'GIT_PASSWORD'
+                    )]) {
+                        sh """
+                            # Git 설정
+                            git config --global user.name "Jenkins"
+                            git config --global user.email "jenkins@company.com"
+                            
+                            # Manifest Repository Clone
+                            git clone https://\$GIT_USERNAME:\$GIT_PASSWORD@github.com/${env.GITHUB_ORG}/smarketing-manifest.git
+                            cd smarketing-manifest
+                            
+                            # Frontend 이미지 태그 업데이트
+                            echo "Updating smarketing-frontend deployment with image tag: ${imageTag}"
+                            
+                            if [ -f "smarketing-frontend/deployment.yaml" ]; then
+                                # 기존 이미지 태그를 새 태그로 교체
+                                sed -i "s|image: ${env.REGISTRY}/${env.IMAGE_ORG}/smarketing-frontend:.*|image: ${env.imagePath}|g" smarketing-frontend/deployment.yaml
+                                
+                                echo "Updated frontend deployment file:"
+                                cat smarketing-frontend/deployment.yaml | grep "image:"
+                            else
+                                echo "Warning: Frontend deployment file not found"
+                            fi
+                            
+                            # 변경사항 커밋 및 푸시
+                            git add .
+                            git commit -m "Update smarketing-frontend image tag to ${imageTag}" || echo "No changes to commit"
+                            git push origin main
+                        """
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo "✅ smarketing-frontend 이미지 빌드 및 Manifest 업데이트가 완료되었습니다!"
+        }
+        failure {
+            echo "❌ smarketing-frontend CI/CD 파이프라인 중 오류가 발생했습니다."
+        }
+    }
+}

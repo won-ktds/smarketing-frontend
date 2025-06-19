@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smarketing-frontend
+  namespace: ${namespace}
+  labels:
+    app: smarketing-frontend
+    version: v1
+spec:
+  replicas: ${replicas}
+  selector:
+    matchLabels:
+      app: smarketing-frontend
+  template:
+    metadata:
+      labels:
+        app: smarketing-frontend
+        version: v1
+    spec:
+      imagePullSecrets:
+      - name: acr-secret
+      containers:
+      - name: smarketing-frontend
+        image: ${smarketing_frontend_image_path}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: ${export_port}
+          name: http
+        resources:
+          requests:
+            cpu: ${resources_requests_cpu}
+            memory: ${resources_requests_memory}
+          limits:
+            cpu: ${resources_limits_cpu}
+            memory: ${resources_limits_memory}
+        volumeMounts:
+        - name: runtime-config
+          mountPath: /usr/share/nginx/html/runtime-env.js
+          subPath: runtime-env.js
+          readOnly: true
+        env:
+        - name: NGINX_PORT
+          value: "${export_port}"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: ${export_port}
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: ${export_port}
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+          successThreshold: 1
+        # 시작 프로브 추가 (컨테이너 시작 시간이 오래 걸릴 수 있음)
+        startupProbe:
+          httpGet:
+            path: /health
+            port: ${export_port}
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 30
+          successThreshold: 1
+      volumes:
+      - name: runtime-config
+        configMap:
+          name: smarketing-frontend-config
+          defaultMode: 0644
+      # 배포 전략 설정
+      strategy:
+        type: RollingUpdate
+        rollingUpdate:
+          maxUnavailable: 0
+          maxSurge: 1
+      # 재시작 정책
+      restartPolicy: Always
+      # DNS 정책
+      dnsPolicy: ClusterFirst
