@@ -232,14 +232,6 @@
                     <p class="text-caption text-grey-darken-1 mb-0">맞춤형 마케팅 제안</p>
                   </div>
                 </div>
-                <v-btn 
-                  icon="mdi-refresh" 
-                  size="small" 
-                  variant="text" 
-                  color="primary"
-                  :loading="aiLoading"
-                  @click="refreshAiRecommendation"
-                />
               </div>
             </v-card-title>
             
