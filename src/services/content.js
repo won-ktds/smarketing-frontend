@@ -1,4 +1,4 @@
-//* src/services/content.js - 수정된 완전한 파일
+//* src/services/content.js - 최종 완전한 파일 (콘텐츠 관리 기능 통합)
 
 import axios from 'axios'
 
@@ -101,7 +101,7 @@ const handleApiError = (error) => {
 
 /**
  * 콘텐츠 서비스 클래스 - 완전 통합 버전
- * Java 백엔드 multipart/form-data API와 연동
+ * Java 백엔드 multipart/form-data API와 연동 + 콘텐츠 관리 기능 통합
  */
 class ContentService {
   /**
@@ -560,10 +560,6 @@ class ContentService {
       if (saveData.status) requestData.status = saveData.status
       if (saveData.category) requestData.category = saveData.category
       if (saveData.requirement) requestData.requirement = saveData.requirement
-      if (saveData.toneAndManner) requestData.toneAndManner = saveData.toneAndManner
-      if (saveData.emotionIntensity || saveData.emotionalIntensity) {
-        requestData.emotionIntensity = saveData.emotionIntensity || saveData.emotionalIntensity
-      }
       if (saveData.eventName) requestData.eventName = saveData.eventName
       if (saveData.startDate) requestData.startDate = saveData.startDate
       if (saveData.endDate) requestData.endDate = saveData.endDate
@@ -594,8 +590,6 @@ class ContentService {
       if (saveData.status) requestData.status = saveData.status
       if (saveData.category) requestData.category = saveData.category
       if (saveData.requirement) requestData.requirement = saveData.requirement
-      if (saveData.toneAndManner) requestData.toneAndManner = saveData.toneAndManner
-      if (saveData.emotionIntensity) requestData.emotionIntensity = saveData.emotionIntensity
       if (saveData.eventName) requestData.eventName = saveData.eventName
       if (saveData.startDate) requestData.startDate = saveData.startDate
       if (saveData.endDate) requestData.endDate = saveData.endDate
@@ -614,7 +608,7 @@ class ContentService {
   }
 
   /**
-   * 콘텐츠 저장 (통합)
+   * ✅ 콘텐츠 저장 (통합)
    * @param {Object} saveData - 저장할 콘텐츠 데이터
    * @returns {Promise<Object>} 저장 결과
    */
@@ -627,7 +621,21 @@ class ContentService {
   }
 
   /**
-   * 콘텐츠 상세 조회
+   * ✅ 진행 중인 콘텐츠 조회 (첫 번째 코드에서 추가)
+   * @param {string} period - 조회 기간
+   * @returns {Promise<Object>} 진행 중인 콘텐츠 목록
+   */
+  async getOngoingContents(period = 'month') {
+    try {
+      const response = await contentApi.get(`/ongoing?period=${period}`)
+      return formatSuccessResponse(response.data.data, '진행 중인 콘텐츠를 조회했습니다.')
+    } catch (error) {
+      return handleApiError(error)
+    }
+  }
+
+  /**
+   * ✅ 콘텐츠 상세 조회 (두 번째 코드에서 유지)
    * @param {number} contentId - 콘텐츠 ID
    * @returns {Promise<Object>} 콘텐츠 상세 정보
    */
@@ -641,7 +649,7 @@ class ContentService {
   }
 
   /**
-   * 콘텐츠 수정 (CON-024: 콘텐츠 수정)
+   * ✅ 콘텐츠 수정 (CON-024: 콘텐츠 수정) - 두 번째 코드에서 유지
    * @param {number} contentId - 콘텐츠 ID
    * @param {Object} updateData - 수정할 콘텐츠 정보
    * @returns {Promise<Object>} 수정 결과
@@ -658,8 +666,6 @@ class ContentService {
       if (updateData.status) requestData.status = updateData.status
       if (updateData.category) requestData.category = updateData.category
       if (updateData.requirement) requestData.requirement = updateData.requirement
-      if (updateData.toneAndManner) requestData.toneAndManner = updateData.toneAndManner
-      if (updateData.emotionIntensity) requestData.emotionIntensity = updateData.emotionIntensity
       if (updateData.eventName) requestData.eventName = updateData.eventName
       if (updateData.images) requestData.images = updateData.images
       
@@ -671,7 +677,7 @@ class ContentService {
   }
 
   /**
-   * 콘텐츠 삭제 (CON-025: 콘텐츠 삭제)
+   * ✅ 콘텐츠 삭제 (CON-025: 콘텐츠 삭제) - 두 번째 코드에서 유지
    * @param {number} contentId - 콘텐츠 ID
    * @returns {Promise<Object>} 삭제 결과
    */
@@ -685,36 +691,24 @@ class ContentService {
   }
 
   /**
-   * 콘텐츠 상태 변경 (추가 기능)
-   * @param {number} contentId - 콘텐츠 ID
-   * @param {string} status - 변경할 상태
-   * @returns {Promise<Object>} 상태 변경 결과
+   * ✅ 타겟 타입을 카테고리로 매핑 (첫 번째 코드에서 추가)
+   * @param {string} targetType - 타겟 타입
+   * @returns {string} 매핑된 카테고리
    */
-  async updateContentStatus(contentId, status) {
-    try {
-      const response = await contentApi.patch(`/${contentId}/status`, { status })
-      return formatSuccessResponse(response.data.data, `콘텐츠 상태가 ${status}로 변경되었습니다.`)
-    } catch (error) {
-      return handleApiError(error)
+  mapTargetToCategory(targetType) {
+    const mapping = {
+      'new_menu': '메뉴소개',
+      'discount': '이벤트',
+      'store': '인테리어', 
+      'event': '이벤트',
+      'menu': '메뉴소개',
+      'service': '서비스'
     }
+    return mapping[targetType] || '이벤트'
   }
 
   /**
-   * 콘텐츠 복제 (추가 기능)
-   * @param {number} contentId - 복제할 콘텐츠 ID
-   * @returns {Promise<Object>} 복제 결과
-   */
-  async duplicateContent(contentId) {
-    try {
-      const response = await contentApi.post(`/${contentId}/duplicate`)
-      return formatSuccessResponse(response.data.data, '콘텐츠가 복제되었습니다.')
-    } catch (error) {
-      return handleApiError(error)
-    }
-  }
-
-  /**
-   * 콘텐츠 검색 (추가 기능)
+   * ✅ 콘텐츠 검색 (첫 번째 코드에서 추가)
    * @param {string} query - 검색어
    * @param {Object} filters - 필터 조건
    * @returns {Promise<Object>} 검색 결과
@@ -741,7 +735,7 @@ class ContentService {
   }
 
   /**
-   * 콘텐츠 통계 조회 (추가 기능)
+   * ✅ 콘텐츠 통계 조회 (첫 번째 코드에서 추가)
    * @param {Object} filters - 필터 조건
    * @returns {Promise<Object>} 통계 데이터
    */
@@ -756,6 +750,78 @@ class ContentService {
       
       const response = await contentApi.get(url)
       return formatSuccessResponse(response.data.data, '콘텐츠 통계를 조회했습니다.')
+    } catch (error) {
+      return handleApiError(error)
+    }
+  }
+
+  /**
+   * ✅ 콘텐츠 복제 (첫 번째 코드에서 추가)
+   * @param {number} contentId - 복제할 콘텐츠 ID
+   * @returns {Promise<Object>} 복제 결과
+   */
+  async duplicateContent(contentId) {
+    try {
+      const response = await contentApi.post(`/${contentId}/duplicate`)
+      return formatSuccessResponse(response.data.data, '콘텐츠가 복제되었습니다.')
+    } catch (error) {
+      return handleApiError(error)
+    }
+  }
+
+  /**
+   * ✅ 콘텐츠 상태 변경 (첫 번째 코드에서 추가)
+   * @param {number} contentId - 콘텐츠 ID
+   * @param {string} status - 변경할 상태
+   * @returns {Promise<Object>} 상태 변경 결과
+   */
+  async updateContentStatus(contentId, status) {
+    try {
+      const response = await contentApi.patch(`/${contentId}/status`, { status })
+      return formatSuccessResponse(response.data.data, `콘텐츠 상태가 ${status}로 변경되었습니다.`)
+    } catch (error) {
+      return handleApiError(error)
+    }
+  }
+
+  /**
+   * ✅ 콘텐츠 즐겨찾기 토글 (첫 번째 코드에서 추가)
+   * @param {number} contentId - 콘텐츠 ID
+   * @returns {Promise<Object>} 즐겨찾기 토글 결과
+   */
+  async toggleContentFavorite(contentId) {
+    try {
+      const response = await contentApi.post(`/${contentId}/favorite`)
+      return formatSuccessResponse(response.data.data, '즐겨찾기가 변경되었습니다.')
+    } catch (error) {
+      return handleApiError(error)
+    }
+  }
+
+  /**
+   * ✅ 콘텐츠 템플릿 목록 조회 (첫 번째 코드에서 추가)
+   * @param {string} type - 템플릿 타입
+   * @returns {Promise<Object>} 템플릿 목록
+   */
+  async getContentTemplates(type = 'all') {
+    try {
+      const response = await contentApi.get(`/templates?type=${type}`)
+      return formatSuccessResponse(response.data.data, '콘텐츠 템플릿을 조회했습니다.')
+    } catch (error) {
+      return handleApiError(error)
+    }
+  }
+
+  /**
+   * ✅ 템플릿으로 콘텐츠 생성 (첫 번째 코드에서 추가)
+   * @param {number} templateId - 템플릿 ID
+   * @param {Object} customData - 커스터마이징 데이터
+   * @returns {Promise<Object>} 생성 결과
+   */
+  async generateFromTemplate(templateId, customData = {}) {
+    try {
+      const response = await contentApi.post(`/templates/${templateId}/generate`, customData)
+      return formatSuccessResponse(response.data.data, '템플릿으로 콘텐츠가 생성되었습니다.')
     } catch (error) {
       return handleApiError(error)
     }

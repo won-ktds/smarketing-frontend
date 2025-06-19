@@ -388,14 +388,50 @@
                   
                   <!-- 콘텐츠 내용 -->
                   <div class="text-body-2 mb-3" style="line-height: 1.6;">
-                    <div v-if="isHtmlContent(currentVersion.content)" 
-                         class="html-content preview-content">
-                      <div v-html="truncateHtmlContent(currentVersion.content, 200)"></div>
-                      <div v-if="currentVersion.content.length > 500" class="text-caption text-grey mt-2">
-                        ... 더 보려면 '자세히 보기'를 클릭하세요
+                    <!-- ✅ 포스터인 경우 이미지로 표시 -->
+                    <div v-if="currentVersion.contentType === 'poster' || currentVersion.type === 'poster'">
+                      <v-img
+                        v-if="currentVersion.posterImage || currentVersion.content"
+                        :src="currentVersion.posterImage || currentVersion.content"
+                        :alt="currentVersion.title"
+                        cover
+                        class="rounded-lg elevation-2 mb-3"
+                        style="max-width: 100%; max-height: 300px; aspect-ratio: 3/4;"
+                        @click="previewImage(currentVersion.posterImage || currentVersion.content, currentVersion.title)"
+                        @error="handleImageError"
+                      >
+                        <template v-slot:placeholder>
+                          <div class="d-flex align-center justify-center fill-height bg-grey-lighten-4">
+                            <v-progress-circular indeterminate color="primary" size="32" />
+                            <span class="ml-2 text-grey">이미지 로딩 중...</span>
+                          </div>
+                        </template>
+                        
+                        <template v-slot:error>
+                          <div class="d-flex flex-column align-center justify-center fill-height bg-grey-lighten-3">
+                            <v-icon size="32" color="grey" class="mb-2">mdi-image-broken</v-icon>
+                            <span class="text-caption text-grey">이미지를 불러올 수 없습니다</span>
+                          </div>
+                        </template>
+                      </v-img>
+                      
+                      <div v-else class="d-flex flex-column align-center justify-center bg-grey-lighten-4 rounded-lg pa-8">
+                        <v-icon size="48" color="grey" class="mb-2">mdi-image-off</v-icon>
+                        <span class="text-body-2 text-grey">포스터 이미지가 없습니다</span>
                       </div>
                     </div>
-                    <div v-else>{{ truncateText(currentVersion.content, 150) }}</div>
+                    
+                    <!-- ✅ SNS인 경우 기존 텍스트 표시 -->
+                    <div v-else>
+                      <div v-if="isHtmlContent(currentVersion.content)" 
+                           class="html-content preview-content">
+                        <div v-html="truncateHtmlContent(currentVersion.content, 200)"></div>
+                        <div v-if="currentVersion.content.length > 500" class="text-caption text-grey mt-2">
+                          ... 더 보려면 '자세히 보기'를 클릭하세요
+                        </div>
+                      </div>
+                      <div v-else>{{ truncateText(currentVersion.content, 150) }}</div>
+                    </div>
                   </div>
                   
                   <!-- 해시태그 -->
@@ -475,26 +511,33 @@
             <!-- ✅ 포스터인 경우 이미지로 표시 -->
             <div v-if="currentVersion.contentType === 'poster' || currentVersion.type === 'poster'">
               <v-img
-                v-if="getValidImageUrl(currentVersion.posterImage || currentVersion.content)"
-                :src="getValidImageUrl(currentVersion.posterImage || currentVersion.content)"
+                v-if="currentVersion.posterImage || currentVersion.content"
+                :src="currentVersion.posterImage || currentVersion.content"
                 :alt="currentVersion.title"
                 cover
                 class="rounded-lg elevation-2"
-                style="max-width: 400px; aspect-ratio: 3/4;"
-                @click="previewImage(getValidImageUrl(currentVersion.posterImage || currentVersion.content), currentVersion.title)"
+                style="max-width: 400px; aspect-ratio: 3/4; cursor: pointer;"
+                @click="previewImage(currentVersion.posterImage || currentVersion.content, currentVersion.title)"
+                @error="handleImageError"
               >
                 <template v-slot:placeholder>
-                  <div class="d-flex align-center justify-center fill-height">
-                    <v-progress-circular indeterminate color="primary" />
+                  <div class="d-flex align-center justify-center fill-height bg-grey-lighten-4">
+                    <v-progress-circular indeterminate color="primary" size="32" />
+                    <span class="ml-2 text-grey">이미지 로딩 중...</span>
                   </div>
                 </template>
+                
                 <template v-slot:error>
                   <div class="d-flex flex-column align-center justify-center fill-height bg-grey-lighten-3">
                     <v-icon size="32" color="grey" class="mb-2">mdi-image-broken</v-icon>
                     <span class="text-caption text-grey">이미지를 불러올 수 없습니다</span>
+                    <span class="text-caption text-grey mt-1" style="word-break: break-all; max-width: 200px;">
+                      {{ (currentVersion.posterImage || currentVersion.content)?.substring(0, 50) }}...
+                    </span>
                   </div>
                 </template>
               </v-img>
+              
               <div v-else class="d-flex flex-column align-center justify-center bg-grey-lighten-4 rounded-lg pa-8">
                 <v-icon size="48" color="grey" class="mb-2">mdi-image-off</v-icon>
                 <span class="text-body-2 text-grey">포스터 이미지가 없습니다</span>
@@ -777,18 +820,33 @@ const promotionEndDateRules = [
   }
 ]
 
-// ✅ 이미지 URL 유효성 검사 함수
+// ✅ 수정: 이미지 URL 유효성 검사 함수 - 더 관대하게 수정
 const getValidImageUrl = (imageUrl) => {
-  if (!imageUrl || typeof imageUrl !== 'string') return null
+  console.log('🖼️ 이미지 URL 검증:', imageUrl, typeof imageUrl)
   
-  // Azure Blob Storage URL, HTTP URL, Data URL 등 유효한 형식 확인
+  if (!imageUrl || typeof imageUrl !== 'string') {
+    console.log('❌ 이미지 URL이 문자열이 아님')
+    return null
+  }
+  
+  // 조건을 더 관대하게 수정 - 최소 길이만 체크
+  if (imageUrl.length < 10) {
+    console.log('❌ 이미지 URL이 너무 짧음:', imageUrl.length)
+    return null
+  }
+  
+  // 유효한 이미지 URL 형식 체크 (조건 완화)
   if (imageUrl.startsWith('http') || 
       imageUrl.startsWith('data:image/') || 
       imageUrl.startsWith('blob:') ||
-      imageUrl.startsWith('//')) {
+      imageUrl.startsWith('//') ||
+      imageUrl.includes('blob.core.windows.net')) { // Azure Blob Storage 추가
+    
+    console.log('✅ 유효한 이미지 URL:', imageUrl.substring(0, 50) + '...')
     return imageUrl
   }
   
+  console.log('❌ 유효하지 않은 이미지 URL 형식')
   return null
 }
 
@@ -798,6 +856,12 @@ const previewImage = (imageUrl, title) => {
   
   // 간단히 새 탭에서 이미지 열기
   window.open(imageUrl, '_blank')
+}
+
+// ✅ 추가: 이미지 에러 핸들링 함수
+const handleImageError = (event) => {
+  console.error('❌ 이미지 로딩 실패:', event.target?.src)
+  // 에러 시 플레이스홀더 표시를 위해 특별한 처리 필요 없음 (v-img의 error slot이 처리)
 }
 
 // 수정: canGenerate computed 추가
