@@ -52,9 +52,9 @@ window.__runtime_config__ = {
     'http://localhost:8083/api/content',
     
   RECOMMEND_URL: isProduction() ? 
-    `${baseUrl}/api/recommend` : 
+    `${baseUrl}/api/recommendations` : 
     'http://localhost:8084/api/recommendations',
-  
+   
   // Gateway URL
   GATEWAY_URL: isProduction() ? baseUrl : 'http://20.1.2.3',
   
