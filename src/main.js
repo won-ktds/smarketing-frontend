@@ -2,7 +2,8 @@
 /**
  * AI 마케팅 서비스 - 메인 앱 진입점
  * Vue 3 + Vuetify 3 기반 애플리케이션 초기화
- */
+ *
+*/
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
