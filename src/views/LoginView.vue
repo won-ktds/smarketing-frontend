@@ -29,7 +29,7 @@
                 @keyup.enter="handleLogin"
               />
 
-              <!-- 비밀번호 입력  -->
+              <!-- 비밀번호 입력 -->
               <v-text-field
                 v-model="credentials.password"
                 label="비밀번호"
@@ -45,7 +45,6 @@
                 @keyup.enter="handleLogin"
               />
 
-              
               <!-- 로그인 옵션 -->
               <div class="d-flex justify-space-between align-center mb-6">
                 <v-checkbox
@@ -109,10 +108,10 @@
               <h3 class="text-subtitle-2 font-weight-bold mb-2">데모 계정 정보</h3>
               <div class="demo-info">
                 <div class="text-body-2 mb-1">
-                  <span class="font-weight-medium">아이디:</span> user01
+                  <span class="font-weight-medium">아이디:</span> test
                 </div>
                 <div class="text-body-2 mb-2">
-                  <span class="font-weight-medium">비밀번호:</span> passw0rd
+                  <span class="font-weight-medium">비밀번호:</span> test1234!
                 </div>
                 <v-btn size="small" color="info" variant="outlined" @click="fillDemoCredentials">
                   데모 계정 자동 입력
@@ -328,8 +327,8 @@ const emailChecked = ref(false)
 
 // 로그인 자격 증명
 const credentials = ref({
-  username: 'user01',
-  password: 'passw0rd',
+  username: 'test',
+  password: 'test1234!',
 })
 
 // 회원가입 데이터
@@ -410,8 +409,8 @@ const businessNumberRules = [
 
 // 로그인 관련 메서드
 const fillDemoCredentials = () => {
-  credentials.value.username = 'user01'
-  credentials.value.password = 'passw0rd'
+  credentials.value.username = 'test'
+  credentials.value.password = 'test1234!'
   loginError.value = ''
 }
 

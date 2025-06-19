@@ -1031,9 +1031,10 @@ const removeImage = (index) => {
   }
 }
 
+// 1. generateContent 함수 - 완전한 버전
 const generateContent = async () => {
-  if (!canGenerate.value) {
-    appStore.showSnackbar('모든 필수 항목을 입력해주세요.', 'warning')
+  if (!formData.value.title?.trim()) {
+    appStore.showSnackbar('제목을 입력해주세요.', 'warning')
     return
   }
 
@@ -1056,22 +1057,59 @@ const generateContent = async () => {
     console.log('📋 [UI] 폼 데이터:', formData.value)
     console.log('📁 [UI] 이미지 데이터:', previewImages.value)
     
-    // 매장 ID 가져오기
-    let storeId = 1
+    // 매장 ID 가져오기 - API 호출로 변경
+    let storeId = null
     
     try {
-      const storeInfo = JSON.parse(localStorage.getItem('storeInfo') || '{}')
-      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+      const storeApiUrl = (window.__runtime_config__ && window.__runtime_config__.STORE_URL) 
+        ? window.__runtime_config__.STORE_URL 
+        : 'http://localhost:8082/api/store'
       
-      if (storeInfo.storeId) {
-        storeId = storeInfo.storeId
-      } else if (userInfo.storeId) {
-        storeId = userInfo.storeId
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('auth_token') || localStorage.getItem('token')
+      
+      if (!token) {
+        throw new Error('인증 토큰이 없습니다.')
+      }
+      
+      const storeResponse = await fetch(`${storeApiUrl}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (storeResponse.ok) {
+        const storeData = await storeResponse.json()
+        storeId = storeData.data?.storeId
+        console.log('✅ 매장 정보 조회 성공, storeId:', storeId)
       } else {
-        console.warn('⚠️ localStorage에서 매장 ID를 찾을 수 없음, 기본값 사용:', storeId)
+        throw new Error(`매장 정보 조회 실패: ${storeResponse.status}`)
       }
     } catch (error) {
-      console.warn('⚠️ 매장 정보 파싱 실패, 기본값 사용:', storeId)
+      console.error('❌ 매장 정보 조회 실패:', error)
+      
+      // fallback: localStorage에서 이전에 저장된 매장 정보 확인
+      try {
+        const storeInfo = JSON.parse(localStorage.getItem('storeInfo') || '{}')
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+        
+        if (storeInfo.storeId) {
+          storeId = storeInfo.storeId
+          console.log('⚠️ fallback - localStorage에서 매장 ID 사용:', storeId)
+        } else if (userInfo.storeId) {
+          storeId = userInfo.storeId
+          console.log('⚠️ fallback - userInfo에서 매장 ID 사용:', storeId)
+        } else {
+          throw new Error('매장 정보를 찾을 수 없습니다. 매장 관리 페이지에서 매장을 등록해주세요.')
+        }
+      } catch (fallbackError) {
+        console.error('❌ fallback 실패:', fallbackError)
+        throw new Error('매장 정보를 찾을 수 없습니다. 매장 관리 페이지에서 매장을 등록해주세요.')
+      }
+    }
+    
+    if (!storeId) {
+      throw new Error('매장 ID를 가져올 수 없습니다. 매장 관리 페이지에서 매장을 등록해주세요.')
     }
     
     console.log('🏪 [UI] 사용할 매장 ID:', storeId)
@@ -1213,6 +1251,7 @@ const selectVersion = (index) => {
   selectedVersion.value = index
 }
 
+// 2. saveVersion 함수 - 완전한 버전
 const saveVersion = async (index) => {
   isPublishing.value = true
   publishingIndex.value = index
@@ -1222,10 +1261,38 @@ const saveVersion = async (index) => {
     
     console.log('💾 [UI] 저장할 버전 데이터:', version)
     
-    // 매장 ID 가져오기
-    let storeId = 1
+    // 매장 ID 가져오기 - API 호출로 변경
+    let storeId = null
     
     try {
+      const storeApiUrl = (window.__runtime_config__ && window.__runtime_config__.STORE_URL) 
+        ? window.__runtime_config__.STORE_URL 
+        : 'http://localhost:8082/api/store'
+      
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('auth_token') || localStorage.getItem('token')
+      
+      if (!token) {
+        throw new Error('인증 토큰이 없습니다.')
+      }
+      
+      const storeResponse = await fetch(`${storeApiUrl}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (storeResponse.ok) {
+        const storeData = await storeResponse.json()
+        storeId = storeData.data?.storeId
+        console.log('✅ [저장] 매장 정보 조회 성공, storeId:', storeId)
+      } else {
+        throw new Error(`매장 정보 조회 실패: ${storeResponse.status}`)
+      }
+    } catch (error) {
+      console.error('❌ [저장] 매장 정보 조회 실패:', error)
+      
+      // fallback
       const storeInfo = JSON.parse(localStorage.getItem('storeInfo') || '{}')
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
       
@@ -1234,10 +1301,12 @@ const saveVersion = async (index) => {
       } else if (userInfo.storeId) {
         storeId = userInfo.storeId
       } else {
-        console.warn('⚠️ localStorage에서 매장 ID를 찾을 수 없음, 기본값 사용:', storeId)
+        throw new Error('매장 정보를 찾을 수 없습니다.')
       }
-    } catch (error) {
-      console.warn('⚠️ 매장 정보 파싱 실패, 기본값 사용:', storeId)
+    }
+    
+    if (!storeId) {
+      throw new Error('매장 ID를 가져올 수 없습니다.')
     }
     
     console.log('🏪 [UI] 사용할 매장 ID:', storeId)
