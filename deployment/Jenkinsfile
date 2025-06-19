@@ -1,4 +1,5 @@
-// deployment/Jenkinsfile
+// deployment/Jenkinsfile_ArgoCD
+
 def PIPELINE_ID = "${env.BUILD_NUMBER}"
 
 def getImageTag() {
@@ -13,148 +14,327 @@ podTemplate(
     containers: [
         containerTemplate(name: 'node', image: 'node:20-slim', ttyEnabled: true, command: 'cat'),
         containerTemplate(name: 'podman', image: "mgoltzsche/podman", ttyEnabled: true, command: 'cat', privileged: true),
-        containerTemplate(name: 'azure-cli', image: 'hiondal/azure-kubectl:latest', command: 'cat', ttyEnabled: true),
-        containerTemplate(name: 'envsubst', image: "hiondal/envsubst", command: 'sleep', args: '1h')
+        containerTemplate(name: 'git', image: 'alpine/git:latest', command: 'cat', ttyEnabled: true)
     ],
     volumes: [
-        emptyDirVolume(mountPath: '/root/.azure', memory: false),
         emptyDirVolume(mountPath: '/run/podman', memory: false)
     ]
 ) {
     node(PIPELINE_ID) {
         def props
         def imageTag = getImageTag()
-        def manifest = "deploy.yaml"
-        def namespace
+        
+        // Manifest Repository 설정
+        def MANIFEST_REPO = 'https://github.com/won-ktds/smarketing-manifest.git'
+        def MANIFEST_CREDENTIAL_ID = 'github-credentials-smarketing'
 
-        stage("Get Source") {
-            checkout scm
-            
-            // 환경변수 파일 확인 및 읽기
-            if (!fileExists('deployment/deploy_env_vars')) {
-                error "deployment/deploy_env_vars 파일이 없습니다!"
+        try {
+            stage("Get Source") {
+                checkout scm
+                
+                // 환경변수 파일 확인 및 읽기
+                if (!fileExists('deployment/deploy_env_vars')) {
+                    error "deployment/deploy_env_vars 파일이 없습니다!"
+                }
+                
+                props = readProperties file: "deployment/deploy_env_vars"
+                
+                // 필수 환경변수 검증
+                if (!props.registry || !props.image_org || !props.namespace) {
+                    error "필수 환경변수가 누락되었습니다. registry, image_org, namespace를 확인하세요."
+                }
+                
+                echo "=== Build Information ==="
+                echo "Service: smarketing-frontend"
+                echo "Image Tag: ${imageTag}"
+                echo "Registry: ${props.registry}"
+                echo "Image Org: ${props.image_org}"
+                echo "Namespace: ${props.namespace}"
             }
-            
-            props = readProperties file: "deployment/deploy_env_vars"
-            namespace = "${props.namespace}"
-            
-            // 필수 환경변수 검증
-            if (!props.registry || !props.image_org || !props.namespace) {
-                error "필수 환경변수가 누락되었습니다. registry, image_org, namespace를 확인하세요."
-            }
-            
-            echo "Registry: ${props.registry}"
-            echo "Image Org: ${props.image_org}"
-            echo "Namespace: ${namespace}"
-            echo "Image Tag: ${imageTag}"
-        }
 
-        stage("Setup AKS") {
-            container('azure-cli') {
-                withCredentials([azureServicePrincipal('azure-credentials')]) {
-                    sh """
-                        az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID
-                        az aks get-credentials --resource-group rg-digitalgarage-02 --name aks-digitalgarage-02 --overwrite-existing
-                        kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply -f -
-                    """
+            stage("Check Changes") {
+                script {
+                    def changes = sh(
+                        script: "git diff --name-only HEAD~1 HEAD",
+                        returnStdout: true
+                    ).trim()
+
+                    if (!changes.contains("src/") && !changes.contains("public/") && !changes.contains("package")) {
+                        echo "No significant frontend changes detected, skipping build"
+                        currentBuild.result = 'SUCCESS'
+                        error("Stopping pipeline - no frontend changes detected")
+                    }
+
+                    echo "Frontend changes detected, proceeding with build"
                 }
             }
-        }
 
-        stage('Build & Push Image') {
-            container('podman') {
-                sh 'podman system service -t 0 unix:///run/podman/podman.sock & sleep 2'
-                
-                withCredentials([usernamePassword(
-                    credentialsId: 'acr-credentials',
-                    usernameVariable: 'ACR_USERNAME',
-                    passwordVariable: 'ACR_PASSWORD'
-                )]) {
-                    def imagePath = "${props.registry}/${props.image_org}/smarketing-frontend:${imageTag}"
+            stage('Build & Push Frontend Image') {
+                container('podman') {
+                    sh 'podman system service -t 0 unix:///run/podman/podman.sock & sleep 2'
                     
-                    sh """
-                        echo "=========================================="
-                        echo "Building smarketing-frontend"
-                        echo "Image Tag: ${imageTag}"
-                        echo "Image Path: ${imagePath}"
-                        echo "=========================================="
-
-                        # ACR 로그인
-                        echo \$ACR_PASSWORD | podman login ${props.registry} --username \$ACR_USERNAME --password-stdin
-
-                        # Docker 이미지 빌드
-                        podman build \\
-                            --build-arg PROJECT_FOLDER="." \\
-                            --build-arg VUE_APP_AUTH_URL="${props.auth_url}" \\
-                            --build-arg VUE_APP_MEMBER_URL="${props.member_url}" \\
-                            --build-arg VUE_APP_STORE_URL="${props.store_url}" \\
-                            --build-arg VUE_APP_MENU_URL="${props.menu_url}" \\
-                            --build-arg VUE_APP_SALES_URL="${props.sales_url}" \\
-                            --build-arg VUE_APP_CONTENT_URL="${props.content_url}" \\
-                            --build-arg VUE_APP_RECOMMEND_URL="${props.recommend_url}" \\
-                            --build-arg BUILD_FOLDER="deployment/container" \\
-                            --build-arg EXPORT_PORT="${props.export_port}" \\
-                            -f deployment/container/Dockerfile-smarketing-frontend \\
-                            -t ${imagePath} .
-
-                        # 이미지 푸시
-                        podman push ${imagePath}
+                    withCredentials([usernamePassword(
+                        credentialsId: 'acr-credentials',
+                        usernameVariable: 'ACR_USERNAME',
+                        passwordVariable: 'ACR_PASSWORD'
+                    )]) {
+                        def imagePath = "${props.registry}/${props.image_org}/smarketing-frontend:${imageTag}"
                         
-                        echo "Image pushed successfully: ${imagePath}"
+                        sh """
+                            echo "=========================================="
+                            echo "Building smarketing-frontend"
+                            echo "Image Tag: ${imageTag}"
+                            echo "Image Path: ${imagePath}"
+                            echo "=========================================="
+
+                            # ACR 로그인
+                            echo \$ACR_PASSWORD | podman login ${props.registry} --username \$ACR_USERNAME --password-stdin
+
+                            # Docker 이미지 빌드
+                            podman build \\
+                                --build-arg PROJECT_FOLDER="." \\
+                                --build-arg VUE_APP_AUTH_URL="${props.auth_url}" \\
+                                --build-arg VUE_APP_MEMBER_URL="${props.member_url}" \\
+                                --build-arg VUE_APP_STORE_URL="${props.store_url}" \\
+                                --build-arg VUE_APP_MENU_URL="${props.menu_url}" \\
+                                --build-arg VUE_APP_SALES_URL="${props.sales_url}" \\
+                                --build-arg VUE_APP_CONTENT_URL="${props.content_url}" \\
+                                --build-arg VUE_APP_RECOMMEND_URL="${props.recommend_url}" \\
+                                --build-arg BUILD_FOLDER="deployment/container" \\
+                                --build-arg EXPORT_PORT="${props.export_port}" \\
+                                -f deployment/container/Dockerfile-smarketing-frontend \\
+                                -t ${imagePath} .
+
+                            # 이미지 푸시
+                            podman push ${imagePath}
+                            
+                            echo "✅ Frontend image pushed successfully: ${imagePath}"
+                        """
+                    }
+                }
+            }
+
+            stage('Update Manifest Repository') {
+                container('git') {
+                    script {
+                        // Manifest Repository Clone
+                        withCredentials([usernamePassword(
+                            credentialsId: MANIFEST_CREDENTIAL_ID,
+                            usernameVariable: 'GIT_USERNAME',
+                            passwordVariable: 'GIT_PASSWORD'
+                        )]) {
+                            sh """
+                                echo "=== Git 설정 ==="
+                                git config --global user.name "Jenkins CI"
+                                git config --global user.email "jenkins@company.com"
+                                
+                                echo "=== Manifest Repository Clone ==="
+                                rm -rf manifest-repo
+                                git clone https://\$GIT_USERNAME:\$GIT_PASSWORD@github.com/won-ktds/smarketing-manifest.git manifest-repo
+                                cd manifest-repo
+                            """
+                            
+                            def fullImageName = "${props.registry}/${props.image_org}/smarketing-frontend:${imageTag}"
+                            def deploymentFile = "smarketing-frontend/deployments/frontend-deployment.yaml"
+                            
+                            sh """
+                                cd manifest-repo
+                                
+                                echo "=== smarketing-frontend 이미지 태그 업데이트 ==="
+                                if [ -f "${deploymentFile}" ]; then
+                                    # 이미지 태그 업데이트 (sed 사용)
+                                    sed -i 's|image: ${props.registry}/${props.image_org}/smarketing-frontend:.*|image: ${fullImageName}|g' "${deploymentFile}"
+                                    echo "Updated ${deploymentFile} with new image: ${fullImageName}"
+                                    
+                                    # 변경사항 확인
+                                    echo "=== 변경된 내용 확인 ==="
+                                    grep "image: ${props.registry}/${props.image_org}/smarketing-frontend" "${deploymentFile}" || echo "이미지 태그 업데이트 확인 실패"
+                                else
+                                    echo "Warning: ${deploymentFile} not found"
+                                    echo "Creating manifest directory structure..."
+                                    
+                                    # 기본 구조 생성
+                                    mkdir -p smarketing-frontend/deployments
+                                    
+                                    # 기본 deployment 파일 생성
+                                    cat > "${deploymentFile}" << EOF
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: smarketing-frontend-config
+  namespace: ${props.namespace}
+data:
+  runtime-env.js: |
+    window.__runtime_config__ = {
+      AUTH_URL: '${props.auth_url}',
+      MEMBER_URL: '${props.member_url}',
+      STORE_URL: '${props.store_url}',
+      MENU_URL: '${props.menu_url}',
+      SALES_URL: '${props.sales_url}',
+      CONTENT_URL: '${props.content_url}',
+      RECOMMEND_URL: '${props.recommend_url}',
+      GATEWAY_URL: 'http://${props.ingress_host}',
+      ENV: 'production',
+      DEBUG: false
+    };
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smarketing-frontend
+  namespace: ${props.namespace}
+  labels:
+    app: smarketing-frontend
+spec:
+  replicas: ${props.replicas}
+  selector:
+    matchLabels:
+      app: smarketing-frontend
+  template:
+    metadata:
+      labels:
+        app: smarketing-frontend
+    spec:
+      imagePullSecrets:
+      - name: acr-secret
+      containers:
+      - name: smarketing-frontend
+        image: ${fullImageName}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: ${props.export_port}
+        resources:
+          requests:
+            cpu: ${props.resources_requests_cpu}
+            memory: ${props.resources_requests_memory}
+          limits:
+            cpu: ${props.resources_limits_cpu}
+            memory: ${props.resources_limits_memory}
+        volumeMounts:
+        - name: runtime-config
+          mountPath: /usr/share/nginx/html/runtime-env.js
+          subPath: runtime-env.js
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: ${props.export_port}
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: ${props.export_port}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: runtime-config
+        configMap:
+          name: smarketing-frontend-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: smarketing-frontend-service
+  namespace: ${props.namespace}
+  labels:
+    app: smarketing-frontend
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: ${props.export_port}
+    protocol: TCP
+    name: http
+  selector:
+    app: smarketing-frontend
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: smarketing-frontend-ingress
+  namespace: ${props.namespace}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+  - host: ${props.ingress_host}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: smarketing-frontend-service
+            port:
+              number: 80
+EOF
+                                    echo "Created basic frontend-deployment.yaml"
+                                fi
+                            """
+                            
+                            sh """
+                                cd manifest-repo
+                                
+                                echo "=== Git 변경사항 확인 ==="
+                                git status
+                                git diff
+                                
+                                # 변경사항이 있으면 커밋 및 푸시
+                                if [ -n "\$(git status --porcelain)" ]; then
+                                    git add .
+                                    git commit -m "Update smarketing-frontend to ${imageTag} - Build ${env.BUILD_NUMBER}"
+                                    git push origin main
+                                    echo "✅ Successfully updated manifest repository"
+                                else
+                                    echo "ℹ️ No changes to commit"
+                                fi
+                            """
+                        }
+                    }
+                }
+            }
+
+            stage('Trigger ArgoCD Sync') {
+                script {
+                    echo """
+🎯 Frontend CI Pipeline 완료!
+
+📦 빌드된 이미지:
+- ${props.registry}/${props.image_org}/smarketing-frontend:${imageTag}
+
+🔄 ArgoCD 동작:
+- ArgoCD가 manifest repository 변경사항을 자동으로 감지합니다
+- smarketing-frontend Application이 새로운 이미지로 동기화됩니다
+- ArgoCD UI에서 배포 상태를 모니터링하세요
+
+🌐 ArgoCD UI: [ArgoCD 접속 URL]
+📁 Manifest Repo: ${MANIFEST_REPO}
                     """
                 }
             }
-        }
 
-        stage('Generate & Apply Manifest') {
-            container('envsubst') {
-                def imagePath = "${props.registry}/${props.image_org}/smarketing-frontend:${imageTag}"
-                
-                sh """
-                    export namespace=${namespace}
-                    export smarketing_frontend_image_path=${imagePath}
-                    export replicas=${props.replicas}
-                    export export_port=${props.export_port}
-                    export ingress_host=${props.ingress_host}
-                    export resources_requests_cpu=${props.resources_requests_cpu}
-                    export resources_requests_memory=${props.resources_requests_memory}
-                    export resources_limits_cpu=${props.resources_limits_cpu}
-                    export resources_limits_memory=${props.resources_limits_memory}
-                    
-                    # API URLs도 export (혹시 사용할 수도 있으니)
-                    export auth_url=${props.auth_url}
-                    export member_url=${props.member_url}
-                    export store_url=${props.store_url}
-                    export menu_url=${props.menu_url}
-                    export sales_url=${props.sales_url}
-                    export content_url=${props.content_url}
-                    export recommend_url=${props.recommend_url}
-                    
-                    echo "=== 환경변수 확인 ==="
-                    echo "namespace: \$namespace"
-                    echo "ingress_host: \$ingress_host"
-                    echo "export_port: \$export_port"
-                    echo "========================="
-                    
-                    envsubst < deployment/${manifest}.template > deployment/${manifest}
-                    echo "Generated manifest file:"
-                    cat deployment/${manifest}
-                """
-            }
+            // 성공 시 처리
+            echo """
+✅ Frontend CI Pipeline 성공!
+🏷️ 새로운 이미지 태그: ${imageTag}
+🔄 ArgoCD가 자동으로 배포를 시작합니다
+            """
 
-            container('azure-cli') {
-                sh """
-                    kubectl apply -f deployment/${manifest}
-                    
-                    echo "Waiting for deployment to be ready..."
-                    kubectl -n ${namespace} wait --for=condition=available deployment/smarketing-frontend --timeout=300s
-                    
-                    echo "Deployment completed successfully!"
-                    kubectl -n ${namespace} get pods -l app=smarketing-frontend
-                    kubectl -n ${namespace} get svc smarketing-frontend-service
-                    kubectl -n ${namespace} get ingress
-                """
+        } catch (Exception e) {
+            // 실패 시 처리
+            echo "❌ Frontend CI Pipeline 실패: ${e.getMessage()}"
+            throw e
+        } finally {
+            // 정리 작업 (항상 실행)
+            container('podman') {
+                sh 'podman system prune -f || true'
             }
+            sh 'rm -rf manifest-repo || true'
         }
     }
 }
