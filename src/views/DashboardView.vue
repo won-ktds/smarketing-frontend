@@ -122,7 +122,7 @@
                     <div class="y-axis-labels">
                       <div v-for="(label, i) in yAxisLabels" :key="i" 
                            class="y-label" 
-                           :style="{ bottom: `${i * 20}%` }">
+                           :style="{ bottom: `${i * 18}%` }">
                         {{ label }}
                       </div>
                     </div>
@@ -139,7 +139,7 @@
                       ref="chartCanvas" 
                       class="chart-canvas"
                       width="800" 
-                      height="300"
+                      height="600"
                       @mousemove="handleMouseMove"
                       @mouseleave="hideTooltip">
                     </canvas>
@@ -176,7 +176,7 @@
 
                   <!-- X축 라벨 - 데이터 포인트와 동일한 위치에 배치 -->
                   <div class="x-axis-labels mt-3" style="position: relative; height: 20px;">
-                    <div class="x-axis-container" style="position: relative; padding-left: 60px; padding-right: 20px;">
+                    <div class="x-axis-container" style="position: relative; padding-left: 60px; padding-right: 60px;">
                       <span 
                         v-for="(point, index) in chartDataPoints" 
                         :key="index" 
@@ -987,6 +987,31 @@ const updateAiRecommendation = (aiData) => {
 }
 
 
+/**
+ * Fallback AI 추천 사용
+ */
+const useFallbackAiRecommendation = () => {
+  console.log('Fallback AI 추천 사용')
+  aiRecommendation.value = {
+    emoji: '☀️',
+    title: '여름 시즌 마케팅 전략',
+    sections: {
+      ideas: {
+        title: '1. 기본 추천사항',
+        items: [
+          '계절 메뉴 개발 및 프로모션',
+          'SNS 마케팅 활용',
+          '지역 고객 대상 이벤트 기획'
+        ]
+      },
+      costs: {
+        title: '2. 기대 효과',
+        items: ['매출 향상', '고객 만족도 증가'],
+        effects: ['브랜드 인지도 상승', '재방문 고객 증가']
+      }
+    }
+  }
+}
 
 // 계산된 속성들 (기존과 동일)
 const currentChartData = computed(() => chartData.value[chartPeriod.value])
@@ -995,17 +1020,30 @@ const chartDataPoints = computed(() => {
   const data = currentChartData.value
   if (!data || data.length === 0) return []
   
-  const maxSales = Math.max(...data.map(d => Math.max(d.sales, d.target)))
+  const maxValue = Math.max(...data.map(d => Math.max(d.sales, d.target)))
+  
+  // Canvas의 실제 padding과 일치하는 좌표 계산
+  const padding = 60 // drawChart에서 사용하는 padding과 동일
+  const canvasWidth = 800 // Canvas width와 동일
+  const canvasHeight = 300 // Canvas height와 동일
+  const chartWidth = canvasWidth - padding * 2
+  const chartHeight = canvasHeight - padding * 2
   
   return data.map((item, index) => {
-    const chartStartPercent = 8
-    const chartEndPercent = 92
-    const chartWidth = chartEndPercent - chartStartPercent
+    // Canvas에서 그려지는 실제 좌표 계산
+    const canvasX = padding + (index * chartWidth / (data.length - 1))
+    const canvasY = padding + chartHeight - ((item.sales / maxValue) * chartHeight)
+    const targetCanvasY = padding + chartHeight - ((item.target / maxValue) * chartHeight)
+    
+    // 백분율로 변환하되, data-points의 padding을 고려
+    const xPercent = (canvasX / canvasWidth) * 100
+    const yPercent = ((canvasHeight - canvasY + padding) / canvasHeight) * 100 - 15
+    const targetYPercent = ((canvasHeight - targetCanvasY + padding) / canvasHeight) * 100 - 15
     
     return {
-      x: chartStartPercent + (index * chartWidth / (data.length - 1)),
-      y: 10 + ((item.sales / maxSales) * 80),
-      targetY: 10 + ((item.target / maxSales) * 80),
+      x: xPercent,
+      y: yPercent,
+      targetY: targetYPercent,
       sales: item.sales,
       target: item.target,
       label: item.label
@@ -1193,10 +1231,6 @@ const showDataTooltip = (index, event) => {
   
   if (!data) return
   
-  // 차트 영역의 위치 계산
-  const chartArea = event.target.closest('.chart-area')
-  const rect = chartArea.getBoundingClientRect()
-  
   // ⚠️ 원본 데이터가 있으면 사용, 없으면 기본 변환 로직 사용
   let actualSales, actualTarget
   
@@ -1215,8 +1249,8 @@ const showDataTooltip = (index, event) => {
   
   tooltip.value = {
     show: true,
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top - 80,
+    x: event.clientX,
+    y: event.clientY - 80,
     title: data.label,
     sales: actualSales,
     target: actualTarget
@@ -1453,8 +1487,7 @@ onMounted(async () => {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 40px;
-  z-index: 0;
+  width: 50px;
 }
 
 .y-label {
@@ -1466,11 +1499,10 @@ onMounted(async () => {
 
 .chart-grid {
   position: absolute;
-  left: 40px;
-  right: 0;
+  left: 60px;
+  right: 60px;
   top: 0;
   bottom: 0;
-  z-index: 0;
 }
 
 .grid-line {
@@ -1487,16 +1519,14 @@ onMounted(async () => {
   top: 0;
   width: 100%;
   height: 100%;
-  z-index: 1;
 }
 
 .data-points {
   position: absolute;
-  left: 40px;
+  left: 0;
   right: 0;
   top: 0;
   bottom: 0;
-  z-index: 2;
 }
 
 .data-point {
@@ -1547,8 +1577,8 @@ onMounted(async () => {
 }
 
 .chart-tooltip {
-  position: absolute;
-  z-index: 99999;
+  position: fixed;
+  z-index: 1000;
   pointer-events: none;
 }
 
@@ -1566,6 +1596,10 @@ onMounted(async () => {
   margin-bottom: 4px;
 }
 
+.tooltip-sales,
+.tooltip-target {
+  margin: 2px 0;
+}
 
 /* AI 추천 카드 새로운 스타일 */
 .ai-recommend-card {
