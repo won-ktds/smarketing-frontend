@@ -333,7 +333,7 @@ class ContentService {
       
       // ✅ API 호출
       const response = await contentApi.post('/sns/generate', formData, {
-        timeout: 30000,
+        timeout: 0,
         headers: {
           'Content-Type': 'multipart/form-data'
         }

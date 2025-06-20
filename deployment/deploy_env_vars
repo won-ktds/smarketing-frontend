@@ -15,9 +15,9 @@ export_port=18080
 ingress_host=smarketing.20.249.184.228.nip.io
 
 # 리소스 설정 (프론트엔드에 맞게 조정)
-resources_requests_cpu=128m    # 프론트엔드는 CPU 사용량이 적음
-resources_requests_memory=128Mi # 메모리도 적게 사용
-resources_limits_cpu=512m      # 제한도 낮게 설정
+resources_requests_cpu=128m
+resources_requests_memory=128Mi
+resources_limits_cpu=512m
 resources_limits_memory=512Mi
 
 # API URLs (⭐ smarketing-backend ingress를 통해 라우팅)

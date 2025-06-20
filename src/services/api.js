@@ -7,14 +7,14 @@ const getApiUrls = () => {
   const config = window.__runtime_config__ || {}
   return {
     GATEWAY_URL: config.GATEWAY_URL || 'http://20.1.2.3',
-    AUTH_URL: config.AUTH_URL || 'http://localhost:8081/api/auth',
-    MEMBER_URL: config.MEMBER_URL || 'http://localhost:8081/api/member',
-    STORE_URL: config.STORE_URL || 'http://localhost:8082/api/store',
-    CONTENT_URL: config.CONTENT_URL || 'http://localhost:8083/api/content',
-    MENU_URL: config.MENU_URL || 'http://localhost:8082/api/menu',
-    SALES_URL: config.SALES_URL || 'http://localhost:8082/api/sales',
-    RECOMMEND_URL: config.RECOMMEND_URL || 'http://localhost:8084/api/recommendations',
-    IMAGE_URL: config.IMAGE_URL || 'http://localhost:8082/api/images'
+    AUTH_URL: config.AUTH_URL || 'http://smarketing.20.249.184.228.nip.io/api/auth',
+    MEMBER_URL: config.MEMBER_URL || 'http://smarketing.20.249.184.228.nip.io/api/member',
+    STORE_URL: config.STORE_URL || 'http://smarketing.20.249.184.228.nip.io/api/store',
+    CONTENT_URL: config.CONTENT_URL || 'http://smarketing.20.249.184.228.nip.io/api/content',
+    MENU_URL: config.MENU_URL || 'http://smarketing.20.249.184.228.nip.io/api/menu',
+    SALES_URL: config.SALES_URL || 'http://smarketing.20.249.184.228.nip.io/api/sales',
+    RECOMMEND_URL: config.RECOMMEND_URL || 'http://smarketing.20.249.184.228.nip.io/api/recommendations',
+    IMAGE_URL: config.IMAGE_URL || 'http://smarketing.20.249.184.228.nip.io/api/images'
   }
 }
 

@@ -1,0 +1,160 @@
+// deployment/Jenkinsfile
+def PIPELINE_ID = "${env.BUILD_NUMBER}"
+
+def getImageTag() {
+    def dateFormat = new java.text.SimpleDateFormat('yyyyMMddHHmmss')
+    def currentDate = new Date()
+    return dateFormat.format(currentDate)
+}
+
+podTemplate(
+    label: "${PIPELINE_ID}",
+    serviceAccount: 'jenkins',
+    containers: [
+        containerTemplate(name: 'node', image: 'node:20-slim', ttyEnabled: true, command: 'cat'),
+        containerTemplate(name: 'podman', image: "mgoltzsche/podman", ttyEnabled: true, command: 'cat', privileged: true),
+        containerTemplate(name: 'azure-cli', image: 'hiondal/azure-kubectl:latest', command: 'cat', ttyEnabled: true),
+        containerTemplate(name: 'envsubst', image: "hiondal/envsubst", command: 'sleep', args: '1h')
+    ],
+    volumes: [
+        emptyDirVolume(mountPath: '/root/.azure', memory: false),
+        emptyDirVolume(mountPath: '/run/podman', memory: false)
+    ]
+) {
+    node(PIPELINE_ID) {
+        def props
+        def imageTag = getImageTag()
+        def manifest = "deploy.yaml"
+        def namespace
+
+        stage("Get Source") {
+            checkout scm
+            
+            // 환경변수 파일 확인 및 읽기
+            if (!fileExists('deployment/deploy_env_vars')) {
+                error "deployment/deploy_env_vars 파일이 없습니다!"
+            }
+            
+            props = readProperties file: "deployment/deploy_env_vars"
+            namespace = "${props.namespace}"
+            
+            // 필수 환경변수 검증
+            if (!props.registry || !props.image_org || !props.namespace) {
+                error "필수 환경변수가 누락되었습니다. registry, image_org, namespace를 확인하세요."
+            }
+            
+            echo "Registry: ${props.registry}"
+            echo "Image Org: ${props.image_org}"
+            echo "Namespace: ${namespace}"
+            echo "Image Tag: ${imageTag}"
+        }
+
+        stage("Setup AKS") {
+            container('azure-cli') {
+                withCredentials([azureServicePrincipal('azure-credentials')]) {
+                    sh """
+                        az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID
+                        az aks get-credentials --resource-group rg-digitalgarage-02 --name aks-digitalgarage-02 --overwrite-existing
+                        kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply -f -
+                    """
+                }
+            }
+        }
+
+        stage('Build & Push Image') {
+            container('podman') {
+                sh 'podman system service -t 0 unix:///run/podman/podman.sock & sleep 2'
+                
+                withCredentials([usernamePassword(
+                    credentialsId: 'acr-credentials',
+                    usernameVariable: 'ACR_USERNAME',
+                    passwordVariable: 'ACR_PASSWORD'
+                )]) {
+                    def imagePath = "${props.registry}/${props.image_org}/smarketing-frontend:${imageTag}"
+                    
+                    sh """
+                        echo "=========================================="
+                        echo "Building smarketing-frontend"
+                        echo "Image Tag: ${imageTag}"
+                        echo "Image Path: ${imagePath}"
+                        echo "=========================================="
+
+                        # ACR 로그인
+                        echo \$ACR_PASSWORD | podman login ${props.registry} --username \$ACR_USERNAME --password-stdin
+
+                        # Docker 이미지 빌드
+                        podman build \\
+                            --build-arg PROJECT_FOLDER="." \\
+                            --build-arg VUE_APP_AUTH_URL="${props.auth_url}" \\
+                            --build-arg VUE_APP_MEMBER_URL="${props.member_url}" \\
+                            --build-arg VUE_APP_STORE_URL="${props.store_url}" \\
+                            --build-arg VUE_APP_MENU_URL="${props.menu_url}" \\
+                            --build-arg VUE_APP_SALES_URL="${props.sales_url}" \\
+                            --build-arg VUE_APP_CONTENT_URL="${props.content_url}" \\
+                            --build-arg VUE_APP_RECOMMEND_URL="${props.recommend_url}" \\
+                            --build-arg BUILD_FOLDER="deployment/container" \\
+                            --build-arg EXPORT_PORT="${props.export_port}" \\
+                            -f deployment/container/Dockerfile-smarketing-frontend \\
+                            -t ${imagePath} .
+
+                        # 이미지 푸시
+                        podman push ${imagePath}
+                        
+                        echo "Image pushed successfully: ${imagePath}"
+                    """
+                }
+            }
+        }
+
+        stage('Generate & Apply Manifest') {
+            container('envsubst') {
+                def imagePath = "${props.registry}/${props.image_org}/smarketing-frontend:${imageTag}"
+                
+                sh """
+                    export namespace=${namespace}
+                    export smarketing_frontend_image_path=${imagePath}
+                    export replicas=${props.replicas}
+                    export export_port=${props.export_port}
+                    export ingress_host=${props.ingress_host}
+                    export resources_requests_cpu=${props.resources_requests_cpu}
+                    export resources_requests_memory=${props.resources_requests_memory}
+                    export resources_limits_cpu=${props.resources_limits_cpu}
+                    export resources_limits_memory=${props.resources_limits_memory}
+                    
+                    # API URLs도 export (혹시 사용할 수도 있으니)
+                    export auth_url=${props.auth_url}
+                    export member_url=${props.member_url}
+                    export store_url=${props.store_url}
+                    export menu_url=${props.menu_url}
+                    export sales_url=${props.sales_url}
+                    export content_url=${props.content_url}
+                    export recommend_url=${props.recommend_url}
+                    
+                    echo "=== 환경변수 확인 ==="
+                    echo "namespace: \$namespace"
+                    echo "ingress_host: \$ingress_host"
+                    echo "export_port: \$export_port"
+                    echo "========================="
+                    
+                    envsubst < deployment/${manifest}.template > deployment/${manifest}
+                    echo "Generated manifest file:"
+                    cat deployment/${manifest}
+                """
+            }
+
+            container('azure-cli') {
+                sh """
+                    kubectl apply -f deployment/${manifest}
+                    
+                    echo "Waiting for deployment to be ready..."
+                    kubectl -n ${namespace} wait --for=condition=available deployment/smarketing-frontend --timeout=300s
+                    
+                    echo "Deployment completed successfully!"
+                    kubectl -n ${namespace} get pods -l app=smarketing-frontend
+                    kubectl -n ${namespace} get svc smarketing-frontend-service
+                    kubectl -n ${namespace} get ingress
+                """
+            }
+        }
+    }
+}
