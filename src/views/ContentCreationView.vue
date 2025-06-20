@@ -135,36 +135,10 @@
                       required
                       density="compact"
                       class="mb-3"
+                      item-title="title"
+                      item-value="value"
                       @update:model-value="handleTargetTypeChange"
-                    >
-                      <template v-slot:item="{ props, item }">
-                        <v-list-item 
-                          v-bind="props"
-                          :disabled="selectedType === 'poster' && item.value !== 'menu'"
-                          :class="{ 'v-list-item--disabled': selectedType === 'poster' && item.value !== 'menu' }"
-                          @click="handleTargetItemClick(item.value, $event)"
-                        >
-                          <template v-slot:prepend>
-                            <v-icon 
-                              :color="(selectedType === 'poster' && item.value !== 'menu') ? 'grey-lighten-2' : 'primary'"
-                            >
-                              mdi-target
-                            </v-icon>
-                          </template>
-                          <v-list-item-title 
-                            :class="{ 'text-grey-lighten-1': selectedType === 'poster' && item.value !== 'menu' }"
-                          >
-                            {{ item.title }}
-                          </v-list-item-title>
-                          <v-list-item-subtitle 
-                            v-if="selectedType === 'poster' && item.value !== 'menu'"
-                            class="text-caption text-grey-lighten-1"
-                          >
-                            현재 메뉴만 지원
-                          </v-list-item-subtitle>
-                        </v-list-item>
-                      </template>
-                    </v-select>
+                    />
 
                     <!-- 이벤트명 (SNS에서 이벤트 선택 시) -->
                     <v-text-field

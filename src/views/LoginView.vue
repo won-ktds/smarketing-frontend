@@ -1,52 +1,55 @@
-//* src/views/LoginView.vue - 모던하고 세련된 디자인으로 개선
+//* src/views/LoginView.vue
 <template>
   <v-container fluid class="login-container">
+    <!-- 배경 패턴 -->
     <div class="login-background">
-      <!-- 배경 패턴 요소들 -->
       <div class="bg-pattern pattern-1"></div>
       <div class="bg-pattern pattern-2"></div>
       <div class="bg-pattern pattern-3"></div>
       <div class="bg-pattern pattern-4"></div>
     </div>
-    
-    <v-row justify="center" align="center" style="min-height: 100vh">
-      <v-col cols="12" sm="8" md="6" lg="4" xl="3">
-        <!-- 브랜드 로고 및 제목 -->
-        <div class="text-center brand-section">
+
+    <v-row justify="center" align="center" class="main-row">
+      <v-col cols="12" sm="10" md="8" lg="6" xl="4">
+        <!-- 브랜드 섹션 -->
+        <div class="brand-section">
           <div class="logo-wrapper">
             <v-img 
               src="/images/logo192.png" 
-              alt="AI 마케팅 로고" 
-              max-width="100" 
-              class="mx-auto logo-image" 
+              alt="AI Marketing Logo"
+              max-width="80"
+              class="logo-image mx-auto"
             />
             <div class="logo-glow"></div>
           </div>
-          <h1 class="brand-title">
-            <span class="ai-text">AI</span>
-            <span class="marketing-text">마케팅</span>
-          </h1>
-          <p class="brand-subtitle">
-            <v-icon class="subtitle-icon">mdi-rocket-launch</v-icon>
-            소상공인을 위한 스마트 마케팅 솔루션
-          </p>
+          
+          <h1 class="brand-title">AI 마케팅</h1>
+          <p class="brand-subtitle">소상공인을 위한 스마트 마케팅 솔루션</p>
         </div>
 
         <!-- 로그인 카드 -->
         <v-card class="login-card" elevation="0">
-          <div class="card-header">
-            <h2 class="login-title">로그인</h2>
-            <p class="login-subtitle">계정에 로그인하여 시작하세요</p>
-          </div>
-          
           <v-card-text class="card-content">
             <v-form v-model="isFormValid" ref="loginForm" @submit.prevent="handleLogin">
+              <!-- 로그인 제목과 테스트 계정 버튼 -->
+              <div class="login-header">
+                <h2 class="login-title">로그인</h2>
+                <v-btn
+                  size="small"
+                  variant="text"
+                  color="info"
+                  @click="showTestAccountHint"
+                  class="hint-btn-header"
+                >
+                  💡 테스트 계정
+                </v-btn>
+              </div>
+
               <!-- 아이디 입력 -->
               <div class="input-group">
                 <label class="input-label">아이디</label>
                 <v-text-field
                   v-model="credentials.username"
-                  placeholder="아이디를 입력하세요"
                   prepend-inner-icon="mdi-account-outline"
                   variant="outlined"
                   :rules="usernameRules"
@@ -63,7 +66,6 @@
                 <label class="input-label">비밀번호</label>
                 <v-text-field
                   v-model="credentials.password"
-                  placeholder="비밀번호를 입력하세요"
                   prepend-inner-icon="mdi-lock-outline"
                   :type="showPassword ? 'text' : 'password'"
                   :append-inner-icon="showPassword ? 'mdi-eye-outline' : 'mdi-eye-off-outline'"
@@ -148,7 +150,7 @@
           비밀번호 찾기
         </v-card-title>
         <v-card-text class="dialog-content">
-          <p class="dialog-description">등록하신 이메일 주소를 입력해주세요.</p>
+          <p class="dialog-text">등록하신 이메일 주소를 입력해주세요.</p>
           <v-text-field
             v-model="forgotEmail"
             label="이메일"
@@ -163,7 +165,8 @@
           <v-btn variant="text" @click="showForgotPassword = false" class="cancel-btn">
             취소
           </v-btn>
-          <v-btn @click="handleForgotPassword" class="send-btn">
+          <v-btn @click="handleForgotPassword" class="submit-btn">
+            <v-icon start>mdi-send</v-icon>
             전송
           </v-btn>
         </v-card-actions>
@@ -174,18 +177,22 @@
     <v-dialog v-model="showSignup" max-width="600" persistent>
       <v-card class="signup-card">
         <v-card-title class="dialog-title">
-          <v-icon class="title-icon">mdi-account-plus-outline</v-icon>
-          회원가입
-          <v-spacer />
-          <v-btn icon variant="text" @click="closeSignupDialog" class="close-btn">
+          <div class="title-section">
+            <v-icon class="title-icon">mdi-account-plus-outline</v-icon>
+            <span>회원가입</span>
+          </div>
+          <v-btn 
+            icon 
+            variant="text" 
+            @click="closeSignupDialog"
+            class="close-btn"
+          >
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-card-title>
+        
         <v-card-text class="dialog-content">
-          <p class="welcome-text">
-            <v-icon class="welcome-icon">mdi-hand-wave</v-icon>
-            AI 마케팅 서비스에 오신 것을 환영합니다!
-          </p>
+          <p class="welcome-text">AI 마케팅 서비스에 오신 것을 환영합니다!</p>
           
           <!-- 회원가입 폼 -->
           <v-form v-model="isSignupFormValid" ref="signupForm">
@@ -260,18 +267,18 @@
             
             <!-- 사업자 번호 -->
             <div class="input-group">
-              <label class="input-label">사업자 번호 <span class="optional">(선택사항)</span></label>
+              <label class="input-label">사업자번호 (선택사항)</label>
               <v-text-field
                 v-model="signupData.businessNumber"
-                placeholder="1234567890"
+                placeholder="10자리 숫자를 입력하세요"
                 variant="outlined"
                 :rules="businessNumberRules"
                 class="signup-input"
-                hint="10자리 숫자로 입력해주세요"
+                hint="사업자등록증의 10자리 숫자를 입력해주세요"
                 persistent-hint
               />
             </div>
-
+            
             <!-- 에러/성공 메시지 -->
             <v-alert
               v-if="signupError"
@@ -281,24 +288,23 @@
               closable
               @click:close="signupError = ''"
             >
-              <v-icon class="alert-icon">mdi-alert-circle-outline</v-icon>
               {{ signupError }}
             </v-alert>
-
+            
             <v-alert
               v-if="signupSuccess"
               type="success"
               variant="tonal"
               class="signup-alert"
             >
-              <v-icon class="alert-icon">mdi-check-circle-outline</v-icon>
               {{ signupSuccess }}
             </v-alert>
           </v-form>
         </v-card-text>
+        
         <v-card-actions class="dialog-actions">
           <v-spacer />
-          <v-btn variant="text" @click="closeSignupDialog" class="cancel-btn">
+          <v-btn @click="closeSignupDialog" class="cancel-btn">
             취소
           </v-btn>
           <v-btn 
@@ -313,6 +319,32 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- 테스트 계정 스낵바 - 가운데 위치 -->
+    <v-snackbar
+      v-model="showTestSnackbar"
+      :timeout="4000"
+      color="info"
+      location="center"
+      class="test-snackbar-center"
+    >
+      <div class="snackbar-content-center">
+        <v-icon start>mdi-information</v-icon>
+        <div class="test-info">
+          <div><strong>테스트 계정 정보</strong></div>
+          <div>아이디: testuser1</div>
+          <div>비밀번호: password123!</div>
+        </div>
+      </div>
+      <template #actions>
+        <v-btn variant="text" @click="fillTestAccountFromSnackbar" class="snackbar-btn">
+          자동 입력
+        </v-btn>
+        <v-btn icon @click="showTestSnackbar = false" class="snackbar-close">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-container>
 </template>
 
@@ -336,6 +368,9 @@ const loginError = ref('')
 const showForgotPassword = ref(false)
 const forgotEmail = ref('')
 
+// 테스트 계정 관련
+const showTestSnackbar = ref(false)
+
 // 회원가입 관련 반응형 데이터
 const showSignup = ref(false)
 const signupForm = ref(null)
@@ -356,12 +391,12 @@ const credentials = ref({
 
 // 회원가입 데이터 - 백엔드 검증 규칙에 맞는 기본값
 const signupData = ref({
-  userId: '',        // 4자 이상
-  password: '',   // 특수문자 포함
+  userId: '',
+  password: '',
   passwordConfirm: '',
   name: '',
   email: '',
-  businessNumber: '',      // 빈 문자열 또는 10자리 숫자
+  businessNumber: '',
 })
 
 const fieldErrors = ref({
@@ -391,16 +426,15 @@ const passwordRules = [
 // 회원가입 유효성 검사 규칙 - 백엔드와 일치하도록 수정
 const signupUserIdRules = [
   (v) => !!v || '아이디를 입력해주세요',
-  (v) => (v && v.length >= 4) || '아이디는 4자 이상이어야 합니다',  // 백엔드: 4자 이상
+  (v) => (v && v.length >= 4) || '아이디는 4자 이상이어야 합니다',
   (v) => (v && v.length <= 20) || '아이디는 20자 이하여야 합니다',
-  (v) => /^[a-zA-Z0-9]+$/.test(v) || '아이디는 영문과 숫자만 사용 가능합니다',  // 백엔드: _는 불허
+  (v) => /^[a-zA-Z0-9]+$/.test(v) || '아이디는 영문과 숫자만 사용 가능합니다',
 ]
 
 const signupPasswordRules = [
   (v) => !!v || '비밀번호를 입력해주세요',
   (v) => (v && v.length >= 8) || '비밀번호는 8자 이상이어야 합니다',
   (v) => (v && v.length <= 20) || '비밀번호는 20자 이하여야 합니다',
-  // 백엔드: 영문, 숫자, 특수문자(@$!%*?&) 모두 필수
   (v) => /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/.test(v) || 
         '영문, 숫자, 특수문자(@$!%*?&)를 모두 포함해야 합니다',
 ]
@@ -413,19 +447,31 @@ const passwordConfirmRules = [
 const nameRules = [
   (v) => !!v || '이름을 입력해주세요',
   (v) => (v && v.length >= 2) || '이름은 2자 이상이어야 합니다',
-  (v) => (v && v.length <= 50) || '이름은 50자 이하여야 합니다',  // 백엔드: 50자 이하
+  (v) => (v && v.length <= 50) || '이름은 50자 이하여야 합니다',
 ]
 
 const emailRules = [
   (v) => !!v || '이메일을 입력해주세요',
   (v) => /.+@.+\..+/.test(v) || '올바른 이메일 형식이 아닙니다',
-  (v) => (v && v.length <= 100) || '이메일은 100자 이하여야 합니다',  // 백엔드: 100자 이하
+  (v) => (v && v.length <= 100) || '이메일은 100자 이하여야 합니다',
 ]
 
 const businessNumberRules = [
-  // 백엔드: 입력시 정확히 10자리 숫자여야 함 (빈 값은 허용)
   (v) => !v || (v.length === 10 && /^\d{10}$/.test(v)) || '사업자번호는 10자리 숫자여야 합니다',
 ]
+
+// 테스트 계정 관련 메서드
+const showTestAccountHint = () => {
+  showTestSnackbar.value = true
+}
+
+const fillTestAccountFromSnackbar = () => {
+  credentials.value.username = 'testuser1'
+  credentials.value.password = 'password123!'
+  loginError.value = ''
+  showTestSnackbar.value = false
+  appStore.showSnackbar('테스트 계정이 입력되었습니다', 'success')
+}
 
 // 로그인 관련 메서드
 const handleLogin = async () => {
@@ -498,29 +544,22 @@ const handleSignup = async () => {
 
     if (response.data.status === 200 || response.data.message?.includes('완료')) {
       signupSuccess.value = '회원가입이 완료되었습니다!'
+      appStore.showSnackbar('회원가입이 완료되었습니다!', 'success')
       
-      // 성공 후 로그인 탭으로 전환하고 폼 초기화
       setTimeout(() => {
         closeSignupDialog()
-        appStore.showSnackbar('회원가입이 완료되었습니다. 로그인해주세요.', 'success')
-      }, 1500)
+      }, 2000)
     } else {
-      throw new Error(response.data.message || '회원가입에 실패했습니다.')
+      signupError.value = response.data.message || '회원가입에 실패했습니다'
     }
   } catch (error) {
-    console.error('회원가입 실패:', error)
+    console.error('회원가입 에러:', error)
     
-    if (error.response && error.response.status === 400) {
-      // 백엔드 validation 에러 처리
+    if (error.response?.status === 400) {
       const errorData = error.response.data
-      
-      if (errorData.data && typeof errorData.data === 'object') {
-        // 각 필드별 에러 메시지들을 하나의 문자열로 결합
-        const errorMessages = []
-        for (const [field, message] of Object.entries(errorData.data)) {
-          errorMessages.push(`${field}: ${message}`)
-        }
-        signupError.value = errorMessages.join('\n') || '입력값을 확인해주세요.'
+      if (errorData.errors && Array.isArray(errorData.errors)) {
+        const errorMessages = errorData.errors.map(err => err.message || err).join(', ')
+        signupError.value = errorMessages
       } else {
         signupError.value = errorData.message || '입력값 검증에 실패했습니다.'
       }
@@ -536,13 +575,13 @@ const handleSignup = async () => {
 const closeSignupDialog = () => {
   showSignup.value = false
   
-  // 폼 초기화 - 백엔드 검증에 맞는 기본값
+  // 폼 초기화
   signupData.value = {
-    userId: 'user01',
-    password: 'test1234!',
-    passwordConfirm: 'test1234!',
-    name: 'test',
-    email: 'test@test.com',
+    userId: '',
+    password: '',
+    passwordConfirm: '',
+    name: '',
+    email: '',
     businessNumber: '',
   }
   
@@ -558,7 +597,7 @@ const closeSignupDialog = () => {
 }
 
 onMounted(() => {
-  // 컴포넌트 마운트 시 필요한 초기화 작업
+  console.log('로그인 페이지 마운트됨')
 })
 </script>
 
@@ -640,11 +679,18 @@ onMounted(() => {
   50% { transform: translateY(-20px) rotate(180deg); }
 }
 
+/* 메인 로우 */
+.main-row {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: 2rem 0;
+}
+
 /* 브랜드 섹션 */
 .brand-section {
   margin-bottom: 3rem;
-  position: relative;
-  z-index: 1;
+  text-align: center;
 }
 
 .logo-wrapper {
@@ -666,62 +712,33 @@ onMounted(() => {
   left: -10px;
   right: -10px;
   bottom: -10px;
-  background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3), transparent 70%);
   border-radius: 50%;
-  filter: blur(20px);
-  opacity: 0.6;
-  animation: logoGlow 3s ease-in-out infinite alternate;
   z-index: 1;
+  animation: glow 3s ease-in-out infinite alternate;
 }
 
-@keyframes logoGlow {
-  0% { opacity: 0.6; transform: scale(1); }
-  100% { opacity: 0.9; transform: scale(1.1); }
+@keyframes glow {
+  from { opacity: 0.5; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1.05); }
 }
 
 .brand-title {
-  font-size: 3.5rem;
-  font-weight: 900;
-  margin-bottom: 1rem;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  letter-spacing: -0.02em;
-}
-
-.ai-text {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  font-size: 3rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffffff, #f0f8ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  color: transparent;
-}
-
-.marketing-text {
-  background: linear-gradient(135deg, #f093fb, #f5576c);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: transparent;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 4px 20px rgba(255, 255, 255, 0.3);
 }
 
 .brand-subtitle {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: rgba(255, 255, 255, 0.9);
   font-weight: 500;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.subtitle-icon {
-  color: #ffd700;
-  animation: rocket 2s ease-in-out infinite;
-}
-
-@keyframes rocket {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-5px); }
 }
 
 /* 로그인 카드 */
@@ -731,33 +748,24 @@ onMounted(() => {
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
+  transition: all 0.3s ease;
 }
 
-.card-header {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  padding: 2rem;
-  text-align: center;
-  color: white;
-}
-
-.login-title {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-}
-
-.login-subtitle {
-  font-size: 1rem;
-  opacity: 0.9;
-  margin: 0;
+.login-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.15);
 }
 
 .card-content {
-  padding: 2.5rem;
+  padding: 3rem;
+}
+
+.login-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0;
 }
 
 /* 입력 필드 */
@@ -789,12 +797,17 @@ onMounted(() => {
   font-size: 1rem;
 }
 
+.custom-input :deep(.v-field__input::placeholder) {
+  color: rgba(0, 0, 0, 0.4) !important;
+  font-style: italic;
+}
+
 /* 로그인 옵션 */
 .login-options {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .remember-checkbox :deep(.v-label) {
@@ -809,6 +822,38 @@ onMounted(() => {
 }
 
 .forgot-password-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+/* 로그인 헤더 */
+.login-header {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.login-title {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0;
+}
+
+.hint-btn-header {
+  position: absolute;
+  right: 0;
+  color: #667eea;
+  font-weight: 500;
+  text-transform: none;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+}
+
+.hint-btn-header:hover {
   background: rgba(102, 126, 234, 0.1);
 }
 
@@ -878,73 +923,68 @@ onMounted(() => {
 .signup-card {
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
 }
 
 .dialog-title {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  padding: 1.5rem;
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  border-radius: 20px 20px 0 0;
+  padding: 1.5rem 2rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   font-weight: 700;
+  color: #1a202c;
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .title-icon {
+  color: #667eea;
   font-size: 1.5rem;
+}
+
+.close-btn {
+  color: #6b7280;
 }
 
 .dialog-content {
   padding: 2rem;
 }
 
-.dialog-description {
-  color: #6b7280;
+.dialog-text {
+  color: #4a5568;
   margin-bottom: 1.5rem;
   line-height: 1.6;
 }
 
 .welcome-text {
-  color: #374151;
-  font-size: 1.1rem;
-  margin-bottom: 2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  color: #4a5568;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+  text-align: center;
+  font-size: 1rem;
 }
 
-.welcome-icon {
-  color: #fbbf24;
-  font-size: 1.3rem;
+.dialog-input,
+.signup-input {
+  border-radius: 12px;
 }
 
+.dialog-input :deep(.v-field),
 .signup-input :deep(.v-field) {
   border-radius: 12px;
-  margin-bottom: 0.5rem;
-}
-
-.optional {
-  color: #9ca3af;
-  font-size: 0.85rem;
-  font-weight: 400;
-}
-
-.signup-alert {
-  margin-bottom: 1rem;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.alert-icon {
-  margin-right: 0.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .dialog-actions {
-  padding: 1.5rem 2rem;
-  background: #f9fafb;
+  padding: 1rem 2rem 2rem;
+  gap: 1rem;
 }
 
 .cancel-btn {
@@ -952,26 +992,74 @@ onMounted(() => {
   text-transform: none;
 }
 
-.send-btn,
+.submit-btn,
 .signup-submit-btn {
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
-  border-radius: 12px;
   text-transform: none;
+  border-radius: 12px;
   font-weight: 600;
 }
 
-.close-btn {
-  color: rgba(255, 255, 255, 0.8);
+.submit-btn:hover,
+.signup-submit-btn:hover {
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
 }
 
-.close-btn:hover {
+.signup-alert {
+  margin-top: 1rem;
+  border-radius: 12px;
+}
+
+/* 스낵바 스타일 - 가운데 위치 */
+.test-snackbar-center {
+  backdrop-filter: blur(10px);
+}
+
+.test-snackbar-center :deep(.v-snackbar__wrapper) {
+  min-width: 320px;
+  background: rgba(33, 150, 243, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(33, 150, 243, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.snackbar-content-center {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.test-info {
+  line-height: 1.4;
+}
+
+.test-info > div:first-child {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.test-info > div:not(:first-child) {
+  font-size: 0.9rem;
+  opacity: 0.95;
+}
+
+.snackbar-btn {
   color: white;
-  background: rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+}
+
+.snackbar-close {
+  color: white;
 }
 
 /* 반응형 디자인 */
 @media (max-width: 768px) {
+  .card-content {
+    padding: 2rem 1.5rem;
+  }
+  
   .brand-title {
     font-size: 2.5rem;
   }
@@ -980,40 +1068,26 @@ onMounted(() => {
     font-size: 1rem;
   }
   
-  .card-content {
-    padding: 2rem;
+  .dialog-content {
+    padding: 1.5rem;
   }
   
-  .login-options {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
-  }
-  
-  .bg-pattern {
-    display: none; /* 모바일에서 배경 패턴 숨김 */
+  .main-row {
+    padding: 1rem 0;
   }
 }
 
 @media (max-width: 480px) {
   .card-content {
-    padding: 1.5rem;
+    padding: 1.5rem 1rem;
   }
   
-  .dialog-content {
-    padding: 1.5rem;
+  .brand-title {
+    font-size: 2rem;
   }
-}
-
-/* 애니메이션 효과 */
-.v-enter-active,
-.v-leave-active {
-  transition: all 0.3s ease;
-}
-
-.v-enter-from,
-.v-leave-to {
-  opacity: 0;
-  transform: translateY(30px);
+  
+  .login-title {
+    font-size: 1.5rem;
+  }
 }
 </style>
