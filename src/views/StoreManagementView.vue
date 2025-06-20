@@ -1132,7 +1132,7 @@ const uploadMenuImage = async (menuId) => {
     
     // ✅ 이미지 전용 API 인스턴스 생성
     const imageApiInstance = axios.create({
-      baseURL: 'http://localhost:8082', // 포트만 지정
+      baseURL: 'http://smarketing.20.249.184.228.nip.io', // 포트만 지정
       timeout: 30000,
       headers: {
         'Content-Type': 'multipart/form-data'
