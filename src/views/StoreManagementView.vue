@@ -1,3 +1,5 @@
+storemanagement vue백업
+
 <template>
   <v-container fluid class="pa-4">
     <!-- 뒤로가기 버튼과 제목 -->
@@ -162,7 +164,7 @@
                         <v-icon class="mr-2" color="grey">mdi-calendar-off</v-icon>
                         <div>
                           <div class="text-caption text-grey">휴무일</div>
-                          <div class="text-body-1">{{ formatClosedDays(storeInfo.holidays) }}</div>
+                          <div class="text-body-1">{{ formatClosedDays(storeInfo.closedDays) }}</div>
                         </div>
                       </div>
                     </v-col>
@@ -243,119 +245,132 @@
 
           <!-- 메뉴 목록 -->
           <div v-if="filteredMenus.length > 0">
-            <v-row>
-              <v-col
-                v-for="menu in filteredMenus"
-                :key="menu.id || menu.menuId"
-                cols="12"
-                sm="6"
-                md="4"
-                lg="3"
+  <v-row>
+    <v-col
+      v-for="menu in filteredMenus"
+      :key="menu.id || menu.menuId"
+      cols="12"
+      sm="6"
+      md="4"
+      lg="3"
+    >
+      <v-card
+        class="menu-card h-100"
+        elevation="3"
+        @click="viewMenuDetail(menu)"
+      >
+        <!-- 이미지 영역 -->
+        <div class="position-relative">
+          <v-img
+            :src="getMenuImageUrl(menu)"
+            height="200"
+            cover
+            class="grey lighten-2"
+            @error="handleImageError($event, menu)"
+          >
+            <template v-slot:placeholder>
+              <div class="d-flex align-center justify-center fill-height">
+                <v-progress-circular
+                  color="grey-lighten-4"
+                  indeterminate
+                />
+              </div>
+            </template>
+            <template v-slot:error>
+              <div class="d-flex align-center justify-center fill-height">
+                <v-icon size="64" color="grey-lighten-2">mdi-image-off</v-icon>
+              </div>
+            </template>
+          </v-img>
+          
+          <!-- 상태 뱃지 - 우상단 -->
+          <div class="position-absolute top-0 right-0 pa-2">
+            <div class="d-flex flex-column gap-1">
+              <v-chip
+                v-if="!menu.available"
+                color="red"
+                size="small"
+                variant="flat"
               >
-                <v-card
-                  class="menu-card h-100"
-                  elevation="2"
-                  @click="viewMenuDetail(menu)"
-                >
-                  <div class="position-relative">
-                    <!-- 메뉴 카드에서 이미지 표시 수정 -->
-                    <v-img
-                      :src="getMenuImageUrl(menu)"
-                      height="200"
-                      cover
-                      class="grey lighten-2"
-                      @error="handleImageError($event, menu)"
-                    >
-                      <template v-slot:placeholder>
-                        <div class="d-flex align-center justify-center fill-height">
-                          <v-progress-circular
-                            color="grey-lighten-4"
-                            indeterminate
-                          />
-                        </div>
-                      </template>
-                      <!-- 이미지 로딩 실패 시 플레이스홀더 표시 -->
-                      <template v-slot:error>
-                        <div class="d-flex align-center justify-center fill-height">
-                          <v-icon size="64" color="grey-lighten-2">mdi-image-off</v-icon>
-                        </div>
-                      </template>
-                    </v-img>
-                    
-                    <!-- 상태 뱃지 -->
-                    <div class="position-absolute top-0 right-0 pa-2">
-                      <v-chip
-                        v-if="!menu.available"
-                        color="red"
-                        size="small"
-                        class="mb-1"
-                      >
-                        품절
-                      </v-chip>
-                      <v-chip
-                        v-if="menu.recommended"
-                        color="orange"
-                        size="small"
-                      >
-                        추천
-                      </v-chip>
-                    </div>
-                    
-                    <!-- 액션 버튼 -->
-                    <div class="position-absolute top-0 left-0 pa-2">
-                      <v-btn
-                        icon="mdi-pencil"
-                        size="small"
-                        color="white"
-                        variant="elevated"
-                        @click.stop="editMenu(menu)"
-                        class="me-1"
-                      />
-                      <v-btn
-                        icon="mdi-delete"
-                        size="small"
-                        color="red"
-                        variant="elevated"
-                        @click.stop="confirmDeleteMenu(menu)"
-                      />
-                    </div>
-                  </div>
-                  
-                  <v-card-text class="pa-3">
-                    <div class="d-flex justify-space-between align-start mb-2">
-                      <h4 class="text-subtitle-1 font-weight-bold">
-                        {{ menu.menuName || menu.name }}
-                      </h4>
-                      <v-chip
-                        :color="menu.available ? 'green' : 'red'"
-                        size="small"
-                        variant="tonal"
-                      >
-                        {{ menu.available ? '판매중' : '품절' }}
-                      </v-chip>
-                    </div>
-                    
-                    <p class="text-body-2 text-grey text-truncate-2 mb-2">
-                      {{ menu.description || '설명이 없습니다' }}
-                    </p>
-                    
-                    <div class="d-flex justify-space-between align-center">
-                      <span class="text-h6 font-weight-bold text-primary">
-                        {{ menu.price ? menu.price.toLocaleString() : '0' }}원
-                      </span>
-                      <v-chip
-                        size="small"
-                        variant="outlined"
-                        color="primary"
-                      >
-                        {{ menu.category }}
-                      </v-chip>
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
+                품절
+              </v-chip>
+              <v-chip
+                v-if="menu.recommended"
+                color="orange"
+                size="small"
+                variant="flat"
+              >
+                추천
+              </v-chip>
+            </div>
           </div>
+        </div>
+        
+        <!-- 카드 내용 -->
+        <v-card-text class="pa-3">
+          <!-- 메뉴명과 상태 -->
+          <div class="d-flex justify-space-between align-start mb-2">
+            <h4 class="text-subtitle-1 font-weight-bold line-clamp-1">
+              {{ menu.menuName || menu.name }}
+            </h4>
+            <v-chip
+              :color="menu.available ? 'green' : 'red'"
+              size="small"
+              variant="tonal"
+              class="ml-2"
+            >
+              {{ menu.available ? '판매중' : '품절' }}
+            </v-chip>
+          </div>
+          
+          <!-- 설명 -->
+          <p class="text-body-2 text-grey text-truncate-2 mb-2">
+            {{ menu.description || '설명이 없습니다' }}
+          </p>
+          
+          <!-- 가격과 카테고리 -->
+          <div class="d-flex justify-space-between align-center mb-3">
+            <span class="text-h6 font-weight-bold text-primary">
+              {{ menu.price ? menu.price.toLocaleString() : '0' }}원
+            </span>
+            <v-chip
+              size="small"
+              variant="outlined"
+              color="primary"
+            >
+              {{ menu.category }}
+            </v-chip>
+          </div>
+          
+          <!-- 액션 버튼들 - 카드 하단에 명확하게 배치 -->
+          <div class="d-flex gap-2 mt-3">
+            <v-btn
+              color="primary"
+              variant="outlined"
+              size="small"
+              prepend-icon="mdi-pencil"
+              @click.stop="editMenu(menu)"
+              class="flex-1"
+            >
+              수정
+            </v-btn>
+            <v-btn
+              color="error"
+              variant="outlined"
+              size="small"
+              prepend-icon="mdi-delete"
+              @click.stop="confirmDeleteMenu(menu)"
+              class="flex-1"
+            >
+              삭제
+            </v-btn>
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-col>
+  </v-row>
+</div>
+
 
           <!-- 메뉴가 없는 경우 -->
           <v-card v-else class="text-center pa-8" elevation="2">
@@ -934,6 +949,20 @@ const shouldShowImagePreview = computed(() => {
   return null
 })
 
+// ✅ 추가: Store 스토어의 메뉴 상태를 감시하여 자동 동기화
+watch(() => storeStore.menus, (newMenus) => {
+  console.log('Store 스토어 메뉴 상태 변경 감지:', newMenus)
+  menus.value = newMenus || []
+}, { immediate: true, deep: true })
+
+// ✅ 추가: 탭 변경 시 메뉴 조회
+watch(currentTab, async (newTab) => {
+  if (newTab === 'menu' && storeStore.hasStoreInfo && menus.value.length === 0) {
+    console.log('메뉴 탭으로 전환, 메뉴 데이터 조회 시작')
+    await loadMenus()
+  }
+})
+
 // ===== 유틸리티 함수들 =====
 
 /**
@@ -1013,13 +1042,28 @@ const checkMenuImages = () => {
 }
 
 const formatClosedDays = (closedDays) => {
-  if (!closedDays) return '미설정'
+  console.log('=== formatClosedDays 호출 ===')
+  console.log('입력값:', closedDays, '타입:', typeof closedDays)
   
-  if (typeof closedDays === 'string') {
-    return closedDays
+  if (!closedDays) {
+    console.log('closedDays가 없음 -> 미설정')
+    return '미설정'
   }
   
-  if (Array.isArray(closedDays)) {
+  // ✅ 문자열인 경우 (백엔드에서 받은 "thursday,saturday" 형태)
+  if (typeof closedDays === 'string') {
+    console.log('문자열 형태의 closedDays:', closedDays)
+    
+    // 빈 문자열인 경우
+    if (closedDays.trim() === '') {
+      console.log('빈 문자열 -> 연중무휴')
+      return '연중무휴'
+    }
+    
+    // ✅ 쉼표로 구분된 문자열을 배열로 변환 후 한글로 변환
+    const dayArray = closedDays.split(',').map(day => day.trim()).filter(day => day)
+    console.log('분리된 배열:', dayArray)
+    
     const dayNames = {
       'monday': '월요일',
       'tuesday': '화요일', 
@@ -1030,9 +1074,42 @@ const formatClosedDays = (closedDays) => {
       'sunday': '일요일'
     }
     
-    return closedDays.map(day => dayNames[day] || day).join(', ') || '연중무휴'
+    const koreanDays = dayArray.map(day => dayNames[day] || day).filter(day => day)
+    console.log('한글 변환된 배열:', koreanDays)
+    
+    if (koreanDays.length === 0) {
+      return '연중무휴'
+    }
+    
+    const result = koreanDays.join(', ')
+    console.log('최종 결과:', result)
+    return result
   }
   
+  // ✅ 배열인 경우 (기존 로직 유지)
+  if (Array.isArray(closedDays)) {
+    console.log('배열 형태의 closedDays:', closedDays)
+    
+    const dayNames = {
+      'monday': '월요일',
+      'tuesday': '화요일', 
+      'wednesday': '수요일',
+      'thursday': '목요일',
+      'friday': '금요일',
+      'saturday': '토요일',
+      'sunday': '일요일'
+    }
+    
+    const koreanDays = closedDays.map(day => dayNames[day] || day).filter(day => day)
+    
+    if (koreanDays.length === 0) {
+      return '연중무휴'
+    }
+    
+    return koreanDays.join(', ')
+  }
+  
+  console.log('예상치 못한 형태 -> 미설정')
   return '미설정'
 }
 
@@ -1290,8 +1367,15 @@ const editBasicInfo = () => {
   console.log('매장 정보 수정 시작')
   editMode.value = true
   
-  // 기존 매장 정보로 폼 데이터 설정
   const store = storeInfo.value
+  
+  // ✅ closedDays 문자열을 holidays 배열로 변환
+  let holidaysArray = []
+  if (store.closedDays && typeof store.closedDays === 'string') {
+    holidaysArray = store.closedDays.split(',').map(day => day.trim()).filter(day => day)
+    console.log('closedDays 문자열을 배열로 변환:', store.closedDays, '->', holidaysArray)
+  }
+  
   formData.value = {
     storeName: store.storeName || '',
     businessType: store.businessType || '',
@@ -1302,10 +1386,12 @@ const editBasicInfo = () => {
     blogUrl: store.blogAccounts || '',
     openTime: store.openTime || '09:00',
     closeTime: store.closeTime || '21:00',
-    holidays: store.holidays || [],
+    // ✅ 수정: closedDays 문자열을 holidays 배열로 변환
+    holidays: holidaysArray,
     description: store.description || ''
   }
   
+  console.log('수정용 폼 데이터 설정:', formData.value)
   showCreateDialog.value = true
 }
 
@@ -1436,16 +1522,19 @@ const saveStore = async () => {
   try {
     console.log('매장 정보 저장 시작')
     
+    const businessHours = `${formData.value.openTime || '09:00'}-${formData.value.closeTime || '21:00'}`
+    const closedDays = Array.isArray(formData.value.holidays) 
+      ? formData.value.holidays.join(',') 
+      : (formData.value.holidays || '')
+
     // 백엔드 형식에 맞는 데이터 구조로 변환
     const storeData = {
       storeName: formData.value.storeName,
       businessType: formData.value.businessType,
       address: formData.value.address,
       phoneNumber: formData.value.phoneNumber || '',
-      openTime: formData.value.openTime || '09:00',
-      closeTime: formData.value.closeTime || '21:00',
-      holidays: Array.isArray(formData.value.holidays) ? 
-        formData.value.holidays.join(',') : '',
+      businessHours: businessHours,    // ✅ 추가
+      closedDays: closedDays,          // ✅ 추가
       seatCount: parseInt(formData.value.seatCount) || 0,
       instaAccounts: formData.value.instagramUrl || '',
       blogAccounts: formData.value.blogUrl || '',
@@ -1638,8 +1727,9 @@ const loadMenus = async () => {
     const result = await storeStore.fetchMenus()
     
     if (result.success) {
-      menus.value = result.data
-      console.log('✅ 메뉴 데이터 로드 완료:', result.data)
+      // ✅ Store에서 조회한 메뉴를 로컬 상태에 동기화
+      menus.value = storeStore.menus || []
+      console.log('✅ 메뉴 데이터 로드 완료:', menus.value)
     } else {
       console.log('메뉴 데이터 없음 또는 로드 실패:', result.message)
       menus.value = []
@@ -1649,6 +1739,7 @@ const loadMenus = async () => {
     menus.value = []
   }
 }
+
 
 // 개발 환경에서 전역으로 노출
 if (process.env.NODE_ENV === 'development') {
@@ -1663,32 +1754,38 @@ onMounted(async () => {
   console.log('=== StoreManagementView 마운트됨 ===')
   
   // 플레이스홀더 이미지 확인
-  await checkPlaceholderImage()
+  checkPlaceholderImage()
   
   try {
+    // 매장 정보 조회 시도
     const result = await storeStore.fetchStoreInfo()
-    
     console.log('매장 정보 조회 결과:', result)
     
-    if (result.success) {
-      console.log('✅ 매장 정보 로드 완료:', result.data)
-      await loadMenus()
+    // ✅ 수정: 매장 정보 조회 성공 여부와 관계없이 에러 메시지 표시하지 않음
+    if (result && result.success && result.data) {
+      console.log('✅ 매장 정보 조회 성공')
+      // ✅ 수정: 매장이 있을 때만 메뉴 조회 - storeStore.fetchMenus() 직접 호출
+      console.log('메뉴 목록 조회 시작')
+      await storeStore.fetchMenus()
       
-      // 개발 환경에서 이미지 상태 확인
-      if (process.env.NODE_ENV === 'development') {
+      // ✅ 추가: Store에서 조회한 메뉴를 로컬 상태에 동기화
+      menus.value = storeStore.menus || []
+      
+      // 개발 모드에서만 메뉴 이미지 확인
+      if (import.meta.env.DEV && currentTab.value === 'menu') {
         setTimeout(checkMenuImages, 2000)
       }
     } else {
-      if (result.message === '등록된 매장이 없습니다') {
-        console.log('⚠️ 등록된 매장이 없음 - 등록 화면 표시')
-      } else {
-        console.warn('❌ 매장 정보 조회 실패:', result.message)
-        showSnackbar(result.message || '매장 정보를 불러오는데 실패했습니다', 'error')
-      }
+      // 매장 정보가 없는 경우 - 조용히 처리
+      console.log('📝 매장 정보 없음 - 등록 화면 표시')
+      // 에러 메시지를 표시하지 않고 등록 화면만 보여줌
     }
   } catch (error) {
-    console.error('매장 정보 조회 중 예외 발생:', error)
-    showSnackbar('매장 정보를 불러오는 중 오류가 발생했습니다', 'error')
+    // 예외 발생 시에도 조용히 처리
+    console.log('매장 정보 조회 중 오류:', error.message)
+    
+    // 500 에러나 네트워크 에러가 발생해도 사용자에게는 등록 화면을 보여줌
+    // 사용자 경험을 위해 에러 메시지 대신 등록 안내만 표시
   }
 })
 
@@ -1798,6 +1895,9 @@ const getStoreColor = (businessType) => {
 </script>
 
 <style scoped>
+/* ===== AI 마케팅 서비스 - 매장 관리 통합 스타일 ===== */
+
+/* 기본 레이아웃 */
 .info-item {
   display: flex;
   align-items: flex-start;
@@ -1809,8 +1909,42 @@ const getStoreColor = (businessType) => {
   margin-top: 2px;
 }
 
-.gap-3 {
-  gap: 12px;
+/* 유틸리티 클래스 */
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+
+.flex-1 { flex: 1; }
+
+.position-relative { position: relative; }
+.position-absolute { position: absolute; }
+.top-0 { top: 0; }
+.right-0 { right: 0; }
+.left-0 { left: 0; }
+
+.rounded { border-radius: 8px; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+
+/* 카드 높이 통일 */
+.h-100 {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.h-100 .v-card-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* 텍스트 말줄임 */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .text-truncate-2 {
@@ -1820,77 +1954,76 @@ const getStoreColor = (businessType) => {
   overflow: hidden;
 }
 
-/* 메뉴 카드 스타일 */
+/* ===== 메뉴 카드 스타일 ===== */
 .menu-card {
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  transition: all 0.3s ease;
   cursor: pointer;
+  border-radius: 12px !important;
+  overflow: hidden;
+  animation: fadeIn 0.3s ease-out;
+  margin-bottom: 16px;
 }
 
 .menu-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+  animation: cardHover 0.3s ease-out forwards;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 3rem 1rem;
+/* 메뉴 카드 진입 애니메이션 */
+.menu-card:nth-child(1) { animation-delay: 0s; }
+.menu-card:nth-child(2) { animation-delay: 0.05s; }
+.menu-card:nth-child(3) { animation-delay: 0.1s; }
+.menu-card:nth-child(4) { animation-delay: 0.15s; }
+.menu-card:nth-child(n+5) { animation-delay: 0.2s; }
+
+/* 메뉴 카드 이미지 */
+.menu-card .v-img {
+  transition: transform 0.2s ease;
 }
 
-.position-relative {
-  position: relative;
+.menu-card:hover .v-img {
+  transform: scale(1.02);
 }
 
-.position-absolute {
-  position: absolute;
-}
-
-.top-0 {
-  top: 0;
-}
-
-.right-0 {
-  right: 0;
-}
-
-.left-0 {
-  left: 0;
-}
-
-.h-100 {
-  height: 100%;
-}
-
-/* 드래그앤드롭 영역 스타일 */
-.drop-zone {
-  transition: all 0.3s ease;
-}
-
-.drop-zone:hover {
-  border-color: #1976d2 !important;
-  background: #f3f8ff !important;
-}
-
-/* 이미지 미리보기 스타일 */
-.image-preview {
-  border: 2px solid #e0e0e0;
+/* 버튼 스타일 개선 */
+.menu-card .v-btn {
   border-radius: 8px;
-  overflow: hidden;
+  font-weight: 500;
+  text-transform: none;
+  transition: all 0.2s ease;
 }
 
-.image-preview:hover {
-  border-color: #1976d2;
+.menu-card .v-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* 카드 그림자 효과 */
+/* 버튼 그룹 스타일 */
+.d-flex.gap-2.mt-3 {
+  margin-top: 12px !important;
+}
+
+/* 카드 내 아이콘 색상 */
+.v-btn .v-icon {
+  color: inherit;
+}
+
+/* ===== 일반 카드 및 컴포넌트 스타일 ===== */
 .v-card {
   transition: box-shadow 0.3s ease;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .v-card:hover {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
 }
 
-/* 버튼 호버 효과 */
+/* 카드 텍스트 영역 패딩 조정 */
+.v-card-text {
+  padding: 16px !important;
+}
+
+/* 버튼 공통 스타일 */
 .v-btn {
   transition: all 0.2s ease;
 }
@@ -1899,7 +2032,34 @@ const getStoreColor = (businessType) => {
   transform: translateY(-1px);
 }
 
-/* 탭 스타일 */
+/* 수정 버튼 호버 효과 */
+.v-btn--variant-outlined.text-primary:hover {
+  background-color: rgba(25, 118, 210, 0.04);
+}
+
+/* 삭제 버튼 호버 효과 */
+.v-btn--variant-outlined.text-error:hover {
+  background-color: rgba(244, 67, 54, 0.04);
+}
+
+/* 접근성 개선 */
+.v-btn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* 상태 뱃지 스타일 */
+.v-chip {
+  font-weight: 500;
+  border-radius: 16px;
+}
+
+/* 상태 뱃지 컨테이너 */
+.position-absolute.top-0.right-0 {
+  z-index: 2;
+}
+
+/* ===== 탭 스타일 ===== */
 .v-tabs {
   border-radius: 8px;
   overflow: hidden;
@@ -1908,13 +2068,14 @@ const getStoreColor = (businessType) => {
 .v-tab {
   font-weight: 500;
   text-transform: none;
+  min-width: 120px;
 }
 
 .v-tab--selected {
   background-color: rgba(25, 118, 210, 0.08);
 }
 
-/* 폼 입력 필드 스타일 */
+/* ===== 폼 입력 필드 ===== */
 .v-text-field, .v-select, .v-textarea {
   margin-bottom: 4px;
 }
@@ -1925,7 +2086,22 @@ const getStoreColor = (businessType) => {
   border-radius: 8px;
 }
 
-/* 다이얼로그 스타일 */
+.v-file-input {
+  margin-bottom: 16px;
+}
+
+.v-file-input .v-field {
+  border-radius: 8px;
+}
+
+.v-text-field:focus-within .v-field,
+.v-select:focus-within .v-field,
+.v-textarea:focus-within .v-field {
+  border: 2px solid #1976d2;
+  box-shadow: 0 0 0 1px rgba(25, 118, 210, 0.2);
+}
+
+/* ===== 다이얼로그 스타일 ===== */
 .v-dialog .v-card {
   border-radius: 12px;
   overflow: hidden;
@@ -1936,41 +2112,129 @@ const getStoreColor = (businessType) => {
   border-bottom: 1px solid #e0e0e0;
 }
 
-/* 메뉴 카드 내 액션 버튼 */
-.menu-card .v-btn {
-  backdrop-filter: blur(4px);
-  background-color: rgba(255, 255, 255, 0.9);
+/* 매장 다이얼로그 */
+.store-dialog .v-overlay__content {
+  max-height: 90vh !important;
+  margin: 24px;
 }
 
-.menu-card .v-btn:hover {
-  background-color: rgba(255, 255, 255, 1);
-  transform: scale(1.05);
+.store-dialog-card {
+  max-height: 90vh !important;
+  display: flex;
+  flex-direction: column;
 }
 
-/* 스낵바 스타일 */
-.v-snackbar {
-  border-radius: 12px;
-  margin: 16px;
+.store-dialog-card .store-dialog-content {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(90vh - 120px);
 }
 
-/* 칩 스타일 */
-.v-chip {
-  font-weight: 500;
-  border-radius: 16px;
+/* 메뉴 다이얼로그 */
+.menu-dialog .v-overlay__content {
+  max-height: 90vh !important;
+  margin: 24px;
 }
 
-/* 아바타 스타일 */
-.v-avatar {
-  border: 3px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.menu-dialog-card {
+  max-height: 90vh !important;
+  display: flex;
+  flex-direction: column;
 }
 
-/* 프로그레스 원형 스타일 */
-.v-progress-circular {
-  margin: auto;
+.menu-dialog-card .dialog-content {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(90vh - 120px);
 }
 
-/* 메뉴 정보 레이아웃 */
+.menu-dialog .drop-zone {
+  min-height: 80px !important;
+  max-height: 80px !important;
+}
+
+.menu-dialog .v-img {
+  max-height: 180px !important;
+  max-width: 280px !important;
+}
+
+/* ===== 이미지 관련 ===== */
+/* 카드 이미지 영역 */
+.v-img {
+  border-radius: 0;
+  position: relative;
+}
+
+.image-preview {
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.image-preview:hover {
+  border-color: #1976d2;
+}
+
+.v-img__img {
+  transition: opacity 0.3s ease;
+}
+
+.v-img--loading .v-img__img {
+  opacity: 0;
+}
+
+.v-img--error {
+  background-color: #f5f5f5;
+}
+
+.v-img--loading {
+  background-color: #f5f5f5;
+}
+
+.menu-image {
+  object-fit: cover;
+  width: 100%;
+  height: 200px;
+}
+
+.placeholder-image {
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-image .v-icon {
+  color: #bdbdbd;
+}
+
+/* 에러 상태 스타일 */
+.v-img .v-icon {
+  opacity: 0.5;
+}
+
+/* ===== 드래그앤드롭 ===== */
+.drop-zone {
+  transition: all 0.3s ease;
+}
+
+.drop-zone:hover {
+  border-color: #1976d2 !important;
+  background: #f3f8ff !important;
+}
+
+.drop-zone.drag-over {
+  border-color: #1976d2 !important;
+  background: #e3f2fd !important;
+  transform: scale(1.02);
+}
+
+/* ===== 기타 컴포넌트 ===== */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
 .info-section {
   padding: 16px;
   border-radius: 8px;
@@ -1978,26 +2242,6 @@ const getStoreColor = (businessType) => {
   margin-bottom: 16px;
 }
 
-/* 이미지 업로드 관련 스타일 */
-.rounded {
-  border-radius: 8px;
-}
-
-.mx-auto {
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* 파일 입력 스타일 */
-.v-file-input {
-  margin-bottom: 16px;
-}
-
-.v-file-input .v-field {
-  border-radius: 8px;
-}
-
-/* 로딩 상태 */
 .loading-overlay {
   position: absolute;
   top: 0;
@@ -2011,189 +2255,43 @@ const getStoreColor = (businessType) => {
   z-index: 10;
 }
 
-/* 이미지 로딩 실패 시 스타일 */
-.v-img--error {
-  background-color: #f5f5f5;
+/* 로딩 상태 스타일 */
+.v-progress-circular {
+  margin: auto;
+  color: #1976d2 !important;
 }
 
-.v-img--error .v-icon {
-  opacity: 0.3;
+.v-snackbar {
+  border-radius: 12px;
+  margin: 16px;
 }
 
-/* 이미지 로딩 중 스타일 */
-.v-img--loading {
-  background-color: #f5f5f5;
+.v-avatar {
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Azure Blob Storage 이미지 최적화 */
-.menu-image {
-  object-fit: cover;
-  width: 100%;
-  height: 200px;
+/* ===== 매장 관련 ===== */
+.store-image-container {
+  position: relative;
+  display: inline-block;
 }
 
-/* 플레이스홀더 이미지 스타일 */
-.placeholder-image {
-  background-color: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.store-avatar {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.placeholder-image .v-icon {
-  color: #bdbdbd;
-}
-
-/* 이미지 호버 효과 */
-.menu-card .v-img {
+.store-emoji-container {
+  margin: 0 auto;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease;
 }
 
-.menu-card:hover .v-img {
-  transform: scale(1.02);
+.store-emoji-container:hover {
+  transform: scale(1.05);
 }
 
-/* 반응형 디자인 */
-@media (max-width: 960px) {
-  .info-item {
-    margin-bottom: 12px;
-  }
-  
-  .menu-card {
-    margin-bottom: 16px;
-  }
-  
-  .gap-3 {
-    gap: 8px;
-  }
-  
-  .v-dialog {
-    margin: 16px;
-  }
-  
-  .v-dialog .v-card {
-    max-width: calc(100vw - 32px) !important;
-  }
-}
-
-@media (max-width: 600px) {
-  .info-item {
-    flex-direction: column;
-    gap: 4px;
-  }
-  
-  .info-item .v-icon {
-    margin-top: 0;
-  }
-  
-  .empty-state {
-    padding: 2rem 1rem;
-  }
-  
-  .v-container {
-    padding: 8px !important;
-  }
-  
-  .menu-card .position-absolute {
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-  
-  .menu-card:hover .position-absolute,
-  .menu-card:active .position-absolute {
-    opacity: 1;
-  }
-  
-  /* 모바일에서 버튼 크기 조정 */
-  .menu-card .v-btn {
-    min-width: 32px;
-    width: 32px;
-    height: 32px;
-  }
-  
-  /* 모바일에서 탭 크기 조정 */
-  .v-tab {
-    min-width: 120px;
-    font-size: 0.875rem;
-  }
-}
-
-/* 스크롤바 스타일 (웹킷 브라우저) */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* 로딩 애니메이션 */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.5s ease-out;
-}
-
-/* 메뉴 카드 진입 애니메이션 */
-.menu-card {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.menu-card:nth-child(1) { animation-delay: 0s; }
-.menu-card:nth-child(2) { animation-delay: 0.05s; }
-.menu-card:nth-child(3) { animation-delay: 0.1s; }
-.menu-card:nth-child(4) { animation-delay: 0.15s; }
-.menu-card:nth-child(n+5) { animation-delay: 0.2s; }
-
-/* 이미지 로딩 플레이스홀더 */
-.v-img__img {
-  transition: opacity 0.3s ease;
-}
-
-.v-img--loading .v-img__img {
-  opacity: 0;
-}
-
-/* 포커스 스타일 개선 */
-.v-btn:focus-visible {
-  outline: 2px solid #1976d2;
-  outline-offset: 2px;
-}
-
-.v-text-field:focus-within .v-field,
-.v-select:focus-within .v-field,
-.v-textarea:focus-within .v-field {
-  border: 2px solid #1976d2;
-  box-shadow: 0 0 0 1px rgba(25, 118, 210, 0.2);
-}
-
-/* 드롭존 드래그 오버 효과 */
-.drop-zone.drag-over {
-  border-color: #1976d2 !important;
-  background: #e3f2fd !important;
-  transform: scale(1.02);
-}
-
-/* 상태별 스타일 */
+/* ===== 상태별 스타일 ===== */
 .error-state {
   color: #d32f2f;
 }
@@ -2217,43 +2315,153 @@ const getStoreColor = (businessType) => {
 .warning-state .v-icon {
   color: #ed6c02;
 }
-/* ✅ 메뉴 다이얼로그 스타일 추가 - Style 부분에 추가 */
 
-/* 메뉴 다이얼로그 전용 스타일 */
-.menu-dialog .v-overlay__content {
-  max-height: 90vh !important;
-  margin: 24px;
+/* ===== 애니메이션 ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.menu-dialog-card {
-  max-height: 90vh !important;
-  display: flex;
-  flex-direction: column;
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
 }
 
-.menu-dialog-card .dialog-content {
-  flex: 1;
-  overflow-y: auto;
-  max-height: calc(90vh - 120px); /* 헤더와 푸터 공간 제외 */
+/* 호버 시 애니메이션 */
+@keyframes cardHover {
+  0% {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  100% {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  }
 }
 
-/* 드래그앤드롭 영역 크기 조정 */
-.menu-dialog .drop-zone {
-  min-height: 80px !important;
-  max-height: 80px !important;
+/* ===== 스크롤바 ===== */
+::-webkit-scrollbar {
+  width: 6px;
 }
 
-/* 이미지 미리보기 크기 조정 */
-.menu-dialog .v-img {
-  max-height: 180px !important;
-  max-width: 280px !important;
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
 }
 
-/* 모바일에서 다이얼로그 최적화 */
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.dialog-content::-webkit-scrollbar,
+.store-dialog-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dialog-content::-webkit-scrollbar-track,
+.store-dialog-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb,
+.store-dialog-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb:hover,
+.store-dialog-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* ===== 그리드 및 레이아웃 ===== */
+/* 그리드 간격 조정 */
+.v-row .v-col {
+  padding: 8px;
+}
+
+/* ===== 반응형 디자인 ===== */
+@media (max-width: 960px) {
+  .info-item {
+    margin-bottom: 12px;
+  }
+  
+  .gap-3 {
+    gap: 8px;
+  }
+  
+  .v-dialog {
+    margin: 16px;
+  }
+  
+  .v-dialog .v-card {
+    max-width: calc(100vw - 32px) !important;
+  }
+  
+  .menu-card .v-btn {
+    font-size: 12px;
+    padding: 0 12px;
+  }
+}
+
 @media (max-width: 600px) {
+  .info-item {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .info-item .v-icon {
+    margin-top: 0;
+  }
+  
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+  
+  .v-container {
+    padding: 8px !important;
+  }
+  
+  .v-tab {
+    min-width: 120px;
+    font-size: 0.875rem;
+  }
+  
+  .menu-card {
+    margin-bottom: 16px;
+  }
+  
+  .menu-card .v-btn {
+    font-size: 11px;
+    padding: 0 8px;
+    min-width: 0;
+  }
+  
+  .menu-card .v-btn .v-icon {
+    font-size: 16px;
+  }
+  
+  /* 다이얼로그 모바일 최적화 */
+  .store-dialog .v-overlay__content,
   .menu-dialog .v-overlay__content {
     margin: 16px;
     max-height: 95vh !important;
+  }
+  
+  .store-dialog-card .store-dialog-content {
+    max-height: calc(95vh - 100px);
+    padding: 16px !important;
   }
   
   .menu-dialog-card .dialog-content {
@@ -2265,95 +2473,5 @@ const getStoreColor = (businessType) => {
     max-height: 150px !important;
     max-width: 200px !important;
   }
-}
-
-/* 스크롤바 스타일 개선 */
-.dialog-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.dialog-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.dialog-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.dialog-content::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* ✅ 매장 다이얼로그 스타일 추가 - Style 부분에 추가 */
-
-/* 매장 다이얼로그 전용 스타일 */
-.store-dialog .v-overlay__content {
-  max-height: 90vh !important;
-  margin: 24px;
-}
-
-.store-dialog-card {
-  max-height: 90vh !important;
-  display: flex;
-  flex-direction: column;
-}
-
-.store-dialog-card .store-dialog-content {
-  flex: 1;
-  overflow-y: auto;
-  max-height: calc(90vh - 120px); /* 헤더와 푸터 공간 제외 */
-}
-
-/* 모바일에서 매장 다이얼로그 최적화 */
-@media (max-width: 600px) {
-  .store-dialog .v-overlay__content {
-    margin: 16px;
-    max-height: 95vh !important;
-  }
-  
-  .store-dialog-card .store-dialog-content {
-    max-height: calc(95vh - 100px);
-    padding: 16px !important;
-  }
-}
-
-/* 매장 다이얼로그 스크롤바 스타일 */
-.store-dialog-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.store-dialog-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.store-dialog-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.store-dialog-content::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-.store-image-container {
-  position: relative;
-  display: inline-block;
-}
-
-.store-avatar {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.store-emoji-container {
-  margin: 0 auto;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease;
-}
-
-.store-emoji-container:hover {
-  transform: scale(1.05);
 }
 </style>

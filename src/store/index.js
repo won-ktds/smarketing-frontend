@@ -12,7 +12,25 @@ export const useStoreStore = defineStore('store', {
   getters: {
     hasStoreInfo: (state) => !!state.storeInfo,
     isLoading: (state) => state.loading,
-    hasMenus: (state) => state.menus && state.menus.length > 0
+    hasMenus: (state) => state.menus && state.menus.length > 0,
+
+    storeInfoSummary: (state) => {
+      if (!state.storeInfo) {
+        return {
+          hasStore: false,
+          message: '매장 정보를 등록해주세요',
+          action: '등록하기'
+        }
+      }
+      
+      return {
+        hasStore: true,
+        storeName: state.storeInfo.storeName,
+        businessType: state.storeInfo.businessType,
+        message: `${state.storeInfo.storeName} 운영 중`,
+        action: '관리하기'
+      }
+    }
   },
   
   actions: {
@@ -20,62 +38,107 @@ export const useStoreStore = defineStore('store', {
      * 매장 정보 조회
      */
     async fetchStoreInfo() {
-      console.log('=== Store 스토어: 매장 정보 조회 시작 ===')
-      this.loading = true
-      this.error = null
+  console.log('=== Store 스토어: 매장 정보 조회 시작 ===')
+  this.loading = true
+  this.error = null
+  
+  try {
+    // 스토어 서비스 임포트
+    const { storeService } = await import('@/services/store')
+    
+    console.log('매장 정보 API 호출')
+    const result = await storeService.getStore()
+    
+    console.log('=== Store 스토어: API 응답 분석 ===')
+    console.log('Result:', result)
+    console.log('Result.success:', result.success)
+    console.log('Result.data:', result.data)
+    console.log('Result.message:', result.message)
+    
+    if (result.success && result.data) {
+      // 매장 정보가 있는 경우
+      console.log('✅ 매장 정보 설정:', result.data)
+      this.storeInfo = result.data
+      return { success: true, data: result.data }
+    } else {
+      // 매장이 없거나 조회 실패한 경우
+      console.log('📝 매장 정보 없음 - 신규 사용자')
+      this.storeInfo = null
       
+      // 매장이 없는 것은 정상 상황이므로 success: false이지만 에러가 아님
+      return { 
+        success: false, 
+        message: '등록된 매장이 없습니다',
+        isNewUser: true // 신규 사용자 플래그 추가
+      }
+    }
+  } catch (error) {
+    console.log('=== Store 스토어: 매장 정보 조회 중 오류 ===')
+    console.log('Error:', error.message)
+    
+    this.error = null // 에러 상태를 설정하지 않음
+    this.storeInfo = null
+    
+    // HTTP 상태 코드별 처리 - 모두 신규 사용자로 간주
+    if (error.response?.status === 404) {
+      return { 
+        success: false, 
+        message: '등록된 매장이 없습니다',
+        isNewUser: true
+      }
+    }
+    
+    if (error.response?.status >= 500) {
+      // 서버 에러도 신규 사용자로 간주 (매장이 없어서 발생할 수 있음)
+      console.log('서버 에러 발생, 신규 사용자로 간주')
+      return { 
+        success: false, 
+        message: '등록된 매장이 없습니다',
+        isNewUser: true
+      }
+    }
+    
+    if (error.response?.status === 401) {
+      return { 
+        success: false, 
+        message: '로그인이 필요합니다',
+        needLogin: true
+      }
+    }
+    
+    // 기타 모든 에러도 신규 사용자로 간주
+    return { 
+      success: false, 
+      message: '등록된 매장이 없습니다',
+      isNewUser: true
+    }
+  } finally {
+    this.loading = false
+  }
+},
+async getLoginRedirectPath() {
       try {
-        // 스토어 서비스 임포트
-        const { storeService } = await import('@/services/store')
-        
-        console.log('매장 정보 API 호출')
-        const result = await storeService.getStore()
-        
-        console.log('=== Store 스토어: API 응답 분석 ===')
-        console.log('Result:', result)
-        console.log('Result.success:', result.success)
-        console.log('Result.data:', result.data)
-        console.log('Result.message:', result.message)
+        const result = await this.fetchStoreInfo()
         
         if (result.success && result.data) {
-          // 매장 정보가 있는 경우
-          console.log('✅ 매장 정보 설정:', result.data)
-          this.storeInfo = result.data
-          return { success: true, data: result.data }
+          return {
+            path: '/dashboard',
+            message: `${result.data.storeName}에 오신 것을 환영합니다!`,
+            type: 'success'
+          }
         } else {
-          // 매장이 없거나 조회 실패한 경우
-          console.log('⚠️ 매장 정보 없음 또는 조회 실패')
-          this.storeInfo = null
-          
-          if (result.message === '등록된 매장이 없습니다') {
-            return { success: false, message: '등록된 매장이 없습니다' }
-          } else {
-            return { success: false, message: result.message || '매장 정보 조회에 실패했습니다' }
+          return {
+            path: '/store',
+            message: '매장 정보를 등록하고 AI 마케팅을 시작해보세요!',
+            type: 'info'
           }
         }
       } catch (error) {
-        console.error('=== Store 스토어: 매장 정보 조회 실패 ===')
-        console.error('Error:', error)
-        
-        this.error = error.message
-        this.storeInfo = null
-        
-        // HTTP 상태 코드별 처리
-        if (error.response?.status === 404) {
-          return { success: false, message: '등록된 매장이 없습니다' }
+        return {
+          path: '/store',
+          message: '매장 정보를 확인할 수 없습니다. 매장 정보를 등록해주세요',
+          type: 'warning'
         }
-        
-        if (error.response?.status >= 500) {
-          return { success: false, message: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.' }
-        }
-        
-        if (error.response?.status === 401) {
-          return { success: false, message: '로그인이 필요합니다' }
-        }
-        
-        return { success: false, message: error.message || '매장 정보 조회에 실패했습니다' }
-      } finally {
-        this.loading = false
       }
     },
 

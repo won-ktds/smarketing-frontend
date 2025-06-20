@@ -1,8 +1,5 @@
-//* src/router/index.js
-/**
- * Vue Router 설정
- * 라우팅 및 네비게이션 가드 설정
- */
+// src/router/index.js - 완전히 수정된 버전
+
 import { createRouter, createWebHistory } from 'vue-router'
 
 // 뷰 컴포넌트 lazy loading
@@ -15,7 +12,7 @@ const ContentManagementView = () => import('@/views/ContentManagementView.vue')
 const routes = [
   {
     path: '/',
-    redirect: '/login', // 항상 로그인 페이지로 먼저 리다이렉트
+    redirect: '/login',
   },
   {
     path: '/login',
@@ -32,6 +29,7 @@ const routes = [
     component: DashboardView,
     meta: {
       requiresAuth: true,
+      requiresStore: true, // ✅ 매장 정보 필수
       title: '대시보드',
     },
   },
@@ -41,6 +39,7 @@ const routes = [
     component: StoreManagementView,
     meta: {
       requiresAuth: true,
+      requiresStore: false, // ✅ 매장 정보 없어도 접근 가능
       title: '매장 관리',
     },
   },
@@ -50,6 +49,7 @@ const routes = [
     component: ContentCreationView,
     meta: {
       requiresAuth: true,
+      requiresStore: true, // ✅ 매장 정보 필수
       title: '콘텐츠 생성',
     },
   },
@@ -59,12 +59,13 @@ const routes = [
     component: ContentManagementView,
     meta: {
       requiresAuth: true,
+      requiresStore: true, // ✅ 매장 정보 필수
       title: '콘텐츠 관리',
     },
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/login', // 404시 로그인으로 이동
+    redirect: '/login',
   },
 ]
 
@@ -73,12 +74,12 @@ const router = createRouter({
   routes,
 })
 
-// 네비게이션 가드 - 수정된 버전
+// ✅ 개선된 네비게이션 가드
 router.beforeEach(async (to, from, next) => {
   console.log('=== 라우터 가드 실행 ===')
   console.log('이동 경로:', `${from.path} → ${to.path}`)
 
-  // Pinia 스토어를 동적으로 가져오기 (순환 참조 방지)
+  // Pinia 스토어를 동적으로 가져오기
   const { useAuthStore } = await import('@/store/auth')
   const authStore = useAuthStore()
 
@@ -89,19 +90,79 @@ router.beforeEach(async (to, from, next) => {
   console.log('토큰 존재:', !!authStore.token)
   console.log('사용자 정보:', authStore.user?.nickname)
 
-  // 인증이 필요한 페이지인지 확인
+  // 1단계: 인증 체크
   const requiresAuth = to.meta.requiresAuth !== false
 
   if (requiresAuth && !authStore.isAuthenticated) {
-    console.log('인증 필요 - 로그인 페이지로 이동')
+    console.log('🚫 인증 필요 - 로그인 페이지로 이동')
     next('/login')
-  } else if (to.path === '/login' && authStore.isAuthenticated) {
-    console.log('이미 로그인됨 - 대시보드로 이동')
-    next('/dashboard')
-  } else {
-    console.log('이동 허용:', to.path)
-    next()
+    return
   }
+
+  if (to.path === '/login' && authStore.isAuthenticated) {
+    console.log('✅ 이미 로그인됨 - 매장 정보 체크 후 리다이렉트')
+    
+    // 로그인 상태에서 /login 접근 시 매장 정보에 따라 리다이렉트
+    try {
+      const { useStoreStore } = await import('@/store/index')
+      const storeStore = useStoreStore()
+      const result = await storeStore.fetchStoreInfo()
+      
+      if (result.success && result.data) {
+        console.log('🏪 매장 정보 있음 - 대시보드로 이동')
+        next('/dashboard')
+      } else {
+        console.log('📝 매장 정보 없음 - 매장 관리로 이동')
+        next('/store')
+      }
+    } catch (error) {
+      console.log('❌ 매장 정보 조회 실패 - 매장 관리로 이동')
+      next('/store')
+    }
+    return
+  }
+
+  // 2단계: 매장 정보 체크 (인증된 사용자만)
+  const requiresStore = to.meta.requiresStore === true
+
+  if (authStore.isAuthenticated && requiresStore) {
+    console.log('🏪 매장 정보 체크 필요한 페이지:', to.name)
+    
+    try {
+      const { useStoreStore } = await import('@/store/index')
+      const storeStore = useStoreStore()
+      
+      // 매장 정보 조회
+      const result = await storeStore.fetchStoreInfo()
+      
+      if (!result.success || !result.data) {
+        console.log('🚫 매장 정보 없음 - 매장 관리 페이지로 리다이렉트')
+        
+        // 사용자에게 알림 (스낵바)
+        const { useAppStore } = await import('@/store/app')
+        const appStore = useAppStore()
+        appStore.showSnackbar('매장 정보를 먼저 등록해주세요', 'warning')
+        
+        next('/store')
+        return
+      } else {
+        console.log('✅ 매장 정보 확인됨 - 페이지 접근 허용')
+      }
+    } catch (error) {
+      console.log('❌ 매장 정보 조회 실패 - 매장 관리 페이지로 리다이렉트')
+      
+      // 에러 시에도 매장 관리로
+      const { useAppStore } = await import('@/store/app')
+      const appStore = useAppStore()
+      appStore.showSnackbar('매장 정보를 확인할 수 없습니다. 매장 정보를 등록해주세요', 'error')
+      
+      next('/store')
+      return
+    }
+  }
+
+  console.log('✅ 이동 허용:', to.path)
+  next()
 })
 
 router.afterEach((to) => {
