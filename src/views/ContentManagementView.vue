@@ -107,27 +107,6 @@
             </th>
             <th width="450">제목</th>
             <th width="150">플랫폼</th>
-            <!-- 프로모션 기간 - 정렬 가능 -->
-            <th 
-              width="200" 
-              class="sortable-header cursor-pointer"
-              @click="sortByPromotionDate"
-            >
-              <div class="d-flex align-center">
-                <span>프로모션 기간</span>
-                <v-icon 
-                  :color="promotionSortOrder === 'none' ? 'grey-lighten-1' : 'primary'"
-                  size="16" 
-                  class="ml-1"
-                >
-                  {{
-                    promotionSortOrder === 'asc' ? 'mdi-arrow-up' :
-                    promotionSortOrder === 'desc' ? 'mdi-arrow-down' :
-                    'mdi-unfold-more-horizontal'
-                  }}
-                </v-icon>
-              </div>
-            </th>
             <th width="120">액션</th>
           </tr>
         </thead>
@@ -179,11 +158,6 @@
               >
                 {{ getPlatformText(content.platform) }}
               </v-chip>
-            </td>
-            <td>
-              <div class="text-body-2">
-                {{ formatDateRange(content.startDate, content.endDate) }}
-              </div>
             </td>
             <td @click.stop>
               <div class="d-flex">
