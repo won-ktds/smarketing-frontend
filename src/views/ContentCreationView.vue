@@ -116,7 +116,7 @@
                     <v-text-field
                       v-if="selectedType === 'poster'"
                       v-model="formData.menuName"
-                      label="음식명"
+                      label="메뉴명"
                       variant="outlined"
                       :rules="menuNameRules"
                       required
@@ -648,7 +648,7 @@
                 </template>
               </v-list-item>
               <v-list-item v-if="currentVersion.menuName || formData.menuName">
-                <v-list-item-title>음식명</v-list-item-title>
+                <v-list-item-title>메뉴명</v-list-item-title>
                 <template v-slot:append>
                   {{ currentVersion.menuName || formData.menuName }}
                 </template>
@@ -850,8 +850,8 @@ const targetRules = [
 ]
 
 const menuNameRules = [
-  v => !!v || '음식명은 필수입니다',
-  v => (v && v.length <= 50) || '음식명은 50자 이하로 입력해주세요'
+  v => !!v || '메뉴명은 필수입니다',
+  v => (v && v.length <= 50) || '메뉴명은 50자 이하로 입력해주세요'
 ]
 
 const eventNameRules = [

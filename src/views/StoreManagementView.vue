@@ -78,16 +78,41 @@
             <v-card-text class="pa-6">
               <v-row>
                 <!-- 매장 이미지 -->
+                <!-- 매장 이미지 섹션 -->
                 <v-col cols="12" md="4" class="text-center">
-                  <v-avatar size="120" class="mb-3">
-                    <v-img
-                      :src="storeInfo.imageUrl || '/images/store-placeholder.png'"
-                      alt="매장 이미지"
-                    />
-                  </v-avatar>
+                  <div class="store-image-container mb-3">
+                    <!-- 매장 사진이 있을 때 -->
+                    <v-avatar 
+                      v-if="storeInfo.storeImage || storeInfo.imageUrl" 
+                      size="120" 
+                      class="store-avatar"
+                    >
+                      <v-img
+                        :src="storeInfo.storeImage || storeInfo.imageUrl"
+                        alt="매장 이미지"
+                      />
+                    </v-avatar>
+                    
+                    <!-- 매장 사진이 없을 때 - 업종별 이모지 표시 -->
+                    <div 
+                      v-else 
+                      class="store-emoji-container d-flex align-center justify-center"
+                      :style="{ 
+                        width: '120px', 
+                        height: '120px', 
+                        borderRadius: '50%',
+                        backgroundColor: getStoreColor(storeInfo.businessType),
+                        fontSize: '48px'
+                      }"
+                    >
+                      {{ getStoreEmoji(storeInfo.businessType) }}
+                    </div>
+                  </div>
+                  
                   <h3 class="text-h6 font-weight-bold">{{ storeInfo.storeName }}</h3>
                   <p class="text-grey">{{ storeInfo.businessType }}</p>
                 </v-col>
+
 
                 <!-- 기본 정보 -->
                 <v-col cols="12" md="8">
@@ -1666,6 +1691,110 @@ onMounted(async () => {
     showSnackbar('매장 정보를 불러오는 중 오류가 발생했습니다', 'error')
   }
 })
+
+// 업종별 이모지 반환 함수
+const getStoreEmoji = (businessType) => {
+  const emojiMap = {
+    '카페': '☕',
+    '레스토랑': '🍽️',
+    '한식': '🍲',
+    '중식': '🥢',
+    '일식': '🍣',
+    '양식': '🍝',
+    '치킨': '🍗',
+    '피자': '🍕',
+    '햄버거': '🍔',
+    '분식': '🍜',
+    '베이커리': '🥐',
+    '디저트': '🧁',
+    '아이스크림': '🍦',
+    '술집': '🍺',
+    '바': '🍸',
+    '펜션': '🏠',
+    '호텔': '🏨',
+    '게스트하우스': '🏡',
+    '마트': '🛒',
+    '편의점': '🏪',
+    '미용실': '💇',
+    '네일샵': '💅',
+    '세탁소': '👔',
+    '약국': '💊',
+    '병원': '🏥',
+    '헬스장': '💪',
+    '학원': '📚',
+    '키즈카페': '🧸',
+    '반려동물': '🐾',
+    '꽃집': '🌸',
+    '문구점': '✏️',
+    '서점': '📖',
+    '화장품': '💄',
+    '옷가게': '👗',
+    '신발가게': '👟',
+    '가구점': '🪑',
+    '전자제품': '📱',
+    '자동차': '🚗',
+    '주유소': '⛽',
+    '세차장': '🚿',
+    '부동산': '🏢',
+    '은행': '🏦',
+    '우체국': '📮',
+    '기타': '🏪'
+  }
+  
+  return emojiMap[businessType] || '🏪'
+}
+
+// 업종별 배경색 반환 함수  
+const getStoreColor = (businessType) => {
+  const colorMap = {
+    '카페': '#8D6E63',
+    '레스토랑': '#FF7043',
+    '한식': '#D32F2F',
+    '중식': '#F57C00',
+    '일식': '#388E3C',
+    '양식': '#303F9F',
+    '치킨': '#FBC02D',
+    '피자': '#E64A19',
+    '햄버거': '#795548',
+    '분식': '#FF5722',
+    '베이커리': '#F57C00',
+    '디저트': '#E91E63',
+    '아이스크림': '#00BCD4',
+    '술집': '#FF9800',
+    '바': '#9C27B0',
+    '펜션': '#4CAF50',
+    '호텔': '#2196F3',
+    '게스트하우스': '#009688',
+    '마트': '#607D8B',
+    '편의점': '#3F51B5',
+    '미용실': '#E91E63',
+    '네일샵': '#9C27B0',
+    '세탁소': '#00BCD4',
+    '약국': '#4CAF50',
+    '병원': '#2196F3',
+    '헬스장': '#FF5722',
+    '학원': '#673AB7',
+    '키즈카페': '#FFEB3B',
+    '반려동물': '#795548',
+    '꽃집': '#E91E63',
+    '문구점': '#FF9800',
+    '서점': '#795548',
+    '화장품': '#E91E63',
+    '옷가게': '#9C27B0',
+    '신발가게': '#607D8B',
+    '가구점': '#8BC34A',
+    '전자제품': '#607D8B',
+    '자동차': '#424242',
+    '주유소': '#FF5722',
+    '세차장': '#00BCD4',
+    '부동산': '#795548',
+    '은행': '#2196F3',
+    '우체국': '#FF5722',
+    '기타': '#9E9E9E'
+  }
+  
+  return colorMap[businessType] || '#9E9E9E'
+}
 </script>
 
 <style scoped>
@@ -2207,5 +2336,24 @@ onMounted(async () => {
 
 .store-dialog-content::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+.store-image-container {
+  position: relative;
+  display: inline-block;
+}
+
+.store-avatar {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.store-emoji-container {
+  margin: 0 auto;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.store-emoji-container:hover {
+  transform: scale(1.05);
 }
 </style>
