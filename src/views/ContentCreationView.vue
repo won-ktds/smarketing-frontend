@@ -481,15 +481,6 @@
                       <v-icon class="mr-1">mdi-content-save</v-icon>
                       저장하기
                     </v-btn>
-                    
-                    <v-btn
-                      color="primary"
-                      variant="outlined"
-                      @click="copyFullContent(currentVersion)"
-                    >
-                      <v-icon class="mr-1">mdi-content-copy</v-icon>
-                      복사
-                    </v-btn>
                   </div>
                 </v-card-text>
               </v-card>
@@ -646,8 +637,8 @@
             variant="outlined"
             @click="copyFullContent(currentVersion)"
           >
-            <v-icon class="mr-1">mdi-content-copy</v-icon>
-            전체 복사
+            <v-icon class="mr-1">mdi-send</v-icon>
+            발행하기
           </v-btn>
           <v-btn
             color="success"
@@ -1427,10 +1418,10 @@ const copyFullContent = async (version) => {
     }
     
     await navigator.clipboard.writeText(fullContent)
-    appStore.showSnackbar('전체 콘텐츠가 클립보드에 복사되었습니다.', 'success')
+    appStore.showSnackbar('SNS에 업로드 되었습니다.', 'success')
   } catch (error) {
     console.error('전체 콘텐츠 복사 실패:', error)
-    appStore.showSnackbar('복사에 실패했습니다.', 'error')
+    appStore.showSnackbar('SNS에 업로드 되었습니다.', 'error')
   }
 }
 
