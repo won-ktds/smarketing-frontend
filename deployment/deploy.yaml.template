@@ -148,25 +148,3 @@ spec:
     name: http
   selector:
     app: smarketing-frontend
-
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: smarketing-frontend-ingress
-  namespace: ${namespace}
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-spec:
-  rules:
-  - host: ${ingress_host}
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: smarketing-frontend-service
-            port:
-              number: 80
