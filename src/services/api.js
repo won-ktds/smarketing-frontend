@@ -14,7 +14,7 @@ const getApiUrls = () => {
     MENU_URL: config.MENU_URL || 'http://smarketing.20.249.184.228.nip.io/api/menu',
     SALES_URL: config.SALES_URL || 'http://smarketing.20.249.184.228.nip.io/api/sales',
     RECOMMEND_URL: config.RECOMMEND_URL || 'http://smarketing.20.249.184.228.nip.io/api/recommendations',
-    IMAGE_URL: config.IMAGE_URL || 'http://smarketing.20.249.184.228.nip.io/api/images'
+    IMAGE_URL: config.IMAGE_URL || 'http://smarketing.20.249.184.228.nip.io/api/menu/images'
   }
 }
 

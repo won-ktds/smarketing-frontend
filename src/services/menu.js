@@ -182,7 +182,7 @@ class MenuService {
       console.log('이미지 업로드 요청 - 메뉴 ID:', numericMenuId)
       
       // POST /api/menu/images/{menuId} (menuApi 사용)
-      const response = await menuApi.post(`/images/${numericMenuId}`, formData, {
+      const response = await menuApi.post(`/menu/images/${numericMenuId}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

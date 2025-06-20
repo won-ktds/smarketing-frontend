@@ -1145,10 +1145,10 @@ const uploadMenuImage = async (menuId) => {
       imageApiInstance.defaults.headers.Authorization = `Bearer ${token}`
     }
     
-    console.log('🎯 ImageController로 업로드: /api/images/menu/' + menuId)
+    console.log('🎯 ImageController로 업로드: /api/menu/images/menu/' + menuId)
     
     // ✅ 올바른 전체 경로 지정
-    const response = await imageApiInstance.post(`/api/images/menu/${menuId}`, formData)
+    const response = await imageApiInstance.post(`/api/menu/images/menu/${menuId}`, formData)
     
     console.log('이미지 업로드 응답:', response.data)
     
